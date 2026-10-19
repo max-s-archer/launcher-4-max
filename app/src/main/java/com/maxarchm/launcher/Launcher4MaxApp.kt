@@ -242,6 +242,7 @@ internal fun Launcher4MaxApp(
         key1 = effectiveFavoriteStore,
         calculation = { HomeFavoriteEditor(store = effectiveFavoriteStore) },
     )
+    var homeSafeWidthDp by remember { mutableFloatStateOf(0f) }
     val settingsBackupController = remember(
         androidContext,
         effectiveFavoriteStore,
@@ -261,6 +262,7 @@ internal fun Launcher4MaxApp(
                 settings = settingsAccess,
                 bindings = bindingsAccess,
                 iconShape = effectiveIconShapeSettingsStore,
+                homeSafeWidthDp = { homeSafeWidthDp.takeIf { width -> width > 0f } },
             )
         }
     }
@@ -1167,9 +1169,10 @@ internal fun Launcher4MaxApp(
             },
     ) {
         val homeSafeInsets = WindowInsets.safeDrawing.asPaddingValues()
-        val homeSafeWidthDp = maxWidth -
+        val measuredHomeSafeWidthDp = maxWidth -
             homeSafeInsets.calculateLeftPadding(layoutDirection) -
             homeSafeInsets.calculateRightPadding(layoutDirection)
+        homeSafeWidthDp = measuredHomeSafeWidthDp.value
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1486,7 +1489,7 @@ internal fun Launcher4MaxApp(
                 homeBottomAppBarState = homeBottomAppBarState,
                 homeBottomAppBarSaveInFlight = homeBottomAppBarSaveInFlight ||
                     favoriteState !is FavoriteReadState.Readable,
-                homeBottomAppBarSafeWidthDp = homeSafeWidthDp.value,
+                homeBottomAppBarSafeWidthDp = homeSafeWidthDp,
                 onHomeBottomAppBarStateChange = { nextState ->
                     if (
                         !homeBottomAppBarSaveInFlight &&

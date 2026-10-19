@@ -92,7 +92,7 @@ Author-reported acceptance of all iteration 35 changes: `Passed` on 2026-10-16.
 
 ### Iteration 36: Home Bottom App Bar
 
-[Contract](iteration-36-home-bottom-app-bar.md). Status: `In Progress`. The author authorized production implementation on 2026-10-16 within the accepted contract. The Settings persistence slice adds the Settings entry, UI controls, preview, an aggregate-backed persisted state model, schema v4 compatibility defaults, global identity validation, and real-time capacity calculation. Author-reported device acceptance of this Settings slice: `Passed` on 2026-10-19. Backup, restore, and Home production integration remain incomplete.
+[Contract](iteration-36-home-bottom-app-bar.md). Status: `In Progress`. The author authorized production implementation on 2026-10-16 within the accepted contract. The Settings persistence slice was accepted on 2026-10-19. The backup slice adds schema v6 Home bottom app bar fields, old-backup defaults, duplicate-identity rejection, and width-based restore truncation. Author-reported device acceptance of this backup slice: `Passed` on 2026-10-19. Home production integration remains incomplete.
 
 ### Iteration 37: Home Edit Mode Interaction
 

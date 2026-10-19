@@ -1,10 +1,7 @@
 package com.maxarchm.launcher.ui.settings
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,32 +14,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.sp
 import com.maxarchm.launcher.FavoriteListSize
 import com.maxarchm.launcher.HomeBottomAppBarPresentation
 import com.maxarchm.launcher.HomeBottomAppBarState
@@ -50,6 +38,7 @@ import com.maxarchm.launcher.R
 import com.maxarchm.launcher.homeBottomAppBarCapacity
 import com.maxarchm.launcher.iconSizeResource
 import com.maxarchm.launcher.ui.style.StyleTitleLine
+import com.maxarchm.launcher.ui.style.StyleTwoOptionSelector
 import com.maxarchm.launcher.ui.style.styleSettingsPanelSurface
 
 @Composable
@@ -261,146 +250,16 @@ private fun HomeBottomAppBarSelectorRow(
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        HomeBottomAppBarSelector(
+        StyleTwoOptionSelector(
             title = title,
-            labels = labels,
+            optionLabels = labels,
             selectedIndex = selectedIndex,
+            selectorWidth = selectorWidth,
             enabled = enabled,
             optionEnabled = optionEnabled,
-            selectorWidth = selectorWidth,
-            testTagPrefix = testTagPrefix,
             onSelectIndex = onSelectIndex,
+            testTagPrefix = testTagPrefix,
         )
-    }
-}
-
-@Composable
-private fun HomeBottomAppBarSelector(
-    title: String,
-    labels: List<String>,
-    selectedIndex: Int,
-    enabled: Boolean,
-    selectorWidth: Dp,
-    testTagPrefix: String,
-    onSelectIndex: (Int) -> Unit,
-    optionEnabled: List<Boolean> = List(labels.size) { true },
-) {
-    val animationDuration = integerResource(
-        id = R.integer.short_property_animation_duration_ms,
-    )
-    val frameShape = RoundedCornerShape(
-        size = dimensionResource(id = R.dimen.style_settings_selector_frame_radius),
-    )
-    Box(
-        modifier = Modifier
-            .size(
-                width = selectorWidth,
-                height = dimensionResource(id = R.dimen.style_settings_stepper_target_size),
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(dimensionResource(R.dimen.style_settings_selector_height))
-                .clip(frameShape)
-                .background(colorResource(R.color.launcher4max_sheet_surface))
-                .border(
-                    width = dimensionResource(R.dimen.style_settings_selector_border_width),
-                    color = MaterialTheme.colorScheme.onSurface.copy(
-                        alpha = integerResource(
-                            R.integer.style_settings_selector_border_alpha_percent,
-                        ) / 100f,
-                    ),
-                    shape = frameShape,
-                ),
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth()
-                .selectableGroup()
-                .semantics { contentDescription = title }
-                .padding(
-                    horizontal = dimensionResource(
-                        R.dimen.style_settings_selector_inner_padding,
-                    ),
-                ),
-        ) {
-            labels.forEachIndexed { index, label ->
-                val selected = index == selectedIndex
-                val optionAvailable = enabled && optionEnabled.getOrElse(index) { false }
-                val backgroundColor by animateColorAsState(
-                    targetValue = if (selected) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        Color.Transparent
-                    },
-                    animationSpec = tween(durationMillis = animationDuration),
-                    label = "${testTagPrefix}_background",
-                )
-                val contentColor by animateColorAsState(
-                    targetValue = if (selected) {
-                        colorResource(id = R.color.launcher4max_sheet_surface)
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                    animationSpec = tween(durationMillis = animationDuration),
-                    label = "${testTagPrefix}_content",
-                )
-                Box(
-                    modifier = Modifier
-                        .weight(weight = 1f)
-                        .height(dimensionResource(R.dimen.style_settings_stepper_target_size))
-                        .clip(
-                            shape = RoundedCornerShape(
-                                size = dimensionResource(
-                                    id = R.dimen.style_settings_selector_thumb_radius,
-                                ),
-                            ),
-                        )
-                        .selectable(
-                            selected = selected,
-                            enabled = optionAvailable,
-                            role = Role.RadioButton,
-                            onClick = { if (!selected) onSelectIndex(index) },
-                        )
-                        .testTag(tag = "${testTagPrefix}_$index"),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth()
-                            .height(
-                                dimensionResource(R.dimen.style_settings_selector_thumb_height),
-                            )
-                            .clip(
-                                RoundedCornerShape(
-                                    dimensionResource(R.dimen.style_settings_selector_thumb_radius),
-                                ),
-                            )
-                            .background(backgroundColor),
-                    )
-                    Text(
-                        text = label,
-                        color = if (optionAvailable || selected) {
-                            contentColor
-                        } else {
-                            contentColor.copy(
-                                alpha = integerResource(
-                                    R.integer.disabled_content_alpha_percent,
-                                ) / 100f,
-                            )
-                        },
-                        fontWeight = FontWeight.Medium,
-                        fontSize = dimensionResource(
-                            id = R.dimen.style_settings_secondary_text_size,
-                        ).value.sp,
-                        lineHeight = dimensionResource(
-                            id = R.dimen.style_settings_secondary_line_height,
-                        ).value.sp,
-                        maxLines = 1,
-                    )
-                }
-            }
-        }
     }
 }
 

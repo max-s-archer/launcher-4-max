@@ -339,6 +339,7 @@ internal fun StyleTwoOptionSelector(
     enabled: Boolean,
     onSelectIndex: (Int) -> Unit,
     testTagPrefix: String,
+    optionEnabled: List<Boolean> = List(optionLabels.size) { true },
 ) {
     val animationDuration = integerResource(
         id = R.integer.short_property_animation_duration_ms,
@@ -376,6 +377,7 @@ internal fun StyleTwoOptionSelector(
         ) {
             optionLabels.forEachIndexed { index, label ->
                 val selected = index == selectedIndex
+                val optionAvailable = enabled && optionEnabled.getOrElse(index) { false }
                 val backgroundColor by animateColorAsState(
                     targetValue = if (selected) {
                         MaterialTheme.colorScheme.onSurface
@@ -407,7 +409,7 @@ internal fun StyleTwoOptionSelector(
                         )
                         .selectable(
                             selected = selected,
-                            enabled = enabled,
+                            enabled = optionAvailable,
                             role = Role.RadioButton,
                             onClick = { if (!selected) onSelectIndex(index) },
                         )
@@ -422,7 +424,15 @@ internal fun StyleTwoOptionSelector(
                     )
                     Text(
                         text = label,
-                        color = contentColor,
+                        color = if (optionAvailable || selected) {
+                            contentColor
+                        } else {
+                            contentColor.copy(
+                                alpha = integerResource(
+                                    R.integer.disabled_content_alpha_percent,
+                                ) / 100f,
+                            )
+                        },
                         fontWeight = FontWeight.Medium,
                         fontSize = dimensionResource(
                             id = R.dimen.style_settings_secondary_text_size,

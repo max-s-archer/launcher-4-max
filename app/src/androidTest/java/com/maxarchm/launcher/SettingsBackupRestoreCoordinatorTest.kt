@@ -239,6 +239,7 @@ class SettingsBackupRestoreCoordinatorTest {
                 context,
                 FakeFavoritesAccess(OrderedFavoriteAggregate()),
                 FakeSettingsAccess(), FakeBindingsAccess(), store,
+                homeSafeWidthDp = { 360f },
             )
             val uri = Uri.fromFile(backupFile)
             assertTrue(controller.writeBackup(uri))

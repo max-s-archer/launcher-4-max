@@ -89,7 +89,7 @@
 
 ### 迭代 36：Home 底部应用栏
 
-[契约](iteration-36-home-bottom-app-bar.zh-CN.md)。状态：`In Progress`。作者于 2026-10-16 在既定契约范围内授权生产实现。Settings 持久化切片已加入 Settings 入口、控件、预览、接入 aggregate 的持久化状态模型、schema v4 兼容默认值、全局身份校验和实时容量计算。作者于 2026-10-19 报告该 Settings 切片设备验收：`Passed`。备份、恢复与 Home 生产集成仍未完成。
+[契约](iteration-36-home-bottom-app-bar.zh-CN.md)。状态：`In Progress`。作者于 2026-10-16 在既定契约范围内授权生产实现。Settings 持久化切片已于 2026-10-19 验收通过。备份切片已加入 schema v6 底部应用栏字段、旧备份默认值、重复身份拒绝和按宽度恢复截断。作者于 2026-10-19 报告该备份切片设备验收：`Passed`。Home 生产集成仍未完成。
 
 ### 迭代 37：Home 编辑模式交互
 

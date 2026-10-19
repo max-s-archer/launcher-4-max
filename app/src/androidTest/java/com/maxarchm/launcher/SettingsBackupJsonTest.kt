@@ -346,6 +346,77 @@ class SettingsBackupJsonTest {
         }
     }
 
+    @Test
+    fun roundTripPreservesHomeBottomAppBarWithoutCapacity() {
+        val aggregate = testAggregate().copy(
+            homeBottomAppBar = HomeBottomAppBarState(
+                enabled = true,
+                presentation = HomeBottomAppBarPresentation.Fixed,
+                iconSize = FavoriteListSize.Small,
+                identities = listOf(identity(4)),
+            ),
+        )
+
+        val parsed = SettingsBackupJson.parse(
+            SettingsBackupJson.serialize(aggregate = aggregate, settings = testSettings()),
+        )
+
+        assertEquals(aggregate, parsed?.aggregate)
+        val section = JSONObject(
+            SettingsBackupJson.serialize(aggregate = aggregate, settings = testSettings()),
+        ).getJSONObject("favorites").getJSONObject("homeBottomAppBar")
+        assertEquals(false, section.has("capacity"))
+    }
+
+    @Test
+    fun missingHomeBottomAppBarRestoresContractedDefaults() {
+        val document = validBackupDocument()
+        document.getJSONObject("favorites").remove("homeBottomAppBar")
+
+        assertEquals(
+            HomeBottomAppBarState(),
+            SettingsBackupJson.parse(document.toString())?.aggregate?.homeBottomAppBar,
+        )
+    }
+
+    @Test
+    fun sharedHomeBottomAppBarIdentityRejectsBackup() {
+        val document = validBackupDocument()
+        val shared = JSONObject()
+            .put("serial", 1)
+            .put("component", identity(1).componentName.flattenToString())
+        document.getJSONObject("favorites").getJSONObject("homeBottomAppBar")
+            .put("identities", org.json.JSONArray().put(shared))
+
+        assertNull(SettingsBackupJson.parse(document.toString()))
+    }
+
+    @Test
+    fun restoreKeepsOnlyCapacityAndRejectsMissingWidth() {
+        val identities = List(4) { index -> identity(index.toLong() + 10) }
+        val aggregate = testAggregate().copy(
+            homeBottomAppBar = HomeBottomAppBarState(identities = identities),
+        )
+
+        assertEquals(
+            identities.take(2),
+            aggregate.restoreHomeBottomAppBarForWidth(
+                safeWidthDp = 120f,
+                horizontalInsetDp = 16f,
+                iconGapDp = 16f,
+                iconSizeDp = { 40f },
+            )?.homeBottomAppBar?.identities,
+        )
+        assertNull(
+            aggregate.restoreHomeBottomAppBarForWidth(
+                safeWidthDp = 0f,
+                horizontalInsetDp = 16f,
+                iconGapDp = 16f,
+                iconSizeDp = { 40f },
+            ),
+        )
+    }
+
     private fun validBackupDocument(): JSONObject =
         JSONObject(
             SettingsBackupJson.serialize(

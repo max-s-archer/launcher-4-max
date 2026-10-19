@@ -72,7 +72,7 @@ private const val BACKUP_TIMESTAMP_PATTERN = "yyyyMMddHHmm"
  * present section restores that field's default value.
  */
 internal object SettingsBackupJson {
-    const val BACKUP_SCHEMA_VERSION = 5
+    const val BACKUP_SCHEMA_VERSION = 6
 
     fun serialize(
         aggregate: OrderedFavoriteAggregate,
@@ -94,26 +94,18 @@ internal object SettingsBackupJson {
                             .put("itemsPerRow", module.itemsPerRow)
                             .put(
                                 "identities",
-                                JSONArray().apply {
-                                    module.identities.forEach { identity ->
-                                        put(
-                                            JSONObject()
-                                                .put(
-                                                    "serial",
-                                                    identity.profileSerialNumber,
-                                                )
-                                                .put(
-                                                    "component",
-                                                    identity.componentName
-                                                        .flattenToString(),
-                                                ),
-                                        )
-                                    }
-                                },
+                                module.identities.toJson(),
                             ),
                     )
                 }
             },
+        ).put(
+            "homeBottomAppBar",
+            JSONObject()
+                .put("enabled", aggregate.homeBottomAppBar.enabled)
+                .put("presentation", aggregate.homeBottomAppBar.presentation.storageValue)
+                .put("iconSize", aggregate.homeBottomAppBar.iconSize.storageValue)
+                .put("identities", aggregate.homeBottomAppBar.identities.toJson()),
         )
         val displaySettings = JSONObject()
             .put("iconSize", settings.iconSize.storageValue)
@@ -184,7 +176,13 @@ internal object SettingsBackupJson {
             }
         }
         return try {
-            OrderedFavoriteAggregate(modules = parsed)
+            val homeBottomAppBar = parseHomeBottomAppBar(
+                favorites.optJSONObject("homeBottomAppBar"),
+            ) ?: return null
+            OrderedFavoriteAggregate(
+                modules = parsed,
+                homeBottomAppBar = homeBottomAppBar,
+            )
         } catch (_: IllegalArgumentException) {
             null
         }
@@ -222,6 +220,39 @@ internal object SettingsBackupJson {
         )
     } catch (_: Exception) {
         null
+    }
+
+    private fun parseHomeBottomAppBar(section: JSONObject?): HomeBottomAppBarState? {
+        if (section == null) return HomeBottomAppBarState()
+        return try {
+            HomeBottomAppBarState(
+                enabled = section.getBoolean("enabled"),
+                presentation = section.enumField(
+                    name = "presentation",
+                    default = HomeBottomAppBarPresentation.SemiHidden,
+                ) { value -> homeBottomAppBarPresentationFromStorageValue(value) }
+                    ?: return null,
+                iconSize = section.enumField(
+                    name = "iconSize",
+                    default = FavoriteListSize.Medium,
+                ) { value -> favoriteListSizeFromStorageValue(value) } ?: return null,
+                identities = parseIdentities(
+                    section.optJSONArray("identities") ?: return null,
+                ),
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun List<LaunchableIdentity>.toJson(): JSONArray = JSONArray().apply {
+        forEach { identity ->
+            put(
+                JSONObject()
+                    .put("serial", identity.profileSerialNumber)
+                    .put("component", identity.componentName.flattenToString()),
+            )
+        }
     }
 
     private fun parseIdentities(identities: JSONArray): List<LaunchableIdentity> = buildList {
@@ -330,6 +361,20 @@ internal object SettingsBackupJson {
         default: T,
         fromStorageValue: (String) -> T?,
     ): T? = if (has(name)) fromStorageValue(getString(name)) else default
+
+    private fun homeBottomAppBarPresentationFromStorageValue(
+        value: String,
+    ): HomeBottomAppBarPresentation? = when (value) {
+        "fixed" -> HomeBottomAppBarPresentation.Fixed
+        "semi_hidden" -> HomeBottomAppBarPresentation.SemiHidden
+        else -> null
+    }
+
+    private val HomeBottomAppBarPresentation.storageValue: String
+        get() = when (this) {
+            HomeBottomAppBarPresentation.Fixed -> "fixed"
+            HomeBottomAppBarPresentation.SemiHidden -> "semi_hidden"
+        }
 
     private fun orderedFavoriteModuleTypeFromStorageValue(
         value: String,
@@ -545,6 +590,7 @@ internal class SettingsBackupController(
     private val settings: BackupSettingsAccess,
     private val bindings: BackupBindingsAccess,
     private val iconShape: BackupIconShapeAccess,
+    private val homeSafeWidthDp: () -> Float?,
 ) : SettingsBackupControl {
     private val coordinator = SettingsBackupRestoreCoordinator(
         favorites = favorites,
@@ -603,8 +649,24 @@ internal class SettingsBackupController(
             }
         }
 
-    override suspend fun restore(backup: SettingsBackupState): Boolean =
-        coordinator.restore(backup = backup)
+    override suspend fun restore(backup: SettingsBackupState): Boolean {
+        val safeWidthDp = homeSafeWidthDp() ?: return false
+        val resources = context.resources
+        val aggregate = backup.aggregate.restoreHomeBottomAppBarForWidth(
+            safeWidthDp = safeWidthDp,
+            horizontalInsetDp = resources.getDimension(
+                R.dimen.home_bottom_app_bar_preview_horizontal_inset,
+            ) / resources.displayMetrics.density,
+            iconGapDp = resources.getDimension(
+                R.dimen.home_bottom_app_bar_preview_icon_gap,
+            ) / resources.displayMetrics.density,
+            iconSizeDp = { size ->
+                resources.getDimension(size.iconSizeResource()) /
+                    resources.displayMetrics.density
+            },
+        ) ?: return false
+        return coordinator.restore(backup = backup.copy(aggregate = aggregate))
+    }
 
     private companion object {
         const val WRITE_MODE = "wt"
