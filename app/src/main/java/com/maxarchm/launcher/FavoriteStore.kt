@@ -57,6 +57,7 @@ internal sealed interface FavoriteReadState {
     data class Readable(
         val aggregate: FavoriteAggregate,
         val orderedModules: List<OrderedFavoriteModule>? = null,
+        val orderedAggregate: OrderedFavoriteAggregate? = null,
     ) : FavoriteReadState {
         constructor(
             primaryIdentities: List<LaunchableIdentity>,

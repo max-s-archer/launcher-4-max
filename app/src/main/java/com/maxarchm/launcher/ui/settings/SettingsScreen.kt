@@ -104,6 +104,8 @@ internal fun SettingsScreen(
     iconShapeSaveFailureToken: Int = 0,
     onCommitIconShapeSettings: (IconShapeSettings) -> Unit = {},
     homeBottomAppBarState: HomeBottomAppBarState = HomeBottomAppBarState(),
+    homeBottomAppBarSaveInFlight: Boolean = false,
+    homeBottomAppBarSafeWidthDp: Float? = null,
     onHomeBottomAppBarStateChange: (HomeBottomAppBarState) -> Unit = {},
     page: SettingsPage = SettingsPage.Root,
     onPageChange: (SettingsPage) -> Unit = {},
@@ -234,6 +236,8 @@ internal fun SettingsScreen(
             } else if (page == SettingsPage.HomeBottomAppBar) {
                 HomeBottomAppBarSettingsContent(
                     state = homeBottomAppBarState,
+                    saveInFlight = homeBottomAppBarSaveInFlight,
+                    homeSafeWidthDp = homeBottomAppBarSafeWidthDp,
                     onStateChange = onHomeBottomAppBarStateChange,
                     modifier = Modifier.weight(1f),
                 )

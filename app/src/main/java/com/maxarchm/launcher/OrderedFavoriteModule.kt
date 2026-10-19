@@ -40,9 +40,11 @@ internal data class OrderedFavoriteModule(
 
 internal data class OrderedFavoriteAggregate(
     val modules: List<OrderedFavoriteModule> = emptyList(),
+    val homeBottomAppBar: HomeBottomAppBarState = HomeBottomAppBarState(),
 ) {
     val identities: List<LaunchableIdentity>
-        get() = modules.flatMap(OrderedFavoriteModule::identities)
+        get() = modules.flatMap(OrderedFavoriteModule::identities) +
+            homeBottomAppBar.identities
 }
 
 internal sealed interface OrderedFavoriteReadState {
@@ -271,11 +273,46 @@ internal class OrderedFavoriteModuleStore private constructor(
                     )
                 }
             }
+            val homeBottomAppBar = if (schemaVersion >= HOME_BOTTOM_APP_BAR_SCHEMA_VERSION) {
+                readHomeBottomAppBar(input)
+            } else {
+                HomeBottomAppBarState()
+            }
             require(input.read() == -1) { "Trailing ordered favorite data" }
-            val aggregate = OrderedFavoriteAggregate(modules)
+            val aggregate = OrderedFavoriteAggregate(
+                modules = modules,
+                homeBottomAppBar = homeBottomAppBar,
+            )
             require(isValidOrderedFavoriteAggregate(aggregate))
             aggregate
         }
+
+    private fun readHomeBottomAppBar(input: DataInputStream): HomeBottomAppBarState {
+        val enabled = input.readBoolean()
+        val presentation = HomeBottomAppBarPresentation.values().getOrNull(input.readInt())
+            ?: throw IllegalArgumentException("Invalid Home bottom app bar presentation")
+        val iconSize = FavoriteListSize.values().getOrNull(input.readInt())
+            ?: throw IllegalArgumentException("Invalid Home bottom app bar icon size")
+        val identityCount = input.readInt()
+        require(identityCount >= 0) { "Invalid Home bottom app bar identity count" }
+        val identities = buildList {
+            repeat(identityCount) {
+                val serial = input.readLong()
+                val flattenedComponent = input.readUTF()
+                val component = ComponentName.unflattenFromString(flattenedComponent)
+                    ?: throw IllegalArgumentException(
+                        "Invalid Home bottom app bar launchable component",
+                    )
+                add(LaunchableIdentity(serial, component))
+            }
+        }
+        return HomeBottomAppBarState(
+            enabled = enabled,
+            presentation = presentation,
+            iconSize = iconSize,
+            identities = identities,
+        )
+    }
 
     private fun writeDocument(aggregate: OrderedFavoriteAggregate) {
         require(isValidOrderedFavoriteAggregate(aggregate))
@@ -298,6 +335,14 @@ internal class OrderedFavoriteModuleStore private constructor(
                     data.writeUTF(identity.componentName.flattenToString())
                 }
             }
+            data.writeBoolean(aggregate.homeBottomAppBar.enabled)
+            data.writeInt(aggregate.homeBottomAppBar.presentation.ordinal)
+            data.writeInt(aggregate.homeBottomAppBar.iconSize.ordinal)
+            data.writeInt(aggregate.homeBottomAppBar.identities.size)
+            aggregate.homeBottomAppBar.identities.forEach { identity ->
+                data.writeLong(identity.profileSerialNumber)
+                data.writeUTF(identity.componentName.flattenToString())
+            }
             data.flush()
             atomicFile.finishWrite(output)
             output = null
@@ -314,7 +359,8 @@ internal class OrderedFavoriteModuleStore private constructor(
         const val MIN_READABLE_SCHEMA_VERSION = 1
         const val STYLE_SCHEMA_VERSION = 2
         const val INDEPENDENT_SIZE_SCHEMA_VERSION = 3
-        const val SCHEMA_VERSION = INDEPENDENT_SIZE_SCHEMA_VERSION
+        const val HOME_BOTTOM_APP_BAR_SCHEMA_VERSION = 4
+        const val SCHEMA_VERSION = HOME_BOTTOM_APP_BAR_SCHEMA_VERSION
         const val LEGACY_MAGIC = 0x4156454E
         const val LEGACY_SCHEMA_VERSION = 1
         const val LEGACY_COMPOSITION_SCHEMA_VERSION = 2
@@ -357,10 +403,10 @@ internal class OrderedFavoriteStoreAdapter private constructor(
                     aggregate
                 } else if (first?.type == OrderedFavoriteModuleType.Vertical) {
                     modules[0] = first.copy(identities = first.identities + identity)
-                    OrderedFavoriteAggregate(modules)
+                    aggregate.copy(modules = modules)
                 } else {
-                    OrderedFavoriteAggregate(
-                        modules +
+                    aggregate.copy(
+                        modules = modules +
                             OrderedFavoriteModule(
                                 id = nextOrderedModuleId("vertical-list", modules),
                                 type = OrderedFavoriteModuleType.Vertical,
@@ -379,7 +425,7 @@ internal class OrderedFavoriteStoreAdapter private constructor(
             action = {
                 update(
                     transform = { aggregate ->
-                        OrderedFavoriteAggregate(
+                        aggregate.copy(
                             modules = aggregate.modules.mapNotNull(
                                 transform = { module ->
                                     val retained = module.identities.filterNot(
@@ -393,6 +439,11 @@ internal class OrderedFavoriteStoreAdapter private constructor(
                                         else -> module.copy(identities = retained)
                                     }
                                 },
+                            ),
+                            homeBottomAppBar = aggregate.homeBottomAppBar.copy(
+                                identities = aggregate.homeBottomAppBar.identities.filterNot(
+                                    predicate = { candidate -> candidate in identities },
+                                ),
                             ),
                         )
                     },
@@ -451,7 +502,8 @@ internal class OrderedFavoriteStoreAdapter private constructor(
             }
             val modulesById = current.modules.associateBy(OrderedFavoriteModule::id)
             val reordered = OrderedFavoriteAggregate(
-                moduleIds.map { id -> modulesById.getValue(id) },
+                modules = moduleIds.map { id -> modulesById.getValue(id) },
+                homeBottomAppBar = current.homeBottomAppBar,
             )
             store.replaceAggregate(reordered).also { succeeded ->
                 if (succeeded) publish()
@@ -494,6 +546,7 @@ internal class OrderedFavoriteStoreAdapter private constructor(
                 FavoriteReadState.Readable(
                     aggregate = current.aggregate.toLegacyAggregate(),
                     orderedModules = current.aggregate.modules,
+                    orderedAggregate = current.aggregate,
                 )
         }
     }
@@ -571,7 +624,9 @@ private fun OrderedFavoriteAggregate.replaceWithLegacyAggregate(
             )
         }
         .toList()
-    return OrderedFavoriteAggregate(updatedModules + appendedModules)
+    return copy(
+        modules = updatedModules + appendedModules,
+    )
 }
 
 private fun FavoriteContainerType.toOrderedFavoriteModuleType(): OrderedFavoriteModuleType =
@@ -585,7 +640,9 @@ internal fun isValidOrderedFavoriteAggregate(
 ): Boolean {
     val modules = aggregate.modules
     if (modules.map(OrderedFavoriteModule::id).distinct().size != modules.size) return false
-    val identities = modules.flatMap(OrderedFavoriteModule::identities)
+    val homeBottomAppBar = aggregate.homeBottomAppBar
+    val identities = modules.flatMap(OrderedFavoriteModule::identities) +
+        homeBottomAppBar.identities
     return identities.distinct().size == identities.size && modules.all { module ->
         module.id.isNotBlank() &&
             module.identities.isNotEmpty() &&
@@ -602,7 +659,7 @@ internal fun isValidOrderedFavoriteAggregate(
                         module.namePlacement == FavoriteNamePlacement.Right &&
                         module.itemsPerRow == 1
             }
-    }
+    } && homeBottomAppBar.identities.distinct().size == homeBottomAppBar.identities.size
 }
 
 private fun legacyAdoptionLists(

@@ -8,8 +8,12 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.SnackbarDuration
@@ -40,6 +44,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
@@ -167,6 +172,7 @@ internal fun Launcher4MaxApp(
 ) {
     val androidContext = LocalContext.current
     val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val homeFavoriteListState = rememberLazyListState()
@@ -279,6 +285,7 @@ internal fun Launcher4MaxApp(
     var settingsOpen by remember { mutableStateOf(false) }
     var settingsPage by remember { mutableStateOf(SettingsPage.Root) }
     var homeBottomAppBarState by remember { mutableStateOf(HomeBottomAppBarState()) }
+    var homeBottomAppBarSaveInFlight by remember { mutableStateOf(false) }
     var externalLaunchPendingReturn by remember { mutableStateOf(false) }
     var inventoryRefreshPendingReturn by remember { mutableStateOf(false) }
     var shortcutOwner by remember { mutableStateOf<LaunchableIdentity?>(null) }
@@ -320,6 +327,15 @@ internal fun Launcher4MaxApp(
         )
     }
     homeCoordinator.updateFavoriteState(favoriteState)
+    val persistedHomeBottomAppBarState =
+        (favoriteState as? FavoriteReadState.Readable)
+            ?.orderedAggregate
+            ?.homeBottomAppBar
+    LaunchedEffect(persistedHomeBottomAppBarState, homeBottomAppBarSaveInFlight) {
+        if (!homeBottomAppBarSaveInFlight && persistedHomeBottomAppBarState != null) {
+            homeBottomAppBarState = persistedHomeBottomAppBarState
+        }
+    }
 
     LaunchedEffect(
         key1 = drawerDisplaySettingsState,
@@ -1134,7 +1150,7 @@ internal fun Launcher4MaxApp(
     }
     val iconShapePageOpen = settingsOpen && settingsPage == SettingsPage.IconShape
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .onGloballyPositioned { coordinates ->
@@ -1150,6 +1166,10 @@ internal fun Launcher4MaxApp(
                 }
             },
     ) {
+        val homeSafeInsets = WindowInsets.safeDrawing.asPaddingValues()
+        val homeSafeWidthDp = maxWidth -
+            homeSafeInsets.calculateLeftPadding(layoutDirection) -
+            homeSafeInsets.calculateRightPadding(layoutDirection)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1464,7 +1484,36 @@ internal fun Launcher4MaxApp(
                     }
                 },
                 homeBottomAppBarState = homeBottomAppBarState,
-                onHomeBottomAppBarStateChange = { homeBottomAppBarState = it },
+                homeBottomAppBarSaveInFlight = homeBottomAppBarSaveInFlight ||
+                    favoriteState !is FavoriteReadState.Readable,
+                homeBottomAppBarSafeWidthDp = homeSafeWidthDp.value,
+                onHomeBottomAppBarStateChange = { nextState ->
+                    if (
+                        !homeBottomAppBarSaveInFlight &&
+                        favoriteState is FavoriteReadState.Readable
+                    ) {
+                        val previousState = homeBottomAppBarState
+                        homeBottomAppBarState = nextState
+                        homeBottomAppBarSaveInFlight = true
+                        scope.launch {
+                            try {
+                                val saved = effectiveFavoriteStore.updateOrderedAggregate {
+                                    it.copy(homeBottomAppBar = nextState)
+                                } != null
+                                if (!saved) {
+                                    homeBottomAppBarState = previousState
+                                    Toast.makeText(
+                                        androidContext,
+                                        R.string.home_bottom_app_bar_save_failure,
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            } finally {
+                                homeBottomAppBarSaveInFlight = false
+                            }
+                        }
+                    }
+                },
                 onBindQuickAction = { slot, action ->
                     scope.launch {
                         effectiveQuickActionBindingsStore.replace(

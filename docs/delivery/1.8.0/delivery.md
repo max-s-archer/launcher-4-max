@@ -54,7 +54,7 @@ Primary risks are interaction overlap between the bottom app bar and edit mode, 
 | Iteration | Status | Updated | Basis |
 | --- | --- | --- | --- |
 | [Iteration 35: Icon Shape Customization](iteration-35-icon-shape-customization.md) | `Completed` | 2026-10-16 | All changes accepted by the author and merged into `main`. |
-| [Iteration 36: Home Bottom App Bar](iteration-36-home-bottom-app-bar.md) | `In Progress` | 2026-10-16 | The author authorized production implementation within the accepted contract. |
+| [Iteration 36: Home Bottom App Bar](iteration-36-home-bottom-app-bar.md) | `In Progress` | 2026-10-19 | The author authorized production implementation within the accepted contract. |
 | [Iteration 37: Home Edit Mode Interaction](iteration-37-home-edit-mode-interaction.md) | `Planned` | 2026-10-14 | The author identified module titles as part of the Home edit-mode interaction change. |
 | [Iteration 38: Home Favorite Placement and Layout](iteration-38-home-favorite-placement-layout.md) | `Planned` | 2026-10-14 | The accepted Home placement and layout updates form an independently reviewable placement journey. |
 | [Iteration 39: Home Loading and Closure](iteration-39-home-loading-closure.md) | `Planned` | 2026-10-14 | The author requested a final iteration for Home loading and small defined-scope issues. |
@@ -92,7 +92,7 @@ Author-reported acceptance of all iteration 35 changes: `Passed` on 2026-10-16.
 
 ### Iteration 36: Home Bottom App Bar
 
-[Contract](iteration-36-home-bottom-app-bar.md). Status: `In Progress`. The author authorized production implementation on 2026-10-16 within the accepted contract. The current slice adds the Settings entry, UI controls, preview, and an in-memory state model; persistence, backup, capacity calculation, and Home production integration remain incomplete.
+[Contract](iteration-36-home-bottom-app-bar.md). Status: `In Progress`. The author authorized production implementation on 2026-10-16 within the accepted contract. The Settings persistence slice adds the Settings entry, UI controls, preview, an aggregate-backed persisted state model, schema v4 compatibility defaults, global identity validation, and real-time capacity calculation. Author-reported device acceptance of this Settings slice: `Passed` on 2026-10-19. Backup, restore, and Home production integration remain incomplete.
 
 ### Iteration 37: Home Edit Mode Interaction
 
@@ -134,6 +134,6 @@ This version uses the `Author daily-use baseline` gates. The accepted APK must r
 
 ## Completion result
 
-Version 1.8.0 is not yet complete. As of 2026-10-16, Iteration 35 is `Completed`,
+Version 1.8.0 is not yet complete. As of 2026-10-19, Iteration 35 is `Completed`,
 accepted by the author, and merged into `main`; Iteration 36 is `In Progress`,
 while Iterations 37–39 remain `Planned`.

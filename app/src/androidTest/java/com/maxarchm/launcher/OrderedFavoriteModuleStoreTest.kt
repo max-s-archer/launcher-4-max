@@ -157,6 +157,7 @@ class OrderedFavoriteModuleStoreTest {
         val file = temporaryFile()
         val first = LaunchableIdentity(1, ComponentName("com.example.first", "Main"))
         val second = LaunchableIdentity(2, ComponentName("com.example.second", "Main"))
+        val bottom = LaunchableIdentity(3, ComponentName("com.example.bottom", "Main"))
         val aggregate = OrderedFavoriteAggregate(
             modules = listOf(
                 OrderedFavoriteModule(
@@ -174,6 +175,12 @@ class OrderedFavoriteModuleStoreTest {
                     identities = listOf(second),
                 ),
             ),
+            homeBottomAppBar = HomeBottomAppBarState(
+                enabled = true,
+                presentation = HomeBottomAppBarPresentation.Fixed,
+                iconSize = FavoriteListSize.Small,
+                identities = listOf(bottom),
+            ),
         )
         val store = OrderedFavoriteModuleStore(file)
         store.load()
@@ -186,7 +193,7 @@ class OrderedFavoriteModuleStoreTest {
             OrderedFavoriteReadState.Readable(aggregate),
             reloadedStore.state.value,
         )
-        assertEquals(listOf(first, second), aggregate.identities)
+        assertEquals(listOf(first, second, bottom), aggregate.identities)
         file.delete()
     }
 
@@ -273,6 +280,27 @@ class OrderedFavoriteModuleStoreTest {
                             type = OrderedFavoriteModuleType.Ribbon,
                             identities = listOf(identity),
                         ),
+                    ),
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun invalidOrderedAggregateRejectsIdentitySharedWithBottomAppBar() {
+        val identity = LaunchableIdentity(1, ComponentName("com.example", "Main"))
+        assertFalse(
+            isValidOrderedFavoriteAggregate(
+                OrderedFavoriteAggregate(
+                    modules = listOf(
+                        OrderedFavoriteModule(
+                            id = "one",
+                            type = OrderedFavoriteModuleType.Vertical,
+                            identities = listOf(identity),
+                        ),
+                    ),
+                    homeBottomAppBar = HomeBottomAppBarState(
+                        identities = listOf(identity),
                     ),
                 ),
             ),
