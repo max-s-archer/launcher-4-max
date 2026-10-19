@@ -72,6 +72,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.maxarchm.launcher.AccessibilityLockController
 import com.maxarchm.launcher.EmptyAccessibilityLockController
 import com.maxarchm.launcher.IconShapeSettings
+import com.maxarchm.launcher.HomeBottomAppBarState
 import com.maxarchm.launcher.QuickAction
 import com.maxarchm.launcher.QuickActionBindings
 import com.maxarchm.launcher.QuickActionSlot
@@ -86,6 +87,7 @@ internal enum class SettingsPage {
     Root,
     QuickActions,
     IconShape,
+    HomeBottomAppBar,
 }
 
 @Composable
@@ -101,6 +103,8 @@ internal fun SettingsScreen(
     iconShapeSaveInFlight: Boolean = false,
     iconShapeSaveFailureToken: Int = 0,
     onCommitIconShapeSettings: (IconShapeSettings) -> Unit = {},
+    homeBottomAppBarState: HomeBottomAppBarState = HomeBottomAppBarState(),
+    onHomeBottomAppBarStateChange: (HomeBottomAppBarState) -> Unit = {},
     page: SettingsPage = SettingsPage.Root,
     onPageChange: (SettingsPage) -> Unit = {},
     onBack: () -> Unit,
@@ -202,6 +206,7 @@ internal fun SettingsScreen(
                         SettingsPage.Root -> R.string.settings
                         SettingsPage.QuickActions -> R.string.quick_action_settings
                         SettingsPage.IconShape -> R.string.icon_shape
+                        SettingsPage.HomeBottomAppBar -> R.string.home_bottom_app_bar
                     },
                 ),
                 onBack = onBack,
@@ -224,6 +229,12 @@ internal fun SettingsScreen(
                         popupAnchorInWindow = anchor
                     },
                     onOpenServiceState = { showScreenLockExplanation = true },
+                    modifier = Modifier.weight(1f),
+                )
+            } else if (page == SettingsPage.HomeBottomAppBar) {
+                HomeBottomAppBarSettingsContent(
+                    state = homeBottomAppBarState,
+                    onStateChange = onHomeBottomAppBarStateChange,
                     modifier = Modifier.weight(1f),
                 )
             } else {
@@ -262,6 +273,14 @@ internal fun SettingsScreen(
                         supportingText = null,
                         onClick = { onPageChange(SettingsPage.IconShape) },
                         testTag = "settings_icon_shape",
+                    )
+                }
+                item(key = "home-bottom-app-bar") {
+                    PrimarySettingsItem(
+                        title = stringResource(R.string.home_bottom_app_bar),
+                        supportingText = null,
+                        onClick = { onPageChange(SettingsPage.HomeBottomAppBar) },
+                        testTag = "settings_home_bottom_app_bar",
                     )
                 }
                 if (backupController != null) {

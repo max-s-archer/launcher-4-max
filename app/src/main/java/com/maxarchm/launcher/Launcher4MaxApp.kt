@@ -278,6 +278,7 @@ internal fun Launcher4MaxApp(
     var favoriteSelectionSaving by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
     var settingsPage by remember { mutableStateOf(SettingsPage.Root) }
+    var homeBottomAppBarState by remember { mutableStateOf(HomeBottomAppBarState()) }
     var externalLaunchPendingReturn by remember { mutableStateOf(false) }
     var inventoryRefreshPendingReturn by remember { mutableStateOf(false) }
     var shortcutOwner by remember { mutableStateOf<LaunchableIdentity?>(null) }
@@ -1462,6 +1463,8 @@ internal fun Launcher4MaxApp(
                         }
                     }
                 },
+                homeBottomAppBarState = homeBottomAppBarState,
+                onHomeBottomAppBarStateChange = { homeBottomAppBarState = it },
                 onBindQuickAction = { slot, action ->
                     scope.launch {
                         effectiveQuickActionBindingsStore.replace(

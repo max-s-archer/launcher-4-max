@@ -142,6 +142,13 @@
     <string name="settings_data_restore_confirm">Restore</string>
     <string name="quick_action_settings">Quick action settings</string>
     <string name="icon_shape">Icon shape</string>
+    <string name="home_bottom_app_bar">Home bottom app bar</string>
+    <string name="home_bottom_app_bar_enable">Enable Home bottom app bar</string>
+    <string name="home_bottom_app_bar_presentation">Presentation</string>
+    <string name="home_bottom_app_bar_fixed">Fixed</string>
+    <string name="home_bottom_app_bar_semi_hidden">Semi-hidden</string>
+    <string name="home_bottom_app_bar_icon_size">Icon size</string>
+    <string name="home_bottom_app_bar_preview">Home bottom app bar preview</string>
     <string name="icon_shape_clip_mode">Clip mode</string>
     <string name="icon_shape_save_failure">Unable to save icon shape</string>
     <string name="icon_shape_oem_clip">OEM clip</string>

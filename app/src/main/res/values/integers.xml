@@ -13,4 +13,5 @@
     <integer name="home_favorite_bar_item_background_alpha_percent">6</integer>
     <integer name="home_favorite_bar_border_alpha_percent">12</integer>
     <integer name="home_favorite_bar_overflow_fade_alpha_percent">24</integer>
+    <integer name="home_bottom_app_bar_semi_hidden_alpha_percent">80</integer>
 </resources>

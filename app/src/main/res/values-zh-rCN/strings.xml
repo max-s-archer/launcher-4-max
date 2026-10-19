@@ -139,6 +139,13 @@
     <string name="settings_data_restore_confirm">恢复</string>
     <string name="quick_action_settings">快捷操作设置</string>
     <string name="icon_shape">图标形状</string>
+    <string name="home_bottom_app_bar">主页底部常驻应用栏</string>
+    <string name="home_bottom_app_bar_enable">启用主页底部常驻应用栏</string>
+    <string name="home_bottom_app_bar_presentation">呈现方式</string>
+    <string name="home_bottom_app_bar_fixed">固定</string>
+    <string name="home_bottom_app_bar_semi_hidden">半隐藏</string>
+    <string name="home_bottom_app_bar_icon_size">图标大小</string>
+    <string name="home_bottom_app_bar_preview">主页底部常驻应用栏预览</string>
     <string name="icon_shape_clip_mode">剪裁模式</string>
     <string name="icon_shape_save_failure">无法保存图标形状</string>
     <string name="icon_shape_oem_clip">OEM 剪裁</string>
