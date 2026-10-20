@@ -148,6 +148,7 @@
     <string name="home_bottom_app_bar_preview">主页底部常驻应用栏预览</string>
     <string name="home_bottom_app_bar_capacity_preview">当前宽度最多显示 %1$d 个应用</string>
     <string name="home_bottom_app_bar_save_failure">无法保存主页底部常驻应用栏设置</string>
+    <string name="home_bottom_app_bar_add">添加到主页底部常驻应用栏</string>
     <string name="icon_shape_clip_mode">剪裁模式</string>
     <string name="icon_shape_save_failure">无法保存图标形状</string>
     <string name="icon_shape_oem_clip">OEM 剪裁</string>

@@ -83,6 +83,8 @@ private data class FavoriteAddTarget(
     val containerType: FavoriteContainerType,
     val label: String,
     val provisional: Boolean,
+    val homeBottomAppBar: Boolean = false,
+    val remainingPlaces: Int? = null,
 )
 
 private fun nextFavoriteContainerId(
@@ -288,6 +290,7 @@ internal fun Launcher4MaxApp(
     var settingsPage by remember { mutableStateOf(SettingsPage.Root) }
     var homeBottomAppBarState by remember { mutableStateOf(HomeBottomAppBarState()) }
     var homeBottomAppBarSaveInFlight by remember { mutableStateOf(false) }
+    var homeBottomAppBarExpanded by remember { mutableStateOf(false) }
     var externalLaunchPendingReturn by remember { mutableStateOf(false) }
     var inventoryRefreshPendingReturn by remember { mutableStateOf(false) }
     var shortcutOwner by remember { mutableStateOf<LaunchableIdentity?>(null) }
@@ -300,6 +303,7 @@ internal fun Launcher4MaxApp(
     val addToListLabel = stringResource(R.string.drawer_selection_add_to_list)
     val createListLabel = stringResource(R.string.drawer_selection_create_list)
     val addToFavoriteBarLabel = stringResource(R.string.drawer_selection_add_to_favorite_bar)
+    val addToHomeBottomAppBarLabel = stringResource(R.string.home_bottom_app_bar_add)
     val createFavoriteBarLabel = stringResource(
         R.string.drawer_selection_create_favorite_bar,
     )
@@ -487,11 +491,7 @@ internal fun Launcher4MaxApp(
     LaunchedEffect(homeCoordinator.editMode) {
         if (!homeCoordinator.editMode) {
             favoriteEditor.invalidateUndo()
-            homeCoordinator.clearEditSelection()
-            // A drag-to-favorite journey ends when its edit mode ends: without a
-            // committed destination the journey resolves as a cancellation that leaves
-            // normal Home without a mutation and without returning to Drawer.
-            homeCoordinator.clearDrawerDrag()
+            homeBottomAppBarExpanded = false
         }
     }
 
@@ -689,6 +689,39 @@ internal fun Launcher4MaxApp(
         settleTo(AppSurface.Drawer)
     }
 
+    fun openHomeBottomAppBarSelection() {
+        if (favoriteEditor.isSaving) return
+        val readable = favoriteState as? FavoriteReadState.Readable ?: return
+        val bar = readable.orderedAggregate?.homeBottomAppBar ?: return
+        val capacity = homeBottomAppBarCapacity(
+            safeWidthDp = homeSafeWidthDp,
+            iconSizeDp = androidContext.resources.getDimension(
+                bar.iconSize.iconSizeResource(),
+            ) / androidContext.resources.displayMetrics.density,
+            horizontalInsetDp = androidContext.resources.getDimension(
+                R.dimen.home_bottom_app_bar_preview_horizontal_inset,
+            ) / androidContext.resources.displayMetrics.density,
+            iconGapDp = androidContext.resources.getDimension(
+                R.dimen.home_bottom_app_bar_preview_icon_gap,
+            ) / androidContext.resources.displayMetrics.density,
+        )
+        val remainingPlaces = (capacity - bar.identities.size).coerceAtLeast(0)
+        if (remainingPlaces == 0) return
+        favoriteEditor.invalidateUndo()
+        favoriteAddTarget = FavoriteAddTarget(
+            containerId = null,
+            containerType = FavoriteContainerType.FavoriteBar,
+            label = addToHomeBottomAppBarLabel,
+            provisional = false,
+            homeBottomAppBar = true,
+            remainingPlaces = remainingPlaces,
+        )
+        favoriteSelection = emptyList()
+        favoriteSelectionSaving = false
+        drawerActivated = true
+        settleTo(AppSurface.Drawer)
+    }
+
     fun openFavoriteBarSelection(containerId: String) {
         if (favoriteEditor.isSaving) return
         val readable = favoriteState as? FavoriteReadState.Readable ?: return
@@ -739,7 +772,45 @@ internal fun Launcher4MaxApp(
                 .orEmpty()
             var updatedAggregate: FavoriteAggregate? = null
             var targetInvalid = false
-            val savedAggregate = inventorySnapshot?.let {
+            val saved = if (target.homeBottomAppBar) {
+                var appended = false
+                effectiveFavoriteStore.updateOrderedAggregate { aggregate ->
+                    val capacity = homeBottomAppBarCapacity(
+                        safeWidthDp = homeSafeWidthDp,
+                        iconSizeDp = androidContext.resources.getDimension(
+                            aggregate.homeBottomAppBar.iconSize.iconSizeResource(),
+                        ) / androidContext.resources.displayMetrics.density,
+                        horizontalInsetDp = androidContext.resources.getDimension(
+                            R.dimen.home_bottom_app_bar_preview_horizontal_inset,
+                        ) / androidContext.resources.displayMetrics.density,
+                        iconGapDp = androidContext.resources.getDimension(
+                            R.dimen.home_bottom_app_bar_preview_icon_gap,
+                        ) / androidContext.resources.displayMetrics.density,
+                    )
+                    val appendable = selected.filter { identity ->
+                        (identity in currentInventoryIdentities ||
+                            identity.profileSerialNumber in temporarilyUnavailableIdentities) &&
+                            identity !in aggregate.identities
+                    }
+                    val capturedPlaces = target.remainingPlaces
+                        ?: (capacity - aggregate.homeBottomAppBar.identities.size)
+                            .coerceAtLeast(0)
+                    if (appendable.size != selected.size ||
+                        appendable.size > capturedPlaces ||
+                        aggregate.homeBottomAppBar.identities.size + appendable.size > capacity
+                    ) {
+                        targetInvalid = true
+                        aggregate
+                    } else {
+                        appended = true
+                        aggregate.copy(
+                            homeBottomAppBar = aggregate.homeBottomAppBar.copy(
+                                identities = aggregate.homeBottomAppBar.identities + appendable,
+                            ),
+                        )
+                    }
+                } != null && appended
+            } else inventorySnapshot?.let {
                 favoriteEditor.updateComposition(transform = { aggregate ->
                     val targetContainers = when (target.containerType) {
                         FavoriteContainerType.VerticalList -> aggregate.verticalLists
@@ -814,15 +885,14 @@ internal fun Launcher4MaxApp(
             }
             if (targetInvalid) {
                 favoriteSelectionSaving = false
-                closeFavoriteSelection()
                 Toast.makeText(
                     androidContext,
-                    R.string.favorite_reorder_unavailable,
+                    R.string.drawer_drag_unable_to_save_favorite,
                     Toast.LENGTH_SHORT,
                 ).show()
                 return@launch
             }
-            if (savedAggregate != null) {
+            if (saved == true) {
                 updatedAggregate?.let(homeCoordinator::updateEditMembership)
                 closeFavoriteSelection()
             } else {
@@ -945,6 +1015,15 @@ internal fun Launcher4MaxApp(
             homeCoordinator.dismissEditMode()
             homeCoordinator.selectModule(moduleId = null)
         }
+    }
+
+    BackHandler(enabled = !homeCoordinator.editMode && !settingsOpen &&
+        settledSurface == AppSurface.Home && progress == 0f &&
+        homeCoordinator.stylePanelExpanded.not() &&
+        selectedEntry == null &&
+        homeBottomAppBarExpanded
+    ) {
+        homeBottomAppBarExpanded = false
     }
 
     BackHandler(enabled = !homeCoordinator.editMode && !settingsOpen &&
@@ -1240,6 +1319,34 @@ internal fun Launcher4MaxApp(
                 onAddProvisionalFavorites = ::openProvisionalFavoriteSelection,
                 onAddFavoritesToBar = ::openFavoriteBarSelection,
                 onAddProvisionalFavoriteBar = ::openProvisionalFavoriteBarSelection,
+                onAddToHomeBottomAppBar = ::openHomeBottomAppBarSelection,
+                onReorderHomeBottomAppBar = { identities ->
+                    scope.launch {
+                        val saved = effectiveFavoriteStore.updateOrderedAggregate { aggregate ->
+                            if (aggregate.homeBottomAppBar.identities.toSet() !=
+                                identities.toSet() ||
+                                aggregate.homeBottomAppBar.identities.size != identities.size
+                            ) {
+                                aggregate
+                            } else {
+                                aggregate.copy(
+                                    homeBottomAppBar = aggregate.homeBottomAppBar.copy(
+                                        identities = identities,
+                                    ),
+                                )
+                            }
+                        } != null
+                        if (!saved) {
+                            Toast.makeText(
+                                androidContext,
+                                R.string.drawer_drag_unable_to_save_favorite,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }
+                },
+                homeBottomAppBarExpanded = homeBottomAppBarExpanded,
+                onHomeBottomAppBarExpandedChange = { homeBottomAppBarExpanded = it },
                 favoriteRevealContainerId = homeCoordinator.favoriteRevealRequest?.containerId,
                 favoriteRevealContainerType = homeCoordinator.favoriteRevealRequest?.containerType,
                 favoriteRevealIdentity = homeCoordinator.favoriteRevealRequest?.identity,
@@ -1351,9 +1458,14 @@ internal fun Launcher4MaxApp(
                     favoriteSelection = favoriteSelection,
                     favoriteMembership = favoriteMembership.orEmpty(),
                     favoriteSelectionSaving = favoriteSelectionSaving,
+                    favoriteSelectionLimit = favoriteAddTarget?.remainingPlaces,
                     onToggleFavoriteSelection = { identity ->
+                        val limit = favoriteAddTarget?.remainingPlaces
                         if (identity !in favoriteMembership.orEmpty() &&
-                            !favoriteSelectionSaving
+                            !favoriteSelectionSaving &&
+                            (identity in favoriteSelection ||
+                                limit == null ||
+                                favoriteSelection.size < limit)
                         ) {
                             favoriteSelection = if (identity in favoriteSelection) {
                                 favoriteSelection - identity

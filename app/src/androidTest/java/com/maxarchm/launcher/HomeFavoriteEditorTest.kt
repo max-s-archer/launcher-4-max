@@ -120,8 +120,34 @@ class HomeFavoriteEditorTest {
         )
         assertEquals(
             listOf(identity(serial = 2), identity(serial = 3)),
-            restoreOrderedFavorite(aggregate = current, snapshot = snapshot).identities,
+            restoreOrderedFavorite(aggregate = current, snapshot = snapshot)?.identities,
         )
+    }
+
+    @Test
+    fun barRemovalRestoresFormerPlaceUntilTheCapturedCapacityIsFull() {
+        val original = OrderedFavoriteAggregate(
+            homeBottomAppBar = HomeBottomAppBarState(
+                enabled = true,
+                identities = listOf(identity(serial = 1), identity(serial = 2)),
+            ),
+        )
+        val snapshot = checkNotNull(
+            value = captureFavoriteRemoval(aggregate = original, identity = identity(serial = 1)),
+        )
+        val removed = removeOrderedFavorite(aggregate = original, identity = identity(serial = 1))
+        assertEquals(
+            listOf(identity(serial = 1), identity(serial = 2)),
+            restoreOrderedFavorite(aggregate = removed, snapshot = snapshot)
+                ?.homeBottomAppBar
+                ?.identities,
+        )
+        val filled = removed.copy(
+            homeBottomAppBar = removed.homeBottomAppBar.copy(
+                identities = listOf(identity(serial = 3), identity(serial = 4)),
+            ),
+        )
+        assertNull(restoreOrderedFavorite(aggregate = filled, snapshot = snapshot))
     }
 
     @Test

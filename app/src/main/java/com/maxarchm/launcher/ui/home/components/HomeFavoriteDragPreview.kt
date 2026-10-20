@@ -449,8 +449,7 @@ internal fun HomeFavoritePreviewContent(
     Row(
         modifier = Modifier
             .widthIn(max = maxWidth)
-            .wrapContentWidth()
-            .graphicsLayer { this.shadowElevation = shadowElevation },
+            .wrapContentWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (entry == null) {

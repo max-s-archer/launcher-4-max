@@ -288,7 +288,7 @@ private fun HomeBottomAppBarPreview(
                 .fillMaxWidth()
                 .height(
                     if (collapsed) {
-                        dimensionResource(R.dimen.home_bottom_app_bar_collapsed_height)
+                        dimensionResource(R.dimen.home_bottom_app_bar_collapsed_exposure)
                     } else {
                         fullHeight
                     },

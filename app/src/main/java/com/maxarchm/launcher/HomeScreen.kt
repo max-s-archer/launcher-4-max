@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -63,6 +64,9 @@ import com.maxarchm.launcher.ui.home.HomeFavoriteEditOrchestration
 import com.maxarchm.launcher.ui.home.components.HomeApplicationMovementOverlay
 import com.maxarchm.launcher.ui.home.components.HomeDrawerDragHandling
 import com.maxarchm.launcher.ui.home.components.HomeBasicInformation
+import com.maxarchm.launcher.ui.home.components.HomeDockDragGhost
+import com.maxarchm.launcher.ui.home.components.HomeDockDragPreview
+import com.maxarchm.launcher.ui.home.components.HomeDockSurface
 import com.maxarchm.launcher.ui.home.components.HomeDefaultLauncherPrompt
 import com.maxarchm.launcher.ui.home.components.HomeEditDock
 import com.maxarchm.launcher.ui.home.components.HomeFavoriteBarContainerDragPreview
@@ -124,6 +128,10 @@ internal fun HomeScreen(
     onAddProvisionalFavorites: () -> Unit = {},
     onAddFavoritesToBar: (String) -> Unit = {},
     onAddProvisionalFavoriteBar: () -> Unit = {},
+    onAddToHomeBottomAppBar: () -> Unit = {},
+    onReorderHomeBottomAppBar: (List<LaunchableIdentity>) -> Unit = {},
+    homeBottomAppBarExpanded: Boolean = false,
+    onHomeBottomAppBarExpandedChange: (Boolean) -> Unit = {},
     favoriteRevealContainerId: String? = null,
     favoriteRevealContainerType: FavoriteContainerType? = null,
     favoriteRevealIdentity: LaunchableIdentity? = null,
@@ -174,6 +182,9 @@ internal fun HomeScreen(
     val snackbarHostState = removalSnackbarHostState ?: remember { SnackbarHostState() }
     val editScope = rememberCoroutineScope()
     var dragRootOriginInWindow by remember { mutableStateOf(Offset.Zero) }
+    var homeDockDragPreview by remember {
+        mutableStateOf<HomeDockDragPreview?>(null)
+    }
     // Band at a row's top and bottom edge that a cross-group drag reads as an insertion boundary
     // instead of the favorite's body, because adjacent rows leave no gap between them.
     val insertionBoundaryBandPx = with(LocalDensity.current) {
@@ -498,6 +509,12 @@ internal fun HomeScreen(
                         contentPadding -
                         dimensionResource(R.dimen.home_style_panel_minimum_list_viewport)
                 ).coerceAtLeast(0.dp)
+        val homeContentWidthDp = maxWidth.value
+        val persistedBar = (favoriteState as? FavoriteReadState.Readable)
+            ?.orderedAggregate
+            ?.homeBottomAppBar
+        val barVisible = persistedBar?.enabled == true &&
+            (editMode || persistedBar.identities.isNotEmpty())
         Column(modifier = Modifier.fillMaxSize()) {
             if (editMode) {
                 HomeEditDock(
@@ -626,6 +643,20 @@ internal fun HomeScreen(
                         start = contentPadding,
                         end = contentPadding,
                         bottom = contentPadding,
+                    )
+                    .then(
+                        if (barVisible &&
+                            !editMode &&
+                            homeBottomAppBarExpanded &&
+                            persistedBar?.presentation ==
+                            HomeBottomAppBarPresentation.SemiHidden
+                        ) {
+                            Modifier.clickable {
+                                onHomeBottomAppBarExpandedChange(false)
+                            }
+                        } else {
+                            Modifier
+                        },
                     )
                     .onGloballyPositioned(onGloballyPositioned = { coordinates ->
                         favoriteEnterBatch.exitTransitions?.viewport = Rect(
@@ -1465,6 +1496,23 @@ internal fun HomeScreen(
                     )
                 }
             }
+            if (barVisible && persistedBar != null) {
+                HomeDockSurface(
+                    state = persistedBar,
+                    safeWidthDp = homeContentWidthDp,
+                    expanded = homeBottomAppBarExpanded,
+                    editMode = editMode,
+                    availabilityByIdentity = favoriteAvailability,
+                    mutationEnabled = !applicationEditingSaving,
+                    onExpandedChange = onHomeBottomAppBarExpandedChange,
+                    onLaunch = onLaunchFavorite,
+                    onLongPress = onLongPressFavorite,
+                    onRemove = onRemoveApplication,
+                    onAdd = onAddToHomeBottomAppBar,
+                    onReorder = onReorderHomeBottomAppBar,
+                    onDragPreviewChange = { homeDockDragPreview = it },
+                )
+            }
         }
         HomeFavoriteExitOverlay(
             owner = favoriteEnterBatch.exitTransitions,
@@ -1536,6 +1584,12 @@ internal fun HomeScreen(
         orchestration.moduleDragSession?.let { session ->
             HomeModuleDragPreview(
                 session = session,
+                rootOriginInWindow = dragRootOriginInWindow,
+            )
+        }
+        homeDockDragPreview?.let { preview ->
+            HomeDockDragGhost(
+                preview = preview,
                 rootOriginInWindow = dragRootOriginInWindow,
             )
         }

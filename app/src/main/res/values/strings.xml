@@ -151,6 +151,7 @@
     <string name="home_bottom_app_bar_preview">Home bottom app bar preview</string>
     <string name="home_bottom_app_bar_capacity_preview">Up to %1$d apps at this width</string>
     <string name="home_bottom_app_bar_save_failure">Unable to save Home bottom app bar settings</string>
+    <string name="home_bottom_app_bar_add">Add to Home bottom app bar</string>
     <string name="icon_shape_clip_mode">Clip mode</string>
     <string name="icon_shape_save_failure">Unable to save icon shape</string>
     <string name="icon_shape_oem_clip">OEM clip</string>

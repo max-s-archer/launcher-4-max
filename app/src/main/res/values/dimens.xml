@@ -245,8 +245,11 @@
     <dimen name="icon_shape_settings_bottom_margin">32dp</dimen>
     <dimen name="home_bottom_app_bar_preview_vertical_padding">8dp</dimen>
     <dimen name="home_bottom_app_bar_preview_horizontal_inset">16dp</dimen>
+    <dimen name="home_bottom_app_bar_outer_margin">16dp</dimen>
+    <dimen name="home_bottom_app_bar_corner_radius">16dp</dimen>
     <dimen name="home_bottom_app_bar_preview_icon_gap">16dp</dimen>
-    <dimen name="home_bottom_app_bar_collapsed_height">24dp</dimen>
+    <dimen name="home_bottom_app_bar_collapsed_exposure">16dp</dimen>
+    <dimen name="home_bottom_app_bar_remove_inset">8dp</dimen>
 
     <!-- Settings screen / Primary and nested preference rows -->
     <dimen name="settings_primary_one_line_min_height">56dp</dimen>

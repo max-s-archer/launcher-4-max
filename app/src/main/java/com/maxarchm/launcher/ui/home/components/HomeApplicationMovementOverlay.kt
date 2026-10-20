@@ -137,13 +137,6 @@ internal fun HomeApplicationMovementOverlay(
         val width = with(receiver = density, block = { source.sourceBounds.width.toDp() })
         val height = with(receiver = density, block = { source.sourceBounds.height.toDp() })
         val ribbon = source.module.type == OrderedFavoriteModuleType.Ribbon
-        val shape = if (ribbon) {
-            RoundedCornerShape(
-                size = dimensionResource(id = R.dimen.home_favorite_bar_corner_radius),
-            )
-        } else {
-            RectangleShape
-        }
         Box(
             modifier = Modifier
                 .offset(
@@ -153,11 +146,6 @@ internal fun HomeApplicationMovementOverlay(
                     },
                 )
                 .size(width = width, height = height)
-                .shadow(
-                    elevation = dimensionResource(id = R.dimen.home_module_drag_shadow_elevation),
-                    shape = shape,
-                    clip = false,
-                )
                 .testTag(tag = "home_application_movement_preview"),
             content = {
                 if (!ribbon && source.module.namePlacement == FavoriteNamePlacement.Below) {

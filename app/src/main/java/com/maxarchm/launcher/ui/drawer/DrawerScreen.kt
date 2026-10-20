@@ -144,6 +144,7 @@ internal fun DrawerScreen(
     favoriteSelection: List<LaunchableIdentity> = emptyList(),
     favoriteMembership: Set<LaunchableIdentity> = emptySet(),
     favoriteSelectionSaving: Boolean = false,
+    favoriteSelectionLimit: Int? = null,
     favoriteAvailability: Map<LaunchableIdentity, FavoriteAvailability> = emptyMap(),
     onToggleFavoriteSelection: (LaunchableIdentity) -> Unit = {},
     onCancelFavoriteSelection: () -> Unit = {},
@@ -611,6 +612,7 @@ internal fun DrawerScreen(
                     selection = favoriteSelection,
                     favoriteMembership = favoriteMembership,
                     saving = favoriteSelectionSaving,
+                    selectionLimit = favoriteSelectionLimit,
                     onToggle = onToggleFavoriteSelection,
                     onCancel = onCancelFavoriteSelection,
                     onConfirm = onConfirmFavoriteSelection,
@@ -733,6 +735,7 @@ private fun DrawerSelectionMessage(
         DrawerSelectionHeader(
             target = target,
             selectionSize = selection.size,
+            selectionLimit = null,
             saving = saving,
             onCancel = onCancel,
             onConfirm = onConfirm,
@@ -765,6 +768,7 @@ private fun DrawerFavoriteSelectionList(
     selection: List<LaunchableIdentity>,
     favoriteMembership: Set<LaunchableIdentity>,
     saving: Boolean,
+    selectionLimit: Int? = null,
     onToggle: (LaunchableIdentity) -> Unit,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
@@ -789,6 +793,7 @@ private fun DrawerFavoriteSelectionList(
         DrawerSelectionHeader(
             target = target,
             selectionSize = selection.size,
+            selectionLimit = selectionLimit,
             saving = saving,
             onCancel = onCancel,
             onConfirm = onConfirm,
@@ -899,6 +904,7 @@ private fun DrawerFavoriteSelectionList(
 private fun DrawerSelectionHeader(
     target: String,
     selectionSize: Int,
+    selectionLimit: Int?,
     saving: Boolean,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
@@ -942,7 +948,8 @@ private fun DrawerSelectionHeader(
         ) {
             TextButton(
                 onClick = onConfirm,
-                enabled = !saving && selectionSize > 0,
+                enabled = !saving && selectionSize > 0 &&
+                    (selectionLimit == null || selectionSize <= selectionLimit),
                 modifier = Modifier.testTag("drawer_favorite_selection_confirm"),
                 colors = ButtonDefaults.textButtonColors(
                     contentColor = colorResource(R.color.launcher4max_foreground),

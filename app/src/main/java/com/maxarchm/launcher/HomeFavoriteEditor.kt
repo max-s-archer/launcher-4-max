@@ -10,16 +10,30 @@ import java.util.UUID
 /** One removal, not a historical copy of the entire Home composition. */
 internal data class FavoriteRemovalSnapshot(
     val identity: LaunchableIdentity,
-    val module: OrderedFavoriteModule,
+    val module: OrderedFavoriteModule?,
     val moduleIndex: Int,
     val applicationIndex: Int,
     val moduleOrder: List<String>,
+    val barIndex: Int? = null,
+    val barOrder: List<LaunchableIdentity> = emptyList(),
 )
 
 internal fun captureFavoriteRemoval(
     aggregate: OrderedFavoriteAggregate,
     identity: LaunchableIdentity,
 ): FavoriteRemovalSnapshot? {
+    val barIndex = aggregate.homeBottomAppBar.identities.indexOf(element = identity)
+    if (barIndex >= 0) {
+        return FavoriteRemovalSnapshot(
+            identity = identity,
+            module = null,
+            moduleIndex = -1,
+            applicationIndex = -1,
+            moduleOrder = emptyList(),
+            barIndex = barIndex,
+            barOrder = aggregate.homeBottomAppBar.identities,
+        )
+    }
     val moduleIndex = aggregate.modules.indexOfFirst(
         predicate = { module -> identity in module.identities },
     )
@@ -48,15 +62,38 @@ internal fun removeOrderedFavorite(
             }
         },
     ),
+    homeBottomAppBar = aggregate.homeBottomAppBar.copy(
+        identities = aggregate.homeBottomAppBar.identities.filterNot(
+            predicate = { it == identity },
+        ),
+    ),
 )
 
 internal fun restoreOrderedFavorite(
     aggregate: OrderedFavoriteAggregate,
     snapshot: FavoriteRemovalSnapshot,
-): OrderedFavoriteAggregate {
+): OrderedFavoriteAggregate? {
     if (snapshot.identity in aggregate.identities) return aggregate
+    val barIndex = snapshot.barIndex
+    if (barIndex != null) {
+        val identities = aggregate.homeBottomAppBar.identities.toMutableList()
+        val capacity = snapshot.barOrder.size + 1
+        if (identities.size >= capacity) return null
+        identities.add(
+            index = restoredFavoritePosition(
+                originalOrder = snapshot.barOrder,
+                originalIndex = barIndex,
+                currentOrder = identities,
+            ),
+            element = snapshot.identity,
+        )
+        return aggregate.copy(
+            homeBottomAppBar = aggregate.homeBottomAppBar.copy(identities = identities),
+        )
+    }
+    val moduleSnapshot = snapshot.module ?: return aggregate
     val modules = aggregate.modules.toMutableList()
-    val moduleIndex = modules.indexOfFirst(predicate = { it.id == snapshot.module.id })
+    val moduleIndex = modules.indexOfFirst(predicate = { it.id == moduleSnapshot.id })
     if (moduleIndex < 0) {
         // Restore only this identity. Other members may have disappeared through reliable
         // inventory reconciliation since removal, and must never be resurrected by Undo.
@@ -66,15 +103,15 @@ internal fun restoreOrderedFavorite(
                 originalIndex = snapshot.moduleIndex,
                 currentOrder = modules.map(transform = { it.id }),
             ),
-            element = snapshot.module.copy(identities = listOf(element = snapshot.identity)),
+            element = moduleSnapshot.copy(identities = listOf(element = snapshot.identity)),
         )
     } else {
         val module = modules[moduleIndex]
-        if (module.type != snapshot.module.type) return aggregate
+        if (module.type != moduleSnapshot.type) return aggregate
         val identities = module.identities.toMutableList()
         identities.add(
             index = restoredFavoritePosition(
-                originalOrder = snapshot.module.identities,
+                originalOrder = moduleSnapshot.identities,
                 originalIndex = snapshot.applicationIndex,
                 currentOrder = identities,
             ),
@@ -175,6 +212,7 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
                         aggregate
                     } else {
                         restoreOrderedFavorite(aggregate = aggregate, snapshot = snapshot)
+                            ?: aggregate
                     }
                 },
             )

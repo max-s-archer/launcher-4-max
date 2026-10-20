@@ -84,7 +84,7 @@ internal sealed interface FavoriteReadState {
                 .orEmpty()
 
         val identities: List<LaunchableIdentity>
-            get() = aggregate.identities
+            get() = orderedAggregate?.identities ?: aggregate.identities
     }
     data object ReadFailure : FavoriteReadState
 }
