@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,9 +48,10 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -71,11 +73,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.maxarchm.launcher.ApplicationOrderChange
 import com.maxarchm.launcher.FavoriteAvailability
+import com.maxarchm.launcher.HOME_BOTTOM_APP_BAR_DESTINATION_ID
+import com.maxarchm.launcher.HomeApplicationMovement
 import com.maxarchm.launcher.HomeBottomAppBarPresentation
 import com.maxarchm.launcher.HomeBottomAppBarState
 import com.maxarchm.launcher.LaunchableEntry
 import com.maxarchm.launcher.LaunchableIdentity
+import com.maxarchm.launcher.OrderedFavoriteModule
+import com.maxarchm.launcher.OrderedFavoriteModuleType
 import com.maxarchm.launcher.R
 import com.maxarchm.launcher.homeBottomAppBarCapacity
 import com.maxarchm.launcher.iconSizeResource
@@ -127,6 +134,8 @@ internal fun HomeDockSurface(
     onAdd: () -> Unit,
     onReorder: (List<LaunchableIdentity>) -> Unit,
     onDragPreviewChange: (HomeDockDragPreview?) -> Unit,
+    onCommitApplicationOrder: (ApplicationOrderChange) -> Unit = {},
+    movement: HomeApplicationMovement? = null,
     modifier: Modifier = Modifier,
 ) {
     val iconDimension = dimensionResource(state.iconSize.iconSizeResource())
@@ -171,13 +180,22 @@ internal fun HomeDockSurface(
     var insertionIndex by remember(identities) { mutableIntStateOf(-1) }
     var barCoordinates by remember(identities) { mutableStateOf<LayoutCoordinates?>(null) }
     val iconBounds = remember(identities) { mutableStateMapOf<Int, LayoutCoordinates>() }
-    val stridePx = with(LocalDensity.current) { (iconDimension + iconGap).toPx() }
     val capacity = homeBottomAppBarCapacity(
         safeWidthDp = safeWidthDp,
         iconSizeDp = iconDimension.value,
         horizontalInsetDp = horizontalInset.value,
         iconGapDp = iconGap.value,
     )
+    var dockBounds by remember(identities) { mutableStateOf<Rect?>(null) }
+    var addBounds by remember(identities) { mutableStateOf<Rect?>(null) }
+    LaunchedEffect(movement, dockBounds, identities, capacity, addBounds, presentedExpanded) {
+        movement?.updateHomeBottomAppBar(
+            bounds = dockBounds?.takeIf { presentedExpanded },
+            identities = identities,
+            capacity = capacity,
+            addBounds = addBounds,
+        )
+    }
     val barShape = RoundedCornerShape(
         dimensionResource(R.dimen.home_bottom_app_bar_corner_radius),
     )
@@ -207,17 +225,32 @@ internal fun HomeDockSurface(
                 ),
                 shape = barShape,
             )
-            .onGloballyPositioned { barCoordinates = it }
+            .onGloballyPositioned { coordinates ->
+                barCoordinates = coordinates
+                dockBounds = Rect(
+                    offset = coordinates.positionInWindow(),
+                    size = androidx.compose.ui.geometry.Size(
+                        width = coordinates.size.width.toFloat(),
+                        height = coordinates.size.height.toFloat(),
+                    ),
+                )
+            }
             .pointerInput(
                 identities,
-                stridePx,
                 editMode,
                 mutationEnabled,
                 presentedExpanded,
                 availabilityByIdentity,
                 iconDimension,
+                movement,
+                onCommitApplicationOrder,
             ) {
-                if (!editMode || !mutationEnabled || !presentedExpanded) return@pointerInput
+                if (
+                    !editMode || !mutationEnabled || !presentedExpanded ||
+                    movement?.isDragging == true
+                ) {
+                    return@pointerInput
+                }
                 val slop = viewConfiguration.touchSlop
                 awaitEachGesture {
                     val down = awaitFirstDown(
@@ -231,19 +264,91 @@ internal fun HomeDockSurface(
                     val origin = startCoordinates.positionInWindow()
                     val size = startCoordinates.size
                     var moved = false
-                    var total = 0f
+                    var totalX = 0f
+                    var totalY = 0f
                     val iconCenter = origin.x + size.width / 2f
                     val pointerStart = bar.localToWindow(down.position).x
                     fun translationFor(pointerTravel: Float): Offset = Offset(
                         x = pointerStart + pointerTravel - iconCenter,
                         y = 0f,
                     )
+                    fun ghostCenterX(): Float = pointerStart + totalX
+                    fun insertionTarget(): Int {
+                        // Visible slot among the icons that stay behind. The ghost center is the
+                        // finger; crossing an icon center selects the gap after that icon.
+                        val center = ghostCenterX()
+                        var slot = 0
+                        for (index in identities.indices) {
+                            if (index == startIndex) continue
+                            val coordinates = iconBounds[index]?.takeIf { it.isAttached }
+                                ?: continue
+                            val restingCenter = coordinates.positionInWindow().x +
+                                coordinates.size.width / 2f
+                            if (center < restingCenter) return slot
+                            slot += 1
+                        }
+                        return slot
+                    }
+                    suspend fun AwaitPointerEventScope.handOff(
+                        pointer: Offset,
+                        pointerId: PointerId,
+                    ): Boolean {
+                        val identity = identities.getOrNull(startIndex) ?: return false
+                        val availability = availabilityByIdentity[identity] ?: return false
+                        if (movement == null || !movement.start(
+                                identity = identity,
+                                module = OrderedFavoriteModule(
+                                    id = HOME_BOTTOM_APP_BAR_DESTINATION_ID,
+                                    type = OrderedFavoriteModuleType.Ribbon,
+                                    identities = identities,
+                                ),
+                                availability = availability,
+                                pointer = pointer,
+                                carriedBounds = Rect(
+                                    offset = origin + translationFor(totalX).copy(y = totalY),
+                                    size = androidx.compose.ui.geometry.Size(
+                                        width = size.width.toFloat(),
+                                        height = size.height.toFloat(),
+                                    ),
+                                ),
+                            )
+                        ) return false
+                        onDragPreviewChange(null)
+                        draggingIndex = -1
+                        insertionIndex = -1
+                        var committed = false
+                        try {
+                            while (true) {
+                                val next = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                val owner = next.changes.firstOrNull { it.id == pointerId } ?: break
+                                next.changes.forEach { it.consume() }
+                                movement.move(pointer = bar.localToWindow(owner.position))
+                                if (!owner.pressed) {
+                                    movement.finish()?.let { order ->
+                                        onCommitApplicationOrder(order)
+                                        committed = true
+                                    }
+                                    break
+                                }
+                            }
+                        } finally {
+                            if (!committed) movement.cancel()
+                        }
+                        return true
+                    }
                     while (true) {
                         val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         val horizontal = change.position.x - change.previousPosition.x
-                        total += horizontal
-                        if (!moved && abs(total) > slop) {
+                        val vertical = change.position.y - change.previousPosition.y
+                        totalX += horizontal
+                        totalY += vertical
+                        val windowPointer = bar.localToWindow(change.position)
+                        if (!moved && (abs(totalX) > slop || abs(totalY) > slop)) {
+                            if (abs(totalY) > abs(totalX)) {
+                                change.consume()
+                                if (handOff(windowPointer, down.id)) return@awaitEachGesture
+                            }
                             moved = true
                             change.consume()
                             onDragPreviewChange(
@@ -254,7 +359,7 @@ internal fun HomeDockSurface(
                                     iconSize = iconDimension,
                                     origin = origin,
                                     size = size,
-                                    translation = translationFor(total),
+                                    translation = translationFor(totalX),
                                 ),
                             )
                             draggingIndex = startIndex
@@ -262,10 +367,9 @@ internal fun HomeDockSurface(
                         }
                         if (moved) {
                             change.consume()
-                            val translation = translationFor(total)
-                            val target = (
-                                startIndex + (translation.x / stridePx).roundToInt()
-                                ).coerceIn(0, identities.lastIndex)
+                            val outside = dockBounds?.contains(windowPointer) == false &&
+                                abs(totalY) > slop
+                            if (outside && handOff(windowPointer, down.id)) return@awaitEachGesture
                             onDragPreviewChange(
                                 barDragPreview(
                                     identities = identities,
@@ -274,27 +378,26 @@ internal fun HomeDockSurface(
                                     iconSize = iconDimension,
                                     origin = origin,
                                     size = size,
-                                    translation = translation,
+                                    translation = translationFor(totalX).copy(y = totalY),
                                 ),
                             )
-                            insertionIndex = target
+                            insertionIndex = insertionTarget()
                         }
                         if (!change.pressed) break
                     }
-                    val target = if (moved) {
-                        (startIndex + (translationFor(total).x / stridePx).roundToInt())
-                            .coerceIn(0, identities.lastIndex)
-                    } else {
-                        startIndex
-                    }
+                    val target = if (moved) insertionTarget() else startIndex
                     onDragPreviewChange(null)
                     draggingIndex = -1
                     insertionIndex = -1
-                    if (moved && target != startIndex) onReorder(
-                        identities.toMutableList().apply {
-                            add(target, removeAt(startIndex))
-                        },
-                    )
+                    if (moved && target != startIndex) {
+                        val movedIdentity = identities[startIndex]
+                        onReorder(
+                            identities.toMutableList().apply {
+                                removeAt(startIndex)
+                                add(target.coerceIn(0, this.size), movedIdentity)
+                            },
+                        )
+                    }
                 }
             }
             .then(
@@ -373,10 +476,9 @@ internal fun HomeDockSurface(
             }
             val insertionSlot = if (
                 draggingIndex in identities.indices &&
-                insertionIndex in identities.indices &&
-                insertionIndex != draggingIndex
+                insertionIndex in 0..visibleIdentities.size
             ) {
-                insertionIndex - if (draggingIndex < insertionIndex) 1 else 0
+                insertionIndex
             } else {
                 -1
             }
@@ -390,9 +492,20 @@ internal fun HomeDockSurface(
                     iconSize = iconDimension,
                     slotHeight = fullHeight,
                     editMode = editMode,
+                    movementActive = movement?.activeIdentity != null,
                     interactionEnabled = presentedExpanded && mutationEnabled,
                     onPositioned = { coordinates ->
                         iconBounds[identities.indexOf(identity)] = coordinates
+                        movement?.updateItem(
+                            identity = identity,
+                            bounds = Rect(
+                                offset = coordinates.positionInWindow(),
+                                size = androidx.compose.ui.geometry.Size(
+                                    width = coordinates.size.width.toFloat(),
+                                    height = coordinates.size.height.toFloat(),
+                                ),
+                            ),
+                        )
                     },
                     onLaunch = onLaunch,
                     onLongPress = onLongPress,
@@ -415,7 +528,16 @@ internal fun HomeDockSurface(
                             onClick = onAdd,
                         )
                         .semantics { contentDescription = addLabel }
-                        .testTag("home_bottom_app_bar_add"),
+                        .testTag("home_bottom_app_bar_add")
+                        .onGloballyPositioned { coordinates ->
+                            addBounds = Rect(
+                                offset = coordinates.positionInWindow(),
+                                size = androidx.compose.ui.geometry.Size(
+                                    width = coordinates.size.width.toFloat(),
+                                    height = coordinates.size.height.toFloat(),
+                                ),
+                            )
+                        },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -440,6 +562,7 @@ private fun HomeDockIcon(
     iconSize: Dp,
     slotHeight: Dp,
     editMode: Boolean,
+    movementActive: Boolean,
     interactionEnabled: Boolean,
     onPositioned: (LayoutCoordinates) -> Unit,
     onLaunch: (FavoriteAvailability) -> Unit,
@@ -465,7 +588,7 @@ private fun HomeDockIcon(
                     disabledAlpha
                 },
             )
-            .then(if (interactionEnabled) {
+            .then(if (interactionEnabled && !movementActive) {
                     Modifier.combinedClickable(
                         interactionSource = interactionSource,
                         indication = null,

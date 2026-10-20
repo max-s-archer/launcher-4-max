@@ -302,6 +302,7 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
         destinationModuleId: String?,
         boundary: Int,
         newModuleType: OrderedFavoriteModuleType?,
+        barCapacity: Int? = null,
     ): Boolean {
         if (isSaving) return false
         isSaving = true
@@ -319,6 +320,20 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
                             ),
                         )
                         destinationModuleId != null -> {
+                            if (destinationModuleId == HOME_BOTTOM_APP_BAR_DESTINATION_ID) {
+                                val identities = aggregate.homeBottomAppBar.identities
+                                if (!aggregate.homeBottomAppBar.enabled ||
+                                    identities.size >= (barCapacity ?: 0) ||
+                                    boundary !in 0..identities.size
+                                ) return@updateOrderedAggregate aggregate
+                                aggregate.copy(
+                                    homeBottomAppBar = aggregate.homeBottomAppBar.copy(
+                                        identities = identities.toMutableList().apply {
+                                            add(index = boundary, element = identity)
+                                        },
+                                    ),
+                                )
+                            } else {
                             val moduleIndex = aggregate.modules.indexOfFirst(
                                 predicate = { it.id == destinationModuleId },
                             )
@@ -336,6 +351,7 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
                                     )
                                 },
                             )
+                            }
                         }
                         else -> return@updateOrderedAggregate aggregate
                     }

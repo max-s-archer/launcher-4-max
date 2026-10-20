@@ -166,6 +166,68 @@ internal fun resolveApplicationDestination(
     return module to insertion
 }
 
+internal fun resolveHomeBottomAppBarInsertion(
+    bounds: Rect?,
+    identities: List<LaunchableIdentity>,
+    capacity: Int,
+    addBounds: Rect?,
+    itemBounds: Map<LaunchableIdentity, Rect>,
+    pointer: Offset,
+    movingIdentity: LaunchableIdentity?,
+): ApplicationInsertion? {
+    val bar = bounds ?: return null
+    if (bar.isEmpty || !bar.contains(offset = pointer)) return null
+    val visible = applicationLayoutIdentities(
+        module = OrderedFavoriteModule(
+            id = HOME_BOTTOM_APP_BAR_DESTINATION_ID,
+            type = OrderedFavoriteModuleType.Ribbon,
+            identities = identities,
+        ),
+        movingIdentity = movingIdentity,
+    )
+    val addingMember = movingIdentity !in identities
+    if (addingMember && visible.size >= capacity) return null
+    val insertion = ribbonApplicationInsertion(
+        identities = visible,
+        boundary = homeBottomAppBarBoundary(
+            identities = visible,
+            itemBounds = itemBounds,
+            pointer = pointer,
+        ),
+        itemBounds = itemBounds,
+        addBounds = addBounds,
+        clip = bar,
+        terminalGap = true,
+    ) ?: return null
+    return insertion
+}
+
+private fun homeBottomAppBarBoundary(
+    identities: List<LaunchableIdentity>,
+    itemBounds: Map<LaunchableIdentity, Rect>,
+    pointer: Offset,
+): Int {
+    val cells = identities.mapIndexedNotNull(
+        transform = { index, identity -> itemBounds[identity]?.let(block = { index to it }) },
+    )
+    val hit = cells.firstOrNull(predicate = { (_, bounds) -> bounds.contains(offset = pointer) })
+    if (hit != null) return hit.first + if (pointer.x >= hit.second.center.x) 1 else 0
+    val following = cells.firstOrNull(predicate = { pointer.x < it.second.left })
+    val preceding = cells.lastOrNull(predicate = { pointer.x > it.second.right })
+    return when {
+        following == null && preceding != null -> preceding.first + 1
+        preceding == null && following != null -> following.first
+        following != null && preceding != null -> {
+            if (following.second.left - pointer.x <= pointer.x - preceding.second.right) {
+                following.first
+            } else {
+                preceding.first + 1
+            }
+        }
+        else -> 0
+    }
+}
+
 /** A semantic ribbon boundary owns one visual axis, independent of which half selected it. */
 private fun ribbonApplicationInsertion(
     identities: List<LaunchableIdentity>,
@@ -173,6 +235,7 @@ private fun ribbonApplicationInsertion(
     itemBounds: Map<LaunchableIdentity, Rect>,
     addBounds: Rect?,
     clip: Rect,
+    terminalGap: Boolean = false,
 ): ApplicationInsertion? {
     if (identities.isEmpty() || boundary !in 0..identities.size) return null
     val preceding = identities.getOrNull(index = boundary - 1)?.let(block = { itemBounds[it] })
@@ -185,8 +248,18 @@ private fun ribbonApplicationInsertion(
     } else {
         heightBounds = preceding ?: return null
         val next = if (boundary == identities.size) addBounds else following
-        // Never substitute a viewport edge or a different visible application for a missing neighbor.
-        x = (heightBounds.right + (next ?: return null).left) / 2
+        // A dock has no add control once it is full. The last gap is still a real boundary,
+        // one icon-to-icon gap past the last icon, and it must stay inside the dock.
+        x = if (next != null) {
+            (heightBounds.right + next.left) / 2
+        } else if (terminalGap && boundary == identities.size) {
+            val previous = identities.getOrNull(index = boundary - 2)
+                ?.let(block = { itemBounds[it] })
+            val gap = if (previous != null) heightBounds.left - previous.right else 0f
+            (heightBounds.right + gap / 2f).coerceAtMost(maximumValue = clip.right)
+        } else {
+            return null
+        }
     }
     if (clip.isEmpty || x < clip.left || x > clip.right) return null
     val top = maxOf(clip.top, heightBounds.top)

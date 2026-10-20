@@ -27,11 +27,22 @@ internal data class ApplicationOrderChange(
     val destinationModuleId: String = moduleId,
     val destinationOrder: List<LaunchableIdentity> = originalOrder,
     val newModuleType: OrderedFavoriteModuleType? = null,
+    val destinationBar: Boolean = false,
+    val barCapacity: Int? = null,
 ) {
     fun reorderedIdentities(): List<LaunchableIdentity>? {
         val sourceIndex = originalOrder.indexOf(element = identity)
         if (sourceIndex < 0) return null
         if (newModuleType != null) return listOf(element = identity).takeIf(predicate = { boundary == 0 })
+        if (destinationBar || destinationModuleId == HOME_BOTTOM_APP_BAR_DESTINATION_ID) {
+            val capacity = barCapacity ?: return null
+            val remaining = destinationOrder.filterNot(predicate = { it == identity })
+            if (identity !in destinationOrder && remaining.size >= capacity) return null
+            if (boundary !in 0..remaining.size) return null
+            return remaining.toMutableList().apply(
+                block = { add(index = boundary, element = identity) },
+            )
+        }
         if (destinationModuleId != moduleId) {
             if (identity in destinationOrder || boundary !in 0..destinationOrder.size) return null
             return destinationOrder.toMutableList().apply(block = { add(index = boundary, element = identity) })
@@ -49,42 +60,101 @@ internal fun applyApplicationOrderChange(
     change: ApplicationOrderChange,
     newModuleId: String? = null,
 ): OrderedFavoriteAggregate? {
-    val source = aggregate.modules.firstOrNull(predicate = { it.id == change.moduleId }) ?: return null
-    if (source.identities != change.originalOrder) return null
+    val source = aggregate.modules.firstOrNull(predicate = { it.id == change.moduleId })
+    val sourceOrder = source?.identities
+        ?: aggregate.homeBottomAppBar.identities.takeIf(
+            predicate = { change.moduleId == HOME_BOTTOM_APP_BAR_DESTINATION_ID },
+        )
+        ?: return null
+    if (sourceOrder != change.originalOrder) return null
+    if (change.destinationBar || change.destinationModuleId == HOME_BOTTOM_APP_BAR_DESTINATION_ID) {
+        val reordered = change.reorderedIdentities() ?: return null
+        val modules = aggregate.modules.mapNotNull(
+            transform = { module ->
+                if (module.id != source?.id) module else {
+                    val remaining = module.identities.filterNot(
+                        predicate = { it == change.identity },
+                    )
+                    if (remaining.isEmpty()) null else module.copy(identities = remaining)
+                }
+            },
+        )
+        return aggregate.copy(
+            modules = modules,
+            homeBottomAppBar = aggregate.homeBottomAppBar.copy(identities = reordered),
+        )
+    }
     if (change.newModuleType != null) {
         val identities = change.reorderedIdentities() ?: return null
         if (newModuleId.isNullOrBlank() || aggregate.modules.any(predicate = { it.id == newModuleId })) return null
         val created = OrderedFavoriteModule(id = newModuleId, type = change.newModuleType, identities = identities)
-        val remaining = source.identities.filterNot(predicate = { it == change.identity })
+        val fromBar = change.moduleId == HOME_BOTTOM_APP_BAR_DESTINATION_ID
+        val remaining = (if (fromBar) aggregate.homeBottomAppBar.identities else source?.identities)
+            ?.filterNot(predicate = { it == change.identity })
+            ?: return null
         return aggregate.copy(
             modules = aggregate.modules.mapNotNull(
                 transform = { module ->
-                    if (module.id != source.id) module else if (remaining.isEmpty()) null else module.copy(identities = remaining)
+                    if (module.id != source?.id) {
+                        module
+                    } else if (remaining.isEmpty()) {
+                        null
+                    } else {
+                        module.copy(identities = remaining)
+                    }
                 },
             ) + created,
+            homeBottomAppBar = if (fromBar) {
+                aggregate.homeBottomAppBar.copy(identities = remaining)
+            } else {
+                aggregate.homeBottomAppBar
+            },
         )
     }
     val destination = aggregate.modules.firstOrNull(predicate = { it.id == change.destinationModuleId }) ?: return null
-    val expectedDestination = if (source.id == destination.id) change.originalOrder else change.destinationOrder
-    if (source.identities != change.originalOrder || destination.identities != expectedDestination) return null
+    val fromBar = change.moduleId == HOME_BOTTOM_APP_BAR_DESTINATION_ID
+    val expectedDestination = if (source?.id == destination.id) {
+        change.originalOrder
+    } else {
+        change.destinationOrder
+    }
+    val sourceIdentities = if (fromBar) {
+        aggregate.homeBottomAppBar.identities
+    } else {
+        source?.identities
+    }
+    if (sourceIdentities != change.originalOrder || destination.identities != expectedDestination) {
+        return null
+    }
     val reordered = change.reorderedIdentities() ?: return null
+    val barRemaining = aggregate.homeBottomAppBar.identities.filterNot(
+        predicate = { it == change.identity },
+    )
     return aggregate.copy(
         modules = aggregate.modules.mapNotNull(
             transform = { module ->
                 when (module.id) {
                     destination.id -> module.copy(identities = reordered)
-                    source.id -> {
-                        val remaining = module.identities.filterNot(predicate = { it == change.identity })
+                    source?.id -> {
+                    val remaining = module.identities.filterNot(
+                        predicate = { it == change.identity },
+                    )
                         if (remaining.isEmpty()) null else module.copy(identities = remaining)
                     }
                     else -> module
                 }
             },
         ),
+        homeBottomAppBar = if (fromBar) {
+            aggregate.homeBottomAppBar.copy(identities = barRemaining)
+        } else {
+            aggregate.homeBottomAppBar
+        },
     )
 }
 
 internal const val EXTERNAL_JOURNEY_MODULE_ID = "drawer-journey-source"
+internal const val HOME_BOTTOM_APP_BAR_DESTINATION_ID = "home-bottom-app-bar"
 
 internal data class HomeApplicationMovementSession(
     val module: OrderedFavoriteModule,
@@ -96,6 +166,7 @@ internal data class HomeApplicationMovementSession(
     val insertion: ApplicationInsertion? = null,
     val destination: OrderedFavoriteModule? = null,
     val creation: Pair<OrderedFavoriteModuleType, Rect>? = null,
+    val barInsertion: ApplicationInsertion? = null,
 ) {
     val previewOrigin: Offset get() = pointer - pointerOffset
 }
@@ -123,6 +194,10 @@ internal class HomeApplicationMovement {
     private val removeBounds = mutableMapOf<LaunchableIdentity, Rect>()
     private val addBounds = mutableMapOf<String, Rect>()
     private val creationBounds = mutableMapOf<OrderedFavoriteModuleType, Rect>()
+    private var barBounds: Rect? = null
+    private var barIdentities: List<LaunchableIdentity> = emptyList()
+    private var barCapacity: Int = 0
+    private var barAddBounds: Rect? = null
     private var modules: List<OrderedFavoriteModule> = emptyList()
     var geometryRevision by mutableStateOf(value = 0L)
         private set
@@ -182,6 +257,23 @@ internal class HomeApplicationMovement {
         refreshCandidate()
     }
 
+    fun updateHomeBottomAppBar(
+        bounds: Rect?,
+        identities: List<LaunchableIdentity>,
+        capacity: Int,
+        addBounds: Rect?,
+    ) {
+        if (barBounds == bounds && barIdentities == identities &&
+            barCapacity == capacity && barAddBounds == addBounds
+        ) return
+        barBounds = bounds
+        barIdentities = identities
+        barCapacity = capacity
+        barAddBounds = addBounds
+        geometryRevision += 1
+        refreshCandidate()
+    }
+
     fun updateCreationTarget(type: OrderedFavoriteModuleType, bounds: Rect?) {
         if (creationBounds[type] == bounds) return
         if (bounds == null) creationBounds.remove(key = type) else creationBounds[type] = bounds
@@ -189,10 +281,12 @@ internal class HomeApplicationMovement {
     }
 
     fun hitIdentity(pointer: Offset): LaunchableIdentity? {
-        if (!viewport.contains(offset = pointer)) return null
         return itemBounds.entries.firstOrNull(
             predicate = { (identity, bounds) ->
-                bounds.contains(offset = pointer) && removeBounds[identity]?.contains(offset = pointer) != true
+                bounds.contains(offset = pointer) &&
+                    removeBounds[identity]?.contains(offset = pointer) != true &&
+                    viewport.contains(offset = pointer) ||
+                    barBounds?.contains(offset = pointer) == true
             },
         )?.key
     }
@@ -202,13 +296,24 @@ internal class HomeApplicationMovement {
         module: OrderedFavoriteModule,
         availability: FavoriteAvailability,
         pointer: Offset,
+        carriedBounds: Rect? = null,
     ): Boolean {
-        if (session != null || identity !in module.identities ||
+        val barSource = identity in barIdentities
+        val sourceModule = if (barSource) {
+            OrderedFavoriteModule(
+                id = HOME_BOTTOM_APP_BAR_DESTINATION_ID,
+                type = OrderedFavoriteModuleType.Ribbon,
+                identities = barIdentities,
+            )
+        } else {
+            module
+        }
+        if (session != null || identity !in sourceModule.identities ||
             (availability !is FavoriteAvailability.Available && availability !is FavoriteAvailability.Disabled)
         ) return false
-        val bounds = itemBounds[identity] ?: return false
+        val bounds = carriedBounds ?: itemBounds[identity] ?: return false
         val source = HomeApplicationMovementSession(
-            module = module,
+            module = sourceModule,
             identity = identity,
             availability = availability,
             sourceBounds = bounds,
@@ -238,7 +343,30 @@ internal class HomeApplicationMovement {
             predicate = { (_, bounds) -> viewport.contains(offset = current.pointer) && bounds.contains(offset = current.pointer) },
         )?.let(block = { it.key to it.value })
         if (creation != null) {
-            session = current.copy(insertion = null, destination = null, creation = creation)
+            session = current.copy(
+                insertion = null,
+                destination = null,
+                creation = creation,
+                barInsertion = null,
+            )
+            return
+        }
+        val barInsertion = resolveHomeBottomAppBarInsertion(
+            bounds = barBounds,
+            identities = barIdentities,
+            capacity = barCapacity,
+            addBounds = barAddBounds,
+            itemBounds = itemBounds,
+            pointer = current.pointer,
+            movingIdentity = current.identity,
+        )
+        if (barInsertion != null) {
+            session = current.copy(
+                insertion = null,
+                destination = null,
+                creation = null,
+                barInsertion = barInsertion,
+            )
             return
         }
         val resolved = resolveApplicationDestination(
@@ -251,6 +379,7 @@ internal class HomeApplicationMovement {
             insertion = resolved?.second,
             destination = resolved?.first,
             creation = null,
+            barInsertion = null,
         )
     }
 
@@ -301,6 +430,9 @@ internal class HomeApplicationMovement {
                 moduleId = resolved.destination.id,
                 boundary = resolved.insertion.boundary,
             )
+            resolved.barInsertion != null -> DrawerDragDrop.HomeBottomAppBar(
+                boundary = resolved.barInsertion.boundary,
+            )
             else -> null
         }
         cancel()
@@ -322,6 +454,23 @@ internal class HomeApplicationMovement {
                 originalOrder = current.module.identities, boundary = 0,
                 newModuleType = current.creation.first,
             )
+        } else if (current.barInsertion != null) {
+            ApplicationOrderChange(
+                moduleId = current.module.id,
+                identity = current.identity,
+                originalOrder = if (
+                    current.module.id == HOME_BOTTOM_APP_BAR_DESTINATION_ID
+                ) {
+                    barIdentities
+                } else {
+                    current.module.identities
+                },
+                boundary = current.barInsertion.boundary,
+                destinationModuleId = HOME_BOTTOM_APP_BAR_DESTINATION_ID,
+                destinationOrder = barIdentities,
+                destinationBar = true,
+                barCapacity = barCapacity,
+            )
         } else {
             current.insertion?.let(block = { insertion ->
                 current.destination?.let(block = { destination ->
@@ -341,7 +490,12 @@ internal class HomeApplicationMovement {
         }
         // Keep source omission and the preview together until the reliable state reaches the UI.
         pendingChange = change
-        session = current.copy(insertion = null, destination = null, creation = null)
+        session = current.copy(
+            insertion = null,
+            destination = null,
+            creation = null,
+            barInsertion = null,
+        )
         edgeFeedback = null
         return change
     }

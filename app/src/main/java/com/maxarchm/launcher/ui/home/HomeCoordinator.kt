@@ -13,6 +13,7 @@ import com.maxarchm.launcher.FavoriteAggregate
 import com.maxarchm.launcher.FavoriteContainerType
 import com.maxarchm.launcher.FavoriteReadState
 import com.maxarchm.launcher.FavoriteStore
+import com.maxarchm.launcher.HOME_BOTTOM_APP_BAR_DESTINATION_ID
 import com.maxarchm.launcher.HomeFavoriteEditor
 import com.maxarchm.launcher.LaunchableIdentity
 import com.maxarchm.launcher.R
@@ -134,7 +135,11 @@ internal class HomeCoordinator(
         }
     }
 
-    suspend fun commitDrawerDrop(identity: LaunchableIdentity, drop: DrawerDragDrop): Boolean {
+    suspend fun commitDrawerDrop(
+        identity: LaunchableIdentity,
+        drop: DrawerDragDrop,
+        barCapacity: Int? = null,
+    ): Boolean {
         return when (drop) {
             is DrawerDragDrop.Insertion -> favoriteEditor.insertExternalFavorite(
                 identity = identity,
@@ -148,6 +153,14 @@ internal class HomeCoordinator(
                 destinationModuleId = null,
                 boundary = 0,
                 newModuleType = drop.moduleType,
+            )
+
+            is DrawerDragDrop.HomeBottomAppBar -> favoriteEditor.insertExternalFavorite(
+                identity = identity,
+                destinationModuleId = HOME_BOTTOM_APP_BAR_DESTINATION_ID,
+                boundary = drop.boundary,
+                newModuleType = null,
+                barCapacity = barCapacity,
             )
         }
     }

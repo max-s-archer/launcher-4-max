@@ -56,7 +56,9 @@ internal fun HomeApplicationMovementOverlay(
         derivedStateOf(policy = structuralEqualityPolicy(), calculation = { movement.session?.creation != null })
     })
     val showInsertion by remember(key1 = movement, calculation = {
-        derivedStateOf(policy = structuralEqualityPolicy(), calculation = { movement.session?.insertion != null })
+        derivedStateOf(policy = structuralEqualityPolicy(), calculation = {
+            movement.session?.insertion != null || movement.session?.barInsertion != null
+        })
     })
     val previewOrigin = remember(key1 = movement, calculation = {
         derivedStateOf(policy = structuralEqualityPolicy(), calculation = { movement.session?.previewOrigin })
@@ -117,7 +119,9 @@ internal fun HomeApplicationMovementOverlay(
         Canvas(
             modifier = Modifier.fillMaxSize().testTag(tag = "home_application_insertion_line"),
             onDraw = {
-                val insertion = movement.session?.insertion ?: return@Canvas
+                val insertion = movement.session?.barInsertion
+                    ?: movement.session?.insertion
+                    ?: return@Canvas
                 val clip = insertion.clipBounds.translate(offset = -rootOrigin)
                 clipRect(
                     left = clip.left, top = clip.top, right = clip.right, bottom = clip.bottom,

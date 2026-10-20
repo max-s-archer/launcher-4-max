@@ -1511,6 +1511,12 @@ internal fun HomeScreen(
                     onAdd = onAddToHomeBottomAppBar,
                     onReorder = onReorderHomeBottomAppBar,
                     onDragPreviewChange = { homeDockDragPreview = it },
+                    onCommitApplicationOrder = { change ->
+                        onCommitApplicationOrder(change) {
+                            orderedApplicationMovement.complete(change = change)
+                        }
+                    },
+                    movement = orderedApplicationMovement,
                 )
             }
         }
