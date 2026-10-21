@@ -16,7 +16,10 @@
 - Kotlin：`2.3.10`。
 - Java 语言级别：JDK 17。
 - Android 配置：`minSdk 31`、`targetSdk 36`、`compileSdk 37`。
-- 应用标识：`com.maxarchm.launcher`。
+- 应用标识与 namespace：`com.maxarcher.launcher`。
+- main 与仪器测试的 Kotlin 包使用 `com.maxarcher.launcher`。
+- 默认测试 namespace 与测试 APK 标识为 `com.maxarcher.launcher.test`。
+- 替换旧应用标识的安装前，请阅读[发布迁移说明](release.zh-CN.md#应用标识迁移)。
 - 当前配置版本标识：`versionName 1.7.2`、配置的 `versionCode 10`；`1.7.0` 已在[交付记录](delivery/1.7.0/delivery.zh-CN.md)中关闭。
 - 依赖仓库当前使用阿里云镜像。`settings.gradle.kts` 保留了被注释的官方上游替代配置，供有意识地手动切换。
 

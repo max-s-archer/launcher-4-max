@@ -90,7 +90,11 @@ Binding the trigger to a Home quick-action slot, rather than a hard-coded double
 - Iteration 10 record: `docs/delivery/1.1.0/iteration-10-double-tap-lock.md`
 - Iteration 32 contract: `docs/delivery/1.7.0/iteration-32-quick-actions-screen-locking.md`
 - Physical-device validation of the purpose-limited boundary: author-reported successful lock behavior, Settings state refresh, disclosure flow, and revocation/fail-closed behavior on the primary device in Iteration 10
-- Implementation files: `app/src/main/java/com/maxarchm/launcher/AccessibilityLockProbeService.kt`, `app/src/main/java/com/maxarchm/launcher/AccessibilityLock.kt`, `app/src/main/AndroidManifest.xml`, `app/src/main/res/xml/accessibility_lock_probe_config.xml`
+- Implementation files:
+  `app/src/main/java/com/maxarcher/launcher/AccessibilityLockProbeService.kt`,
+  `app/src/main/java/com/maxarcher/launcher/AccessibilityLock.kt`,
+  `app/src/main/AndroidManifest.xml`,
+  `app/src/main/res/xml/accessibility_lock_probe_config.xml`
 - Settings integration: `SettingsScreen.kt` Quick action settings page, Privacy, and disclosure resources
 - Home gesture integration: `HomeBasicInformation.kt` bound-slot detection in eligible blank space
 

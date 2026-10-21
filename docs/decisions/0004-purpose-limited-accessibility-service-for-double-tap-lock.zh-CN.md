@@ -90,7 +90,11 @@ Launcher4Max 的无障碍服务仅用于支持已绑定的锁屏快捷操作。�
 - 迭代 10 记录：`docs/delivery/1.1.0/iteration-10-double-tap-lock.md`
 - 迭代 32 契约：`docs/delivery/1.7.0/iteration-32-quick-actions-screen-locking.md`
 - 用途受限边界的物理设备验证：作者报告迭代 10 在主要设备上成功的锁屏行为、Settings 状态刷新、披露流程和撤销/安全失败行为
-- 实现文件：`app/src/main/java/com/maxarchm/launcher/AccessibilityLockProbeService.kt`、`app/src/main/java/com/maxarchm/launcher/AccessibilityLock.kt`、`app/src/main/AndroidManifest.xml`、`app/src/main/res/xml/accessibility_lock_probe_config.xml`
+- 实现文件：
+  `app/src/main/java/com/maxarcher/launcher/AccessibilityLockProbeService.kt`、
+  `app/src/main/java/com/maxarcher/launcher/AccessibilityLock.kt`、
+  `app/src/main/AndroidManifest.xml`、
+  `app/src/main/res/xml/accessibility_lock_probe_config.xml`
 - Settings 集成：`SettingsScreen.kt` 快捷操作设置页、Privacy 与披露资源
 - Home 手势集成：`HomeBasicInformation.kt` 中符合条件的空白位置内的绑定槽位检测
 

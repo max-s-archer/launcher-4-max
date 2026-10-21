@@ -25,7 +25,7 @@
         errorLine1="    var geometryRevision by mutableStateOf(value = 0L)"
         errorLine2="                            ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/maxarchm/launcher/HomeApplicationMovement.kt"
+            file="src/main/java/com/maxarcher/launcher/HomeApplicationMovement.kt"
             line="127"
             column="29"/>
     </issue>
@@ -36,7 +36,7 @@
         errorLine1="    var insertionBoundaryBandPx by mutableStateOf(0f)"
         errorLine2="                                   ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/maxarchm/launcher/ui/home/HomeFavoriteEditOrchestration.kt"
+            file="src/main/java/com/maxarcher/launcher/ui/home/HomeFavoriteEditOrchestration.kt"
             line="117"
             column="36"/>
     </issue>
@@ -47,7 +47,7 @@
         errorLine1="    var edgeScrollBandPx by mutableStateOf(0f)"
         errorLine2="                            ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/maxarchm/launcher/ui/home/HomeFavoriteEditOrchestration.kt"
+            file="src/main/java/com/maxarcher/launcher/ui/home/HomeFavoriteEditOrchestration.kt"
             line="118"
             column="29"/>
     </issue>
@@ -58,7 +58,7 @@
         errorLine1="    var edgeScrollSpeedPxPerSecond by mutableStateOf(0f)"
         errorLine2="                                      ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/maxarchm/launcher/ui/home/HomeFavoriteEditOrchestration.kt"
+            file="src/main/java/com/maxarcher/launcher/ui/home/HomeFavoriteEditOrchestration.kt"
             line="119"
             column="39"/>
     </issue>
@@ -69,7 +69,7 @@
         errorLine1="    var edgeScrollStartDelayMillis by mutableStateOf(0L)"
         errorLine2="                                      ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/maxarchm/launcher/ui/home/HomeFavoriteEditOrchestration.kt"
+            file="src/main/java/com/maxarcher/launcher/ui/home/HomeFavoriteEditOrchestration.kt"
             line="120"
             column="39"/>
     </issue>
@@ -80,7 +80,7 @@
         errorLine1="    var favoriteBarItemStridePx by mutableStateOf(0f)"
         errorLine2="                                   ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/maxarchm/launcher/ui/home/HomeFavoriteEditOrchestration.kt"
+            file="src/main/java/com/maxarcher/launcher/ui/home/HomeFavoriteEditOrchestration.kt"
             line="121"
             column="36"/>
     </issue>

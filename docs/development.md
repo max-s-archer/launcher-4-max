@@ -16,7 +16,11 @@ This document records the minimum current development baseline for Launcher4Max.
 - Kotlin: `2.3.10`.
 - Java language level: JDK 17.
 - Android configuration: `minSdk 31`, `targetSdk 36`, and `compileSdk 37`.
-- Application identity: `com.maxarchm.launcher`.
+- Application identity and namespace: `com.maxarcher.launcher`.
+- Main and instrumented-test Kotlin packages use `com.maxarcher.launcher`.
+- The default test namespace and test APK identity are `com.maxarcher.launcher.test`.
+- See [release migration guidance](release.md#application-identity-migration) before replacing
+  an installation with the previous application identity.
 - Current configured version identity: `versionName 1.7.2`, configured `versionCode 10`; `1.7.0` is closed in [its delivery record](delivery/1.7.0/delivery.md).
 - Dependency repositories currently use Aliyun mirrors. `settings.gradle.kts` retains commented official-upstream alternatives for deliberate manual switching.
 

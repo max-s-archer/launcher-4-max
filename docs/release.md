@@ -77,6 +77,27 @@ Pure documentation changes never change the application version. A source, resou
 - The product rename to Launcher4Max changed the `applicationId` from `com.avenor.launcher` to `com.maxarchm.launcher`. Android therefore treats the renamed application as a fresh install: an existing Avenor installation does not upgrade in place, and its local favorites and Drawer display settings are not visible to the renamed application. The supported migration path is: back up favorites and display settings through the previous application's Settings Data export, install the Launcher4Max build, restore that backup file, re-select the default-Launcher role, re-enable the accessibility service, and only then remove the previous application. The restore path accepts the previous `avenor-backup-` file name because restore parses backup content rather than file names.
 - Downgrade is not supported.
 
+## Application identity migration
+
+The current `applicationId` is `com.maxarcher.launcher`, replacing `com.maxarchm.launcher`.
+Android installs it as a separate application, even with the same signing certificate and version.
+It cannot upgrade the previous package in place or automatically access its private data.
+The earlier Avenor rename recorded above remains a historical migration.
+
+1. Export a backup through Settings Data in the previous application before removing it.
+2. Install the build with the new application identity and restore the exported backup manually.
+3. Select the new application as the default Home app and enable its accessibility service again
+   if using accessibility-based lock.
+4. Verify restored settings and favorites before removing the previous application.
+
+This identity change does not change the backup schema or add automatic data migration.
+Backup component identities are not rewritten from the old Launcher package to the new package.
+Old Launcher self-references continue through the existing restore and availability handling;
+check those entries after restoring.
+Android roles and service grants are not restored by the backup.
+Build, installation, and device migration validation remain required before release acceptance.
+This source change does not declare a completed formal version or allocate a new artifact version.
+
 ## Build identity and observability
 
 Product version, APK build sequence, build stage, source revision, and Git milestone identity are separate dimensions:
@@ -90,7 +111,11 @@ Product version, APK build sequence, build stage, source revision, and Git miles
 - A build does not become a completed formal version merely because it is uploaded to a monitoring platform or marked as a release there.
 - Privacy, security, data collection, consent or disclosure, dependency and license impact, symbol or mapping-file custody, access control, retention, and upload authority must be reviewed before a monitoring integration is authorized.
 
-Within one `MAJOR` family, any older formal version must have a supported direct upgrade path to any newer formal version. For a cross-major upgrade, the applicable major-version delivery contract must define supported source versions, migrations, validation, and limitations before release.
+Within one `MAJOR` family and the same application identity, any older formal version must have a
+supported direct upgrade path to any newer formal version. The application identity migration above
+requires a separate installation and manual restore, regardless of the configured version number.
+For a cross-major upgrade, the applicable major-version delivery contract must define supported
+source versions, migrations, validation, and limitations before release.
 
 ## Iterations and completed version records
 
