@@ -153,7 +153,6 @@ class HomeScreenTest {
         composeRule.onNodeWithTag("home_add_favorite_list").assertIsDisplayed()
         composeRule.onNodeWithTag("home_add_favorite_ribbon").assertIsDisplayed()
         composeRule.onNodeWithText("Select a favorite list to edit its style").assertIsDisplayed()
-        composeRule.onAllNodesWithTag("favorite_provisional_add_0").assertCountEquals(0)
     }
 
     @Test
@@ -427,7 +426,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun editModeDoesNotExposeProvisionalFavoriteBarTarget() {
+    fun editModeRibbonAddEntryKeepsItsPersistedDestination() {
         val identity = LaunchableIdentity(
             profileSerialNumber = 42,
             componentName = ComponentName("com.example.bar", "MainActivity"),
@@ -446,6 +445,13 @@ class HomeScreenTest {
                                 ),
                             ),
                         ),
+                        orderedModules = listOf(
+                            OrderedFavoriteModule(
+                                id = "favorite-bar-1",
+                                type = OrderedFavoriteModuleType.Ribbon,
+                                identities = listOf(identity),
+                            ),
+                        ),
                     ),
                     editMode = true,
                     onAddFavoritesToBar = { existingTarget = it },
@@ -453,91 +459,9 @@ class HomeScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("favorite_bar_add_0").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("home_add_favorite_favorite-bar-1")
+            .assertIsDisplayed().performClick()
         composeRule.runOnIdle { assertEquals("favorite-bar-1", existingTarget) }
-        composeRule.onAllNodesWithTag("favorite_bar_provisional_add").assertCountEquals(0)
-    }
-
-    @Test
-    fun favoriteBarRevealScrollsOnlyItsTargetIntoView() {
-        val entries = List(6) { index ->
-            LaunchableEntry(
-                identity = LaunchableIdentity(
-                    profileSerialNumber = 42,
-                    componentName = ComponentName("com.example.bar$index", "MainActivity"),
-                ),
-                user = Process.myUserHandle(),
-                label = "Favorite bar application $index",
-                icon = ColorDrawable(Color.TRANSPARENT),
-            )
-        }
-        var revealCompleted = false
-        composeRule.setContent {
-            Launcher4MaxTheme {
-                HomeScreen(
-                    favoriteState = FavoriteReadState.Readable(
-                        FavoriteAggregate(
-                            favoriteBars = listOf(
-                                FavoriteContainer(
-                                    id = "favorite-bar-reveal",
-                                    type = FavoriteContainerType.FavoriteBar,
-                                    identities = entries.map { it.identity },
-                                ),
-                            ),
-                        ),
-                    ),
-                    favoriteAvailability = entries.associate { entry ->
-                        entry.identity to FavoriteAvailability.Available(entry)
-                    },
-                    editMode = true,
-                    favoriteRevealContainerId = "favorite-bar-reveal",
-                    favoriteRevealContainerType = FavoriteContainerType.FavoriteBar,
-                    favoriteRevealIdentity = entries.last().identity,
-                    onFavoriteRevealComplete = { revealCompleted = true },
-                )
-            }
-        }
-
-        composeRule.waitForIdle()
-        composeRule.onNodeWithText("Favorite bar application 5").assertIsDisplayed()
-        composeRule.runOnIdle { assertEquals(true, revealCompleted) }
-    }
-
-    @Test
-    fun removingTheFinalFavoriteBarItemDeletesItsContainerAndOffersUndo() {
-        val identity = LaunchableIdentity(
-            profileSerialNumber = 42,
-            componentName = ComponentName("com.example.removed.bar", "MainActivity"),
-        )
-        val initial = FavoriteAggregate(
-            favoriteBars = listOf(
-                FavoriteContainer(
-                    id = "favorite-bar-remove",
-                    type = FavoriteContainerType.FavoriteBar,
-                    identities = listOf(identity),
-                ),
-            ),
-        )
-        var committed = initial
-        composeRule.setContent {
-            Launcher4MaxTheme {
-                HomeScreen(
-                    favoriteState = FavoriteReadState.Readable(initial),
-                    editMode = true,
-                    onCommitFavoriteComposition = { transform ->
-                        transform(committed).also { committed = it }
-                    },
-                )
-            }
-        }
-
-        composeRule.onNodeWithTag("remove_favorite_bar_item").performClick()
-        composeRule.waitForIdle()
-        composeRule.runOnIdle { assertEquals(emptyList<FavoriteContainer>(), committed.favoriteBars) }
-        composeRule.onNodeWithText("Removed from favorites").assertIsDisplayed()
-        composeRule.onNodeWithText("Undo").performClick()
-        composeRule.waitForIdle()
-        composeRule.runOnIdle { assertEquals(initial, committed) }
     }
 
     @Test
@@ -560,14 +484,23 @@ class HomeScreenTest {
                                 ),
                             ),
                         ),
+                        orderedModules = listOf(
+                            OrderedFavoriteModule(
+                                id = "vertical-list-edit-custom",
+                                type = OrderedFavoriteModuleType.Vertical,
+                                identities = listOf(identity),
+                                iconSize = FavoriteListSize.Large,
+                            ),
+                        ),
                     ),
                     editMode = true,
                 )
             }
         }
 
-        composeRule.onNodeWithTag("home_favorites").assertIsDisplayed()
-        composeRule.onAllNodesWithTag("home_companion_favorites").assertCountEquals(0)
+        composeRule.onNodeWithTag("home_add_favorite_vertical-list-edit-custom").assertIsDisplayed()
+        composeRule.onAllNodesWithTag("home_favorite_row").assertCountEquals(1)
+        composeRule.onAllNodesWithTag("remove_favorite_item").assertCountEquals(1)
     }
 
     @Test
@@ -607,8 +540,18 @@ class HomeScreenTest {
             ),
         )
         val favoriteState = mutableStateOf<FavoriteReadState>(
-            FavoriteReadState.Readable(initial),
+            FavoriteReadState.Readable(
+                aggregate = initial,
+                orderedModules = listOf(
+                    OrderedFavoriteModule(
+                        id = "inventory-interruption-list",
+                        type = OrderedFavoriteModuleType.Vertical,
+                        identities = listOf(removedEntry.identity),
+                    ),
+                ),
+            ),
         )
+        var saveAttempts = 0
 
         composeRule.setContent {
             Launcher4MaxTheme {
@@ -619,19 +562,34 @@ class HomeScreenTest {
                         refreshedEntry.identity to FavoriteAvailability.Available(refreshedEntry),
                     ),
                     editMode = true,
+                    stylePanelExpanded = true,
+                    selectedModuleId = "inventory-interruption-list",
                     onCommitFavoriteComposition = {
-                        favoriteState.value = FavoriteReadState.Readable(refreshed)
+                        saveAttempts += 1
+                        favoriteState.value = FavoriteReadState.Readable(
+                            aggregate = refreshed,
+                            orderedModules = listOf(
+                                OrderedFavoriteModule(
+                                    id = "inventory-interruption-list",
+                                    type = OrderedFavoriteModuleType.Vertical,
+                                    identities = listOf(refreshedEntry.identity),
+                                ),
+                            ),
+                        )
                         null
                     },
                 )
             }
         }
 
-        composeRule.onNodeWithTag("remove_favorite_item").performClick()
+        composeRule.onNodeWithText("Below").performClick()
         composeRule.waitForIdle()
 
+        composeRule.runOnIdle { assertEquals(1, saveAttempts) }
+        composeRule.onNodeWithText("Reliable refreshed application").performScrollTo()
         composeRule.onNodeWithText("Reliable refreshed application").assertIsDisplayed()
         composeRule.onAllNodesWithText("Removed during failed save").assertCountEquals(0)
+        composeRule.onAllNodesWithTag("home_favorite_below_item").assertCountEquals(0)
     }
 
     @Test
@@ -1585,59 +1543,6 @@ class HomeScreenTest {
         }
 
         composeRule.onNodeWithTag("edit_favorites_action").assertIsDisplayed()
-    }
-
-    @Test
-    fun editModeShowsProvisionalListWhenFavoritesAreEmpty() {
-        composeRule.setContent {
-            Launcher4MaxTheme {
-                HomeScreen(
-                    favoriteState = FavoriteReadState.Readable(FavoriteAggregate()),
-                    editMode = true,
-                )
-            }
-        }
-
-        composeRule.onNodeWithTag("favorite_provisional_add_0").assertIsDisplayed()
-        composeRule.onAllNodesWithTag("home_favorites_empty").assertCountEquals(0)
-    }
-
-    @Test
-    fun editModeShowsListReorderHandlesOnlyForTwoLists() {
-        val first = LaunchableIdentity(
-            profileSerialNumber = 0,
-            componentName = ComponentName("com.example.list-one", "MainActivity"),
-        )
-        val second = LaunchableIdentity(
-            profileSerialNumber = 0,
-            componentName = ComponentName("com.example.list-two", "MainActivity"),
-        )
-        composeRule.setContent {
-            Launcher4MaxTheme {
-                HomeScreen(
-                    favoriteState = FavoriteReadState.Readable(
-                        FavoriteAggregate(
-                            verticalLists = listOf(
-                                FavoriteContainer(
-                                    id = "list-one",
-                                    type = FavoriteContainerType.VerticalList,
-                                    identities = listOf(first),
-                                ),
-                                FavoriteContainer(
-                                    id = "list-two",
-                                    type = FavoriteContainerType.VerticalList,
-                                    identities = listOf(second),
-                                ),
-                            ),
-                        ),
-                    ),
-                    editMode = true,
-                )
-            }
-        }
-
-        composeRule.onNodeWithTag("reorder_favorite_list_0").assertIsDisplayed()
-        composeRule.onNodeWithTag("reorder_favorite_list_1").assertIsDisplayed()
     }
 
     @Test

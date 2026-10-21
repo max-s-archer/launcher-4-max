@@ -2,7 +2,6 @@ package com.maxarchm.launcher.ui.home.components
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,8 +10,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -83,8 +82,8 @@ import com.maxarchm.launcher.ModuleDragSession
 import com.maxarchm.launcher.OrderedFavoriteModule
 import com.maxarchm.launcher.OrderedFavoriteModuleType
 import com.maxarchm.launcher.R
-import com.maxarchm.launcher.drawCornerMark
 import com.maxarchm.launcher.rowHeightResource
+import com.maxarchm.launcher.drawCornerMark
 import com.maxarchm.launcher.ui.home.components.HomeApplicationAutoScroll
 import com.maxarchm.launcher.ui.home.components.HomeFavoriteEnterBatch
 import com.maxarchm.launcher.ui.home.components.HomeFavoriteEnterKey
@@ -667,7 +666,6 @@ internal fun HomeFavoriteMessage(
 }
 
 @Composable
-
 internal fun HomeFavoriteComposition(
     verticalLists: List<FavoriteContainer>,
     availabilityByIdentity: Map<LaunchableIdentity, FavoriteAvailability>,
@@ -717,19 +715,10 @@ internal fun HomeFavoriteComposition(
                     availabilityByIdentity = availabilityByIdentity,
                     listState = listState,
                     nestedScrollConnection = nestedScrollConnection,
-                    editMode = false,
                     compact = false,
                     listSize = container.listSize,
-                    draggedIdentity = null,
-                    exchangeTargetIdentity = null,
-                    insertionBoundaryIndex = null,
-                    onBoundsInWindow = {},
                     onLaunchFavorite = onLaunchFavorite,
                     onLongPressFavorite = onLongPressFavorite,
-                    onDragStart = { _, _, _, _ -> },
-                    onDrag = {},
-                    onDragEnd = {},
-                    onDragCancel = {},
                     testTag = "home_favorite_list_$index",
                 )
             }

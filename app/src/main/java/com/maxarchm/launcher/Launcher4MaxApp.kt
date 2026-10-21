@@ -178,7 +178,6 @@ internal fun Launcher4MaxApp(
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val homeFavoriteListState = rememberLazyListState()
-    val companionFavoriteListState = rememberLazyListState()
     val drawerListState = rememberLazyListState()
     val fullGestureDistancePx = with(density) {
         dimensionResource(R.dimen.drawer_transition_full_gesture_distance).toPx()
@@ -640,7 +639,6 @@ internal fun Launcher4MaxApp(
         settingsPage = SettingsPage.Root
         homeCoordinator.dismissEditMode()
         homeCoordinator.clearEditSelection()
-        homeCoordinator.completeFavoriteReveal()
         if (!favoriteSelectionSaving) {
             favoriteAddTarget = null
             favoriteSelection = emptyList()
@@ -1189,9 +1187,6 @@ internal fun Launcher4MaxApp(
     val homeNestedScrollConnection = remember(homeFavoriteListState) {
         homeTransitionNestedScrollConnection(homeFavoriteListState)
     }
-    val companionNestedScrollConnection = remember(companionFavoriteListState) {
-        homeTransitionNestedScrollConnection(companionFavoriteListState)
-    }
 
     val drawerPointerSafetyModifier = Modifier.pointerInput(Unit) {
         awaitEachGesture {
@@ -1277,9 +1272,6 @@ internal fun Launcher4MaxApp(
                 favoriteListState = homeFavoriteListState,
                 favoriteNestedScrollConnection =
                     homeNestedScrollConnection.takeUnless { homeCoordinator.editMode },
-                companionFavoriteListState = companionFavoriteListState,
-                companionFavoriteNestedScrollConnection =
-                    companionNestedScrollConnection.takeUnless { homeCoordinator.editMode },
                 accessibilityLockController = accessibilityLockController,
                 quickActionBindings = quickActionBindings,
                 showDefaultLauncherPrompt = showDefaultLauncherPrompt,
@@ -1347,10 +1339,6 @@ internal fun Launcher4MaxApp(
                 },
                 homeBottomAppBarExpanded = homeBottomAppBarExpanded,
                 onHomeBottomAppBarExpandedChange = { homeBottomAppBarExpanded = it },
-                favoriteRevealContainerId = homeCoordinator.favoriteRevealRequest?.containerId,
-                favoriteRevealContainerType = homeCoordinator.favoriteRevealRequest?.containerType,
-                favoriteRevealIdentity = homeCoordinator.favoriteRevealRequest?.identity,
-                onFavoriteRevealComplete = homeCoordinator::completeFavoriteReveal,
                 onCommitFavoriteComposition = homeCoordinator::commitFavoriteComposition,
                 onCommitModuleOrder = favoriteEditor::reorderModules,
                 onLaunchFavorite = { availability ->

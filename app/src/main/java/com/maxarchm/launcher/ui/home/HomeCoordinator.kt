@@ -10,7 +10,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import com.maxarchm.launcher.ApplicationOrderChange
 import com.maxarchm.launcher.FavoriteAggregate
-import com.maxarchm.launcher.FavoriteContainerType
 import com.maxarchm.launcher.FavoriteReadState
 import com.maxarchm.launcher.FavoriteStore
 import com.maxarchm.launcher.HOME_BOTTOM_APP_BAR_DESTINATION_ID
@@ -22,13 +21,6 @@ import com.maxarchm.launcher.ui.drawer.DrawerDragJourney
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-
-/** The Home-owned state and durable operations coordinated by the App composition root. */
-internal data class FavoriteRevealRequest(
-    val containerId: String,
-    val containerType: FavoriteContainerType,
-    val identity: LaunchableIdentity,
-)
 
 /**
  * Keeps Home editing, Drawer-to-Home handoff, and durable favorite mutations together while
@@ -57,8 +49,6 @@ internal class HomeCoordinator(
     var drawerDragTouchPosition by mutableStateOf(Offset.Zero)
         private set
     var drawerDragDropping by mutableStateOf(false)
-        private set
-    var favoriteRevealRequest by mutableStateOf<FavoriteRevealRequest?>(null)
         private set
 
     fun refreshEditMembership() {
@@ -106,10 +96,6 @@ internal class HomeCoordinator(
     fun clearDrawerDrag() {
         drawerDragJourney = null
         drawerDragDropping = false
-    }
-
-    fun completeFavoriteReveal() {
-        favoriteRevealRequest = null
     }
 
     fun startDrawerDrag(journey: DrawerDragJourney): Boolean {

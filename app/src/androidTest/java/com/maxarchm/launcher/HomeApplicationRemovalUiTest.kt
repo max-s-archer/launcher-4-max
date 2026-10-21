@@ -166,6 +166,58 @@ class HomeApplicationRemovalUiTest {
         )
     }
 
+    @Test
+    fun removingTheFinalFavoriteBarItemDeletesItsContainerAndOffersUndo() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val entry = entry()
+        val module = OrderedFavoriteModule(
+            id = "edit-single-ribbon",
+            type = OrderedFavoriteModuleType.Ribbon,
+            identities = listOf(entry.identity),
+        )
+        val initial = OrderedFavoriteAggregate(modules = listOf(module))
+        val file = files.newFolder().resolve("favorites.bin")
+        val store = OrderedFavoriteModuleStore(file = file)
+        runBlocking {
+            store.load()
+            assertTrue(store.replaceAggregate(initial))
+        }
+        val adapter = OrderedFavoriteStoreAdapter(file = file)
+        composeRule.setContent {
+            Launcher4MaxTheme {
+                Launcher4MaxApp(
+                    inventoryLoader = LaunchableInventoryLoader {
+                        LaunchableInventorySnapshot(
+                            entries = listOf(entry),
+                            profileReadStatus = mapOf(
+                                entry.identity.profileSerialNumber to
+                                    ProfileInventoryReadStatus.Complete,
+                            ),
+                        )
+                    },
+                    favoriteStore = adapter,
+                )
+            }
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithText(entry.label).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText(entry.label).performTouchInput { longClick(center) }
+        composeRule.onNodeWithTag("edit_favorites_action").performClick()
+        composeRule.onNodeWithTag("remove_favorite_item").performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            (adapter.state.value as? FavoriteReadState.Readable)?.orderedModules?.isEmpty() == true
+        }
+        composeRule.onNodeWithText(context.getString(R.string.favorite_removed)).assertIsDisplayed()
+        composeRule.onAllNodesWithTag("home_favorite_row").assertCountEquals(0)
+        composeRule.onNodeWithText(context.getString(R.string.undo)).performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            (adapter.state.value as? FavoriteReadState.Readable)?.orderedAggregate == initial
+        }
+        composeRule.onNodeWithText(entry.label).assertIsDisplayed()
+        composeRule.onNodeWithTag("remove_favorite_item").assertIsDisplayed()
+    }
+
     private fun entry(): LaunchableEntry = LaunchableEntry(
         identity = LaunchableIdentity(
             profileSerialNumber = 1,
