@@ -92,7 +92,7 @@ Author-reported acceptance of all iteration 35 changes: `Passed` on 2026-10-16.
 
 ### Iteration 36: Home Bottom App Bar
 
-[Contract](iteration-36-home-bottom-app-bar.md). Status: `In Progress`. The author authorized production implementation on 2026-10-16 within the accepted contract. The Settings persistence slice was accepted on 2026-10-19. The backup slice adds schema v6 Home bottom app bar fields, old-backup defaults, duplicate-identity rejection, and width-based restore truncation. Author-reported device acceptance of this backup slice: `Passed` on 2026-10-19. Home production integration remains incomplete.
+[Contract](iteration-36-home-bottom-app-bar.md). Status: `In Progress`. The author authorized production implementation on 2026-10-16 within the accepted contract. The Settings persistence slice was accepted on 2026-10-19. The backup slice adds schema v6 Home bottom app bar fields, old-backup defaults, duplicate-identity rejection, and width-based restore truncation. Author-reported device acceptance of this backup slice: `Passed` on 2026-10-19. The Home presentation slice reads the persisted bar, renders fixed and semi-hidden states, and adds edit-mode add, remove, and in-bar reorder. The movement slice accepts a Drawer drop, moves favorites between the bar and modules, rejects a new member when the bar is full, and ends movement on Back before collapsing the bar. Focused checks cover insertion, full-bar rejection, reorder, Drawer drop, and exact-fit capacity. Author-reported device acceptance of these slices: `Passed` on 2026-10-20. Ordinary Home one-shot placement remains Iteration 38. Iteration closure and merge into `main` are not yet authorized.
 
 ### Iteration 37: Home Edit Mode Interaction
 

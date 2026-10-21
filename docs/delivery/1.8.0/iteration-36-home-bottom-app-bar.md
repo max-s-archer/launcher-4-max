@@ -59,7 +59,7 @@ The app bar must not change the allocated Home content gesture or create a secon
 
 ## Validation requirements
 
-Validate fresh defaults, all app-bar states and transitions on the primary device, including the 24dp semi-hidden surface, Home scrolling, Back, edit-mode expansion, restart, backup/restore of the bar settings and ordered favorites, and accessibility traversal.
+Validate fresh defaults, all app-bar states and transitions on the primary device, including the 16dp semi-hidden exposure, Home scrolling, Back, edit-mode expansion, restart, backup/restore of the bar settings and ordered favorites, and accessibility traversal.
 
 ## Related decisions and technical assessments
 
