@@ -54,7 +54,7 @@
 | 迭代 | 状态 | 更新日期 | 依据 |
 | --- | --- | --- | --- |
 | [迭代 35：图标形状配置](iteration-35-icon-shape-customization.zh-CN.md) | `Completed` | 2026-10-16 | 全部改动已获作者验收通过，并已合入 `main`。 |
-| [迭代 36：Home 底部应用栏](iteration-36-home-bottom-app-bar.zh-CN.md) | `In Progress` | 2026-10-19 | 作者已在既定契约范围内授权生产实现。 |
+| [迭代 36：Home 底部应用栏](iteration-36-home-bottom-app-bar.zh-CN.md) | `Completed` | 2026-10-20 | 作者已验收应用栏实现。 |
 | [迭代 37：Home 编辑模式交互](iteration-37-home-edit-mode-interaction.zh-CN.md) | `Planned` | 2026-10-14 | 作者确认模块标题属于 Home 编辑模式交互修改。 |
 | [迭代 38：Home 收藏放置与布局](iteration-38-home-favorite-placement-layout.zh-CN.md) | `Planned` | 2026-10-14 | 已接受的 Home 放置与布局更新形成独立可验收的放置旅程。 |
 | [迭代 39：Home 加载与收尾](iteration-39-home-loading-closure.zh-CN.md) | `Planned` | 2026-10-14 | 作者要求最后一个迭代处理 Home 加载与小范围已定义问题。 |
@@ -89,7 +89,7 @@
 
 ### 迭代 36：Home 底部应用栏
 
-[契约](iteration-36-home-bottom-app-bar.zh-CN.md)。状态：`In Progress`。作者于 2026-10-16 在既定契约范围内授权生产实现。Settings 持久化切片已于 2026-10-19 验收通过。备份切片已加入 schema v6 底部应用栏字段、旧备份默认值、重复身份拒绝和按宽度恢复截断。作者于 2026-10-19 报告该备份切片设备验收：`Passed`。Home 呈现切片读取持久化应用栏，渲染固定与半隐藏状态，并提供编辑模式添加、移除和栏内排序。移动切片接受 Drawer 拖入，支持应用栏与模块之间移动，应用栏已满时拒绝新增成员，并在 Back 收起应用栏前先结束移动。聚焦检查覆盖插入、满员拒绝、栏内换序、Drawer 拖入和刚好容纳一个图标的容量。作者于 2026-10-20 报告这些切片设备验收：`Passed`。普通 Home 一次操作仍属于迭代 38。迭代关闭和合入 `main` 尚未授权。
+[契约](iteration-36-home-bottom-app-bar.zh-CN.md)。状态：`Completed`。作者于 2026-10-16 在既定契约范围内授权生产实现。Settings 持久化切片已于 2026-10-19 验收通过。备份切片已加入 schema v6 底部应用栏字段、旧备份默认值、重复身份拒绝和按宽度恢复截断。作者于 2026-10-19 报告该备份切片设备验收：`Passed`。Home 呈现切片读取持久化应用栏，渲染固定与半隐藏状态，并提供编辑模式添加、移除和栏内排序。移动切片接受 Drawer 拖入，支持应用栏与模块之间移动，应用栏已满时拒绝新增成员，并在 Back 收起应用栏前先结束移动。聚焦检查覆盖插入、满员拒绝、栏内换序、Drawer 拖入和刚好容纳一个图标的容量。作者于 2026-10-20 报告这些切片设备验收：`Passed`。普通 Home 一次操作仍属于迭代 38。作者于 2026-10-20 关闭本迭代。
 
 ### 迭代 37：Home 编辑模式交互
 
@@ -131,6 +131,4 @@
 
 ## 完成结果
 
-1.8.0 版本尚未完成。截至 2026-10-19，迭代35为 `Completed`，
-已获作者验收通过并合入 `main`；迭代36为 `In Progress`，
-迭代37–39仍为 `Planned`。
+1.8.0 版本尚未完成。截至 2026-10-20，迭代 35 和迭代 36 均为 `Completed`，并已获作者验收。迭代 37–39 仍为 `Planned`。

@@ -54,7 +54,7 @@ Primary risks are interaction overlap between the bottom app bar and edit mode, 
 | Iteration | Status | Updated | Basis |
 | --- | --- | --- | --- |
 | [Iteration 35: Icon Shape Customization](iteration-35-icon-shape-customization.md) | `Completed` | 2026-10-16 | All changes accepted by the author and merged into `main`. |
-| [Iteration 36: Home Bottom App Bar](iteration-36-home-bottom-app-bar.md) | `In Progress` | 2026-10-19 | The author authorized production implementation within the accepted contract. |
+| [Iteration 36: Home Bottom App Bar](iteration-36-home-bottom-app-bar.md) | `Completed` | 2026-10-20 | The author accepted the bar implementation. |
 | [Iteration 37: Home Edit Mode Interaction](iteration-37-home-edit-mode-interaction.md) | `Planned` | 2026-10-14 | The author identified module titles as part of the Home edit-mode interaction change. |
 | [Iteration 38: Home Favorite Placement and Layout](iteration-38-home-favorite-placement-layout.md) | `Planned` | 2026-10-14 | The accepted Home placement and layout updates form an independently reviewable placement journey. |
 | [Iteration 39: Home Loading and Closure](iteration-39-home-loading-closure.md) | `Planned` | 2026-10-14 | The author requested a final iteration for Home loading and small defined-scope issues. |
@@ -92,7 +92,7 @@ Author-reported acceptance of all iteration 35 changes: `Passed` on 2026-10-16.
 
 ### Iteration 36: Home Bottom App Bar
 
-[Contract](iteration-36-home-bottom-app-bar.md). Status: `In Progress`. The author authorized production implementation on 2026-10-16 within the accepted contract. The Settings persistence slice was accepted on 2026-10-19. The backup slice adds schema v6 Home bottom app bar fields, old-backup defaults, duplicate-identity rejection, and width-based restore truncation. Author-reported device acceptance of this backup slice: `Passed` on 2026-10-19. The Home presentation slice reads the persisted bar, renders fixed and semi-hidden states, and adds edit-mode add, remove, and in-bar reorder. The movement slice accepts a Drawer drop, moves favorites between the bar and modules, rejects a new member when the bar is full, and ends movement on Back before collapsing the bar. Focused checks cover insertion, full-bar rejection, reorder, Drawer drop, and exact-fit capacity. Author-reported device acceptance of these slices: `Passed` on 2026-10-20. Ordinary Home one-shot placement remains Iteration 38. Iteration closure and merge into `main` are not yet authorized.
+[Contract](iteration-36-home-bottom-app-bar.md). Status: `Completed`. The author authorized production implementation on 2026-10-16 within the accepted contract. The Settings persistence slice was accepted on 2026-10-19. The backup slice adds schema v6 Home bottom app bar fields, old-backup defaults, duplicate-identity rejection, and width-based restore truncation. Author-reported device acceptance of this backup slice: `Passed` on 2026-10-19. The Home presentation slice reads the persisted bar, renders fixed and semi-hidden states, and adds edit-mode add, remove, and in-bar reorder. The movement slice accepts a Drawer drop, moves favorites between the bar and modules, rejects a new member when the bar is full, and ends movement on Back before collapsing the bar. Focused checks cover insertion, full-bar rejection, reorder, Drawer drop, and exact-fit capacity. Author-reported device acceptance of these slices: `Passed` on 2026-10-20. Ordinary Home one-shot placement remains Iteration 38. The author closed the iteration on 2026-10-20.
 
 ### Iteration 37: Home Edit Mode Interaction
 
@@ -134,6 +134,4 @@ This version uses the `Author daily-use baseline` gates. The accepted APK must r
 
 ## Completion result
 
-Version 1.8.0 is not yet complete. As of 2026-10-19, Iteration 35 is `Completed`,
-accepted by the author, and merged into `main`; Iteration 36 is `In Progress`,
-while Iterations 37–39 remain `Planned`.
+Version 1.8.0 is not yet complete. As of 2026-10-20, Iterations 35 and 36 are `Completed` and accepted by the author. Iterations 37–39 remain `Planned`.
