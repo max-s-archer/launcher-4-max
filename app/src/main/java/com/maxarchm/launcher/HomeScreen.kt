@@ -1,5 +1,6 @@
 package com.maxarchm.launcher
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -169,6 +170,9 @@ internal fun HomeScreen(
         modules = (favoriteState as? FavoriteReadState.Readable)?.orderedModules,
     )
     val applicationMovementActive = orderedApplicationMovement.activeIdentity != null
+    BackHandler(enabled = applicationMovementActive) {
+        orderedApplicationMovement.cancel()
+    }
     val favoriteBarItemWidthPx = with(LocalDensity.current) {
         dimensionResource(R.dimen.home_favorite_bar_item_width).toPx()
     }
