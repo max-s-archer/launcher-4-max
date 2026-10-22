@@ -442,6 +442,9 @@ class OrderedFavoriteModuleStoreTest {
             ),
         )
 
+        val before = adapter.state.value
+        assertFalse(adapter.replaceModuleOrder(listOf("vertical-1", "vertical-1")))
+        assertEquals(before, adapter.state.value)
         assertTrue(adapter.replaceModuleOrder(listOf("ribbon-1", "vertical-1")))
 
         val reloaded = OrderedFavoriteStoreAdapter(file)
