@@ -12,10 +12,21 @@ android {
     // Load local signing configuration without committing credentials.
     val keystoreFile = rootProject.file("keystore.properties")
     val signingProp = Properties()
-    if (keystoreFile.exists()) {
-        keystoreFile.inputStream().use {
-            signingProp.load(it)
+    check(keystoreFile.isFile) {
+        "Both debug and release require local signing configuration in keystore.properties."
+    }
+    keystoreFile.inputStream().use {
+        signingProp.load(it)
+    }
+    val signingKeys = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+    signingKeys.forEach { key ->
+        check(!signingProp.getProperty(key).isNullOrBlank()) {
+            "Missing required signing property '$key' in keystore.properties."
         }
+    }
+    val signingStoreFile = rootProject.file(signingProp.getProperty("storeFile"))
+    check(signingStoreFile.isFile) {
+        "The keystore specified by storeFile in keystore.properties does not exist."
     }
 
     defaultConfig {
@@ -30,19 +41,21 @@ android {
 
     signingConfigs {
         create("release") {
-            // Keep debug builds available when local release credentials are absent.
-            if (keystoreFile.exists()) {
-                storeFile = rootProject.file(signingProp.getProperty("storeFile"))
-                storePassword = signingProp.getProperty("storePassword")
-                keyAlias = signingProp.getProperty("keyAlias")
-                keyPassword = signingProp.getProperty("keyPassword")
-            }
+            storeFile = signingStoreFile
+            storePassword = signingProp.getProperty("storePassword")
+            keyAlias = signingProp.getProperty("keyAlias")
+            keyPassword = signingProp.getProperty("keyPassword")
         }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("release")
+            isDebuggable = true
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
+            isDebuggable = false
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

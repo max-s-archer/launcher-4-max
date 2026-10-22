@@ -34,6 +34,24 @@
 
 准确的 Android SDK 软件包清单、受支持 IDE 版本和主机特定环境变量设置，尚未成为项目统一要求。只有确认某项要求确实必要后才记录于此，不得根据单台设备推断。
 
+## 本地签名
+
+`debug` 与 `release` 两个 build type 共用本地 `release` signing config，
+并使用上文所列的同一个 `applicationId`。`debug` 可调试，`release` 不可调试。
+
+Gradle 配置前，需在仓库根目录提供不受版本控制跟踪的 `keystore.properties`，
+并准备实际 keystore 文件。以下四个属性均为必填，且不得为空或仅含空白：
+
+- `storeFile`：keystore 路径，由 `rootProject.file` 解析；相对路径以仓库根目录为基准，
+  绝对路径保留其主机特定含义。
+- `storePassword`：keystore 密码。
+- `keyAlias`：签名密钥别名。
+- `keyPassword`：签名密钥密码。
+
+凭据与 keystore 不得纳入版本控制，文档中不得填写真实秘密。
+属性文件缺失、必填值缺失或为空白、keystore 路径未指向现有文件时，
+Gradle 会在配置阶段失败，包括 IDE Sync。不会回退到默认 debug 签名密钥。
+
 ## 开发入口
 
 在仓库根目录使用已检入的 Wrapper 运行 Gradle：

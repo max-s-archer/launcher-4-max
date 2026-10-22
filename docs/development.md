@@ -35,6 +35,25 @@ Treat these values as current repository configuration, not promises that every 
 
 The exact Android SDK package list, supported IDE version, and host-specific environment-variable setup are not yet established as project-wide requirements. Record a verified requirement here when it becomes necessary; do not infer it from one machine.
 
+## Local signing
+
+Both `debug` and `release` build types use the local `release` signing config and the same
+`applicationId` listed above. `debug` is debuggable; `release` is not debuggable.
+
+Before Gradle configuration, provide an untracked `keystore.properties` at the repository root
+and the actual keystore file. All four properties are required and must be nonblank:
+
+- `storeFile`: the keystore path, resolved by `rootProject.file`; relative paths are relative
+  to the repository root, and absolute paths retain their host-specific meaning.
+- `storePassword`: the keystore password.
+- `keyAlias`: the signing key alias.
+- `keyPassword`: the signing key password.
+
+Keep credentials and the keystore out of version control; do not put real secrets in documentation.
+If the properties file is missing, a required value is missing or blank, or the keystore path
+does not identify an existing file, Gradle fails during configuration, including IDE Sync.
+There is no fallback to the default debug signing key.
+
 ## Development entry points
 
 Run Gradle from the repository root with the checked-in wrapper:

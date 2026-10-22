@@ -41,6 +41,32 @@ For a product behavior change, use the applicable product or iteration acceptanc
 
 An emulator result does not establish physical-device behavior. One device result does not establish compatibility on another OEM, Android version, profile type, or clone environment.
 
+### Switching between debug and release installations
+
+Use the [local signing baseline](development.md#local-signing) for configuration prerequisites.
+The following is a validation method, not a record of a passed build or installation:
+
+1. Obtain both APKs through an authorized build. Inspect APK metadata and signing certificates
+   with Android SDK tools, such as APK Analyzer and `apksigner verify --print-certs`.
+   Confirm that both APKs and the installed app have the same `applicationId` and signing
+   certificate. Record certificate fingerprints, version codes, and debuggable attributes.
+2. Check version codes before each replacement: the incoming APK must have a `versionCode`
+   equal to or greater than the installed app for a normal replacement. Matching identity
+   and certificate do not bypass Android downgrade restrictions; do not force a downgrade
+   or change the project version just to complete this check.
+3. If the installed app uses the previous default debug certificate, direct replacement with
+   these APKs is not possible. Back up needed data/settings through an available, verified
+   method before an author-controlled uninstall and reinstall. Do not uninstall automatically;
+   if backup is unavailable, stop and ask the author how to preserve the data.
+4. With a compatible debug installation, record representative saved settings, then replace
+   it with release without uninstalling or clearing app data. Reopen the app, verify that
+   settings persist, and inspect the installed package to confirm it is not debuggable.
+5. Repeat in the reverse direction, release -> debug, after checking the same installation
+   prerequisites. Verify that saved settings persist and the installed package is debuggable.
+   If version codes prevent either direction, report that direction as not run with the reason.
+
+Record each direction separately using the evidence fields above and result statuses below.
+
 ## Validation proportionality
 
 - Documentation-only changes: inspect the relevant Git diff, run `git diff --check`, and verify affected local Markdown links. Do not run Gradle unless separately required.
