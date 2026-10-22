@@ -57,11 +57,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.drawable.toBitmap
-import com.maxarcher.launcher.FavoriteAggregate
 import com.maxarcher.launcher.FavoriteAvailability
-import com.maxarcher.launcher.FavoriteContainer
 import com.maxarcher.launcher.FavoriteListSize
 import com.maxarcher.launcher.LaunchableIdentity
+import com.maxarcher.launcher.OrderedFavoriteAggregate
 import com.maxarcher.launcher.OrderedFavoriteModule
 import com.maxarcher.launcher.OrderedFavoriteModuleType
 import com.maxarcher.launcher.R
@@ -434,9 +433,11 @@ internal fun HomeFavoriteRow(
 }
 
 internal fun List<OrderedFavoriteModule>.withPresentationFrom(
-    aggregate: FavoriteAggregate,
+    aggregate: OrderedFavoriteAggregate,
 ): List<OrderedFavoriteModule> {
-    val verticalById = aggregate.verticalLists.associateBy(FavoriteContainer::id)
+    val verticalById = aggregate.modules
+        .filter { it.type == OrderedFavoriteModuleType.Vertical }
+        .associateBy(OrderedFavoriteModule::id)
     return map { module ->
         val container = verticalById[module.id]
         if (module.type != OrderedFavoriteModuleType.Vertical || container == null) {

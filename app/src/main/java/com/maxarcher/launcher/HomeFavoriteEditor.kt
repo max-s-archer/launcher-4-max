@@ -72,12 +72,14 @@ internal fun removeOrderedFavorite(
 internal fun restoreOrderedFavorite(
     aggregate: OrderedFavoriteAggregate,
     snapshot: FavoriteRemovalSnapshot,
+    barCapacity: Int? = null,
 ): OrderedFavoriteAggregate? {
     if (snapshot.identity in aggregate.identities) return aggregate
     val barIndex = snapshot.barIndex
     if (barIndex != null) {
         val identities = aggregate.homeBottomAppBar.identities.toMutableList()
-        val capacity = snapshot.barOrder.size + 1
+        if (!aggregate.homeBottomAppBar.enabled) return null
+        val capacity = barCapacity ?: return null
         if (identities.size >= capacity) return null
         identities.add(
             index = restoredFavoritePosition(
@@ -200,6 +202,7 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
 
     suspend fun undo(
         snapshot: FavoriteRemovalSnapshot,
+        currentBarCapacity: (HomeBottomAppBarState) -> Int? = { null },
         revalidate: suspend () -> Boolean = { true },
     ): Boolean {
         if (isSaving || undoRemoval !== snapshot) return false
@@ -211,8 +214,15 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
                     if (undoRemoval !== snapshot || snapshot.identity in confirmedAbsent) {
                         aggregate
                     } else {
-                        restoreOrderedFavorite(aggregate = aggregate, snapshot = snapshot)
-                            ?: aggregate
+                        restoreOrderedFavorite(
+                            aggregate = aggregate,
+                            snapshot = snapshot,
+                            barCapacity = if (snapshot.barIndex != null) {
+                                currentBarCapacity(aggregate.homeBottomAppBar)
+                            } else {
+                                null
+                            },
+                        ) ?: aggregate
                     }
                 },
             )
@@ -260,13 +270,13 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
     }
 
     suspend fun updateComposition(
-        transform: (FavoriteAggregate) -> FavoriteAggregate,
-    ): FavoriteAggregate? {
+        transform: (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
+    ): OrderedFavoriteAggregate? {
         if (isSaving) return null
         isSaving = true
         return try {
             val before = store.state.value
-            store.updateAggregate(transform = transform).also(
+            store.updateOrderedAggregate(transform = transform).also(
                 block = { saved ->
                     if (saved != null && before != store.state.value) invalidateUndo()
                 },

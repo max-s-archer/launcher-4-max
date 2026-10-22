@@ -7,34 +7,63 @@ import org.junit.Test
 
 class HomeBottomAppBarTest {
     @Test
-    fun capacityCountsOnlyWholeIconsAfterInsetsAndGaps() {
+    fun capacityCountsOnlyWholeIconsAfterOuterMarginsInsetsAndGaps() {
         assertEquals(
             4,
             homeBottomAppBarCapacity(
                 safeWidthDp = 280f,
+                outerMarginDp = 16f,
                 iconSizeDp = 40f,
                 horizontalInsetDp = 16f,
                 iconGapDp = 16f,
             ),
         )
         assertEquals(
-            3,
+            2,
             homeBottomAppBarCapacity(
                 safeWidthDp = 223f,
+                outerMarginDp = 16f,
                 iconSizeDp = 48f,
                 horizontalInsetDp = 16f,
                 iconGapDp = 16f,
             ),
         )
         assertEquals(
-            1,
+            0,
             homeBottomAppBarCapacity(
                 safeWidthDp = 80f,
+                outerMarginDp = 16f,
                 iconSizeDp = 48f,
                 horizontalInsetDp = 16f,
                 iconGapDp = 16f,
             ),
         )
+    }
+
+    @Test
+    fun capacityChangesOnlyWhenAnotherWholeIconFitsInsideBothMargins() {
+        val cases = listOf(
+            0f to 0,
+            111f to 0,
+            112f to 1,
+            175f to 1,
+            176f to 2,
+            239f to 2,
+            240f to 3,
+        )
+        for ((width, expected) in cases) {
+            assertEquals(
+                "Safe width: $width",
+                expected,
+                homeBottomAppBarCapacity(
+                    safeWidthDp = width,
+                    iconSizeDp = 48f,
+                    outerMarginDp = 16f,
+                    horizontalInsetDp = 16f,
+                    iconGapDp = 16f,
+                ),
+            )
+        }
     }
 
     @Test

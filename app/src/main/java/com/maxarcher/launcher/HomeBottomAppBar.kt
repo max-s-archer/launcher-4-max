@@ -18,16 +18,18 @@ internal data class HomeBottomAppBarState(
 internal fun homeBottomAppBarCapacity(
     safeWidthDp: Float,
     iconSizeDp: Float,
+    outerMarginDp: Float,
     horizontalInsetDp: Float,
     iconGapDp: Float,
 ): Int {
-    val availableWidthDp = safeWidthDp - horizontalInsetDp * 2
+    val availableWidthDp = safeWidthDp - (outerMarginDp + horizontalInsetDp) * 2
     if (availableWidthDp < iconSizeDp) return 0
     return floor((availableWidthDp + iconGapDp) / (iconSizeDp + iconGapDp)).toInt()
 }
 
 internal fun OrderedFavoriteAggregate.restoreHomeBottomAppBarForWidth(
     safeWidthDp: Float,
+    outerMarginDp: Float,
     horizontalInsetDp: Float,
     iconGapDp: Float,
     iconSizeDp: (FavoriteListSize) -> Float,
@@ -35,6 +37,7 @@ internal fun OrderedFavoriteAggregate.restoreHomeBottomAppBarForWidth(
     if (safeWidthDp <= 0f) return null
     val capacity = homeBottomAppBarCapacity(
         safeWidthDp = safeWidthDp,
+        outerMarginDp = outerMarginDp,
         iconSizeDp = iconSizeDp(homeBottomAppBar.iconSize),
         horizontalInsetDp = horizontalInsetDp,
         iconGapDp = iconGapDp,

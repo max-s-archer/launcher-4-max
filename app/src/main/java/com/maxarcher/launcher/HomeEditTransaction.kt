@@ -11,13 +11,13 @@ internal class HomeEditTransaction {
     var sessionId by mutableIntStateOf(0)
         private set
 
-    var pendingAggregate by mutableStateOf<FavoriteAggregate?>(null)
+    var pendingAggregate by mutableStateOf<OrderedFavoriteAggregate?>(null)
         private set
 
-    var committedAggregate by mutableStateOf<FavoriteAggregate?>(null)
+    var committedAggregate by mutableStateOf<OrderedFavoriteAggregate?>(null)
         private set
 
-    var undoAggregate by mutableStateOf<FavoriteAggregate?>(null)
+    var undoAggregate by mutableStateOf<OrderedFavoriteAggregate?>(null)
         private set
 
     var undoSequence by mutableIntStateOf(0)
@@ -26,7 +26,7 @@ internal class HomeEditTransaction {
     var pendingModuleOrder by mutableStateOf<List<OrderedFavoriteModule>?>(null)
         private set
 
-    fun enter(initialAggregate: FavoriteAggregate?) {
+    fun enter(initialAggregate: OrderedFavoriteAggregate?) {
         sessionId += 1
         committedAggregate = initialAggregate
     }
@@ -39,26 +39,26 @@ internal class HomeEditTransaction {
         pendingModuleOrder = null
     }
 
-    fun baseAggregate(currentAggregate: FavoriteAggregate?): FavoriteAggregate? =
+    fun baseAggregate(currentAggregate: OrderedFavoriteAggregate?): OrderedFavoriteAggregate? =
         pendingAggregate ?: committedAggregate ?: currentAggregate
 
-    fun previewAggregate(fallback: FavoriteAggregate): FavoriteAggregate =
+    fun previewAggregate(fallback: OrderedFavoriteAggregate): OrderedFavoriteAggregate =
         pendingAggregate ?: committedAggregate ?: fallback
 
-    fun beginMutation(updated: FavoriteAggregate) {
+    fun beginMutation(updated: OrderedFavoriteAggregate) {
         pendingAggregate = updated
     }
 
-    fun completeMutation(persisted: FavoriteAggregate) {
+    fun completeMutation(persisted: OrderedFavoriteAggregate) {
         committedAggregate = persisted
         pendingAggregate = null
     }
 
-    fun discardPending(expectedPending: FavoriteAggregate) {
+    fun discardPending(expectedPending: OrderedFavoriteAggregate) {
         if (pendingAggregate == expectedPending) pendingAggregate = null
     }
 
-    fun restoreCommitted(currentAggregate: FavoriteAggregate?) {
+    fun restoreCommitted(currentAggregate: OrderedFavoriteAggregate?) {
         committedAggregate = currentAggregate ?: committedAggregate
     }
 
@@ -75,13 +75,13 @@ internal class HomeEditTransaction {
         undoAggregate = null
     }
 
-    fun recordUndo(aggregate: FavoriteAggregate): Int {
+    fun recordUndo(aggregate: OrderedFavoriteAggregate): Int {
         undoSequence += 1
         undoAggregate = aggregate
         return undoSequence
     }
 
-    fun consumeUndo(expectedSequence: Int): FavoriteAggregate? {
+    fun consumeUndo(expectedSequence: Int): OrderedFavoriteAggregate? {
         if (expectedSequence != undoSequence) return null
         val snapshot = undoAggregate ?: return null
         undoAggregate = null
@@ -89,7 +89,7 @@ internal class HomeEditTransaction {
         return snapshot
     }
 
-    fun reconcileExternal(aggregate: FavoriteAggregate): Boolean {
+    fun reconcileExternal(aggregate: OrderedFavoriteAggregate): Boolean {
         val dismissedUndo = undoAggregate != null
         if (dismissedUndo) clearUndo()
         pendingAggregate = null

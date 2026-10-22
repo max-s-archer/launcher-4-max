@@ -9,12 +9,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import com.maxarcher.launcher.ApplicationOrderChange
-import com.maxarcher.launcher.FavoriteAggregate
 import com.maxarcher.launcher.FavoriteReadState
 import com.maxarcher.launcher.FavoriteStore
 import com.maxarcher.launcher.HOME_BOTTOM_APP_BAR_DESTINATION_ID
 import com.maxarcher.launcher.HomeFavoriteEditor
 import com.maxarcher.launcher.LaunchableIdentity
+import com.maxarcher.launcher.OrderedFavoriteAggregate
 import com.maxarcher.launcher.R
 import com.maxarcher.launcher.ui.drawer.DrawerDragDrop
 import com.maxarcher.launcher.ui.drawer.DrawerDragJourney
@@ -64,7 +64,7 @@ internal class HomeCoordinator(
         favoriteState = state
     }
 
-    fun updateEditMembership(aggregate: FavoriteAggregate) {
+    fun updateEditMembership(aggregate: OrderedFavoriteAggregate) {
         editMembership = aggregate.identities.toSet()
     }
 
@@ -187,8 +187,8 @@ internal class HomeCoordinator(
     }
 
     suspend fun commitFavoriteComposition(
-        transform: (FavoriteAggregate) -> FavoriteAggregate,
-    ): FavoriteAggregate? {
+        transform: (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
+    ): OrderedFavoriteAggregate? {
         val aggregate = favoriteEditor.updateComposition(transform = transform) ?: return null
         if (editMode) editMembership = aggregate.identities.toSet()
         return aggregate

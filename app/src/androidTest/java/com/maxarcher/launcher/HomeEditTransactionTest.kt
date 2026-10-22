@@ -78,12 +78,14 @@ class HomeEditTransactionTest {
         assertNull(transaction.pendingModuleOrder)
     }
 
-    private fun aggregate(id: String) = FavoriteAggregate(
-        verticalLists = listOf(
-            FavoriteContainer(
+    private fun aggregate(id: String) = OrderedFavoriteAggregate(
+        modules = listOf(
+            OrderedFavoriteModule(
                 id = id,
-                type = FavoriteContainerType.VerticalList,
-                identities = emptyList(),
+                type = OrderedFavoriteModuleType.Vertical,
+                identities = listOf(
+                    LaunchableIdentity(0, android.content.ComponentName("test", id)),
+                ),
             ),
         ),
     )

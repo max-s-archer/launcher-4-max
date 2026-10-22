@@ -314,12 +314,12 @@ class OrderedFavoriteModuleStoreTest {
         val adapter = OrderedFavoriteStoreAdapter(file)
         adapter.load()
         assertTrue(
-            adapter.replaceAggregate(
-                FavoriteAggregate(
-                    verticalLists = listOf(
-                        FavoriteContainer(
+            adapter.restoreAggregate(
+                OrderedFavoriteAggregate(
+                    modules = listOf(
+                        OrderedFavoriteModule(
                             id = "vertical-list-1",
-                            type = FavoriteContainerType.VerticalList,
+                            type = OrderedFavoriteModuleType.Vertical,
                             identities = listOf(identity),
                         ),
                     ),
@@ -327,9 +327,9 @@ class OrderedFavoriteModuleStoreTest {
             ),
         )
 
-        val updated = adapter.updateAggregate { it.removeIdentity(identity) }
+        val updated = adapter.updateOrderedAggregate { removeOrderedFavorite(it, identity) }
 
-        assertEquals(FavoriteAggregate(), updated)
+        assertEquals(OrderedFavoriteAggregate(), updated)
         val readable = adapter.state.value as FavoriteReadState.Readable
         assertTrue(readable.aggregate.identities.isEmpty())
         assertTrue(readable.orderedModules?.isEmpty() == true)
@@ -344,12 +344,12 @@ class OrderedFavoriteModuleStoreTest {
         val adapter = OrderedFavoriteStoreAdapter(file)
         adapter.load()
         assertTrue(
-            adapter.replaceAggregate(
-                FavoriteAggregate(
-                    favoriteBars = listOf(
-                        FavoriteContainer(
+            adapter.restoreAggregate(
+                OrderedFavoriteAggregate(
+                    modules = listOf(
+                        OrderedFavoriteModule(
                             id = "favorite-bar-1",
-                            type = FavoriteContainerType.FavoriteBar,
+                            type = OrderedFavoriteModuleType.Ribbon,
                             identities = listOf(ribbonIdentity),
                         ),
                     ),
@@ -379,17 +379,17 @@ class OrderedFavoriteModuleStoreTest {
         val adapter = OrderedFavoriteStoreAdapter(file)
         adapter.load()
         assertTrue(
-            adapter.replaceAggregate(
-                FavoriteAggregate(
-                    verticalLists = listOf(
-                        FavoriteContainer(
+            adapter.restoreAggregate(
+                OrderedFavoriteAggregate(
+                    modules = listOf(
+                        OrderedFavoriteModule(
                             id = "vertical-1",
-                            type = FavoriteContainerType.VerticalList,
+                            type = OrderedFavoriteModuleType.Vertical,
                             identities = listOf(firstIdentity),
                         ),
-                        FavoriteContainer(
+                        OrderedFavoriteModule(
                             id = "vertical-2",
-                            type = FavoriteContainerType.VerticalList,
+                            type = OrderedFavoriteModuleType.Vertical,
                             identities = listOf(secondIdentity),
                         ),
                     ),
@@ -400,11 +400,14 @@ class OrderedFavoriteModuleStoreTest {
             .orderedModules
             ?.single { it.id == "vertical-2" }
 
-        adapter.updateAggregate { aggregate ->
-            aggregate.updateVerticalList("vertical-1") {
-                it.copy(listSize = FavoriteListSize.Large)
-            }
+        val updated = adapter.updateOrderedAggregate { aggregate ->
+            aggregate.copy(
+                modules = aggregate.modules.map {
+                    if (it.id == "vertical-1") it.copy(iconSize = FavoriteListSize.Large) else it
+                },
+            )
         }
+        assertEquals(FavoriteListSize.Large, updated?.modules?.first()?.iconSize)
 
         val unchangedAfter = (adapter.state.value as FavoriteReadState.Readable)
             .orderedModules
@@ -421,19 +424,17 @@ class OrderedFavoriteModuleStoreTest {
         val adapter = OrderedFavoriteStoreAdapter(file)
         adapter.load()
         assertTrue(
-            adapter.replaceAggregate(
-                FavoriteAggregate(
-                    verticalLists = listOf(
-                        FavoriteContainer(
+            adapter.restoreAggregate(
+                OrderedFavoriteAggregate(
+                    modules = listOf(
+                        OrderedFavoriteModule(
                             id = "vertical-1",
-                            type = FavoriteContainerType.VerticalList,
+                            type = OrderedFavoriteModuleType.Vertical,
                             identities = listOf(first),
                         ),
-                    ),
-                    favoriteBars = listOf(
-                        FavoriteContainer(
+                        OrderedFavoriteModule(
                             id = "ribbon-1",
-                            type = FavoriteContainerType.FavoriteBar,
+                            type = OrderedFavoriteModuleType.Ribbon,
                             identities = listOf(second),
                         ),
                     ),
@@ -457,12 +458,12 @@ class OrderedFavoriteModuleStoreTest {
         val adapter = OrderedFavoriteStoreAdapter(file)
         adapter.load()
         assertTrue(
-            adapter.replaceAggregate(
-                FavoriteAggregate(
-                    verticalLists = listOf(
-                        FavoriteContainer(
+            adapter.restoreAggregate(
+                OrderedFavoriteAggregate(
+                    modules = listOf(
+                        OrderedFavoriteModule(
                             id = "vertical-1",
-                            type = FavoriteContainerType.VerticalList,
+                            type = OrderedFavoriteModuleType.Vertical,
                             identities = listOf(identity),
                         ),
                     ),

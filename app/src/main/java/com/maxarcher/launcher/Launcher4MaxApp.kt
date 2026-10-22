@@ -87,17 +87,6 @@ private data class FavoriteAddTarget(
     val remainingPlaces: Int? = null,
 )
 
-private fun nextFavoriteContainerId(
-    prefix: String,
-    containers: List<FavoriteContainer>,
-): String {
-    var suffix = 1
-    while (containers.any { it.id == "$prefix-$suffix" }) {
-        suffix += 1
-    }
-    return "$prefix-$suffix"
-}
-
 private const val DRAWER_MOVEMENT_PER_GESTURE_DP = 1.5f
 private const val TARGET_FLING_THRESHOLD_DP_PER_SECOND = 1_000f
 
@@ -384,6 +373,31 @@ internal fun Launcher4MaxApp(
                     block = {
                         val restored = favoriteEditor.undo(
                             snapshot = snapshot,
+                            currentBarCapacity = { bar ->
+                                // Read live width and transaction state after inventory validation.
+                                val width = homeSafeWidthDp
+                                if (!width.isFinite() || width <= 0f) {
+                                    null
+                                } else {
+                                    val resources = androidContext.resources
+                                    val density = resources.displayMetrics.density
+                                    homeBottomAppBarCapacity(
+                                        safeWidthDp = width,
+                                        outerMarginDp = resources.getDimension(
+                                            R.dimen.home_bottom_app_bar_outer_margin,
+                                        ) / density,
+                                        iconSizeDp = resources.getDimension(
+                                            bar.iconSize.iconSizeResource(),
+                                        ) / density,
+                                        horizontalInsetDp = resources.getDimension(
+                                            R.dimen.home_bottom_app_bar_preview_horizontal_inset,
+                                        ) / density,
+                                        iconGapDp = resources.getDimension(
+                                            R.dimen.home_bottom_app_bar_preview_icon_gap,
+                                        ) / density,
+                                    )
+                                }
+                            },
                             revalidate = {
                                 val inventory = (inventoryCoordinator.state.value
                                     as? LaunchableInventoryState.Content)?.snapshot
@@ -655,8 +669,11 @@ internal fun Launcher4MaxApp(
     fun openFavoriteSelection(containerId: String) {
         if (favoriteEditor.isSaving) return
         val readable = favoriteState as? FavoriteReadState.Readable ?: return
-        val index = readable.aggregate.verticalLists.indexOfFirst { it.id == containerId }
-        if (index < 0) return
+        val modules = readable.orderedAggregate?.modules ?: return
+        if (modules.none {
+                it.id == containerId && it.type == OrderedFavoriteModuleType.Vertical
+            }
+        ) return
         favoriteEditor.invalidateUndo()
         favoriteAddTarget = FavoriteAddTarget(
             containerId = containerId,
@@ -693,6 +710,9 @@ internal fun Launcher4MaxApp(
         val bar = readable.orderedAggregate?.homeBottomAppBar ?: return
         val capacity = homeBottomAppBarCapacity(
             safeWidthDp = homeSafeWidthDp,
+            outerMarginDp = androidContext.resources.getDimension(
+                R.dimen.home_bottom_app_bar_outer_margin,
+            ) / androidContext.resources.displayMetrics.density,
             iconSizeDp = androidContext.resources.getDimension(
                 bar.iconSize.iconSizeResource(),
             ) / androidContext.resources.displayMetrics.density,
@@ -723,7 +743,11 @@ internal fun Launcher4MaxApp(
     fun openFavoriteBarSelection(containerId: String) {
         if (favoriteEditor.isSaving) return
         val readable = favoriteState as? FavoriteReadState.Readable ?: return
-        if (readable.aggregate.favoriteBars.none { it.id == containerId }) return
+        val modules = readable.orderedAggregate?.modules ?: return
+        if (modules.none {
+                it.id == containerId && it.type == OrderedFavoriteModuleType.Ribbon
+            }
+        ) return
         favoriteEditor.invalidateUndo()
         favoriteAddTarget = FavoriteAddTarget(
             containerId = containerId,
@@ -768,13 +792,16 @@ internal fun Launcher4MaxApp(
                 ?.filterValues { it == ProfileInventoryReadStatus.Unavailable }
                 ?.keys
                 .orEmpty()
-            var updatedAggregate: FavoriteAggregate? = null
+            var updatedAggregate: OrderedFavoriteAggregate? = null
             var targetInvalid = false
             val saved = if (target.homeBottomAppBar) {
                 var appended = false
                 effectiveFavoriteStore.updateOrderedAggregate { aggregate ->
                     val capacity = homeBottomAppBarCapacity(
                         safeWidthDp = homeSafeWidthDp,
+                        outerMarginDp = androidContext.resources.getDimension(
+                            R.dimen.home_bottom_app_bar_outer_margin,
+                        ) / androidContext.resources.displayMetrics.density,
                         iconSizeDp = androidContext.resources.getDimension(
                             aggregate.homeBottomAppBar.iconSize.iconSizeResource(),
                         ) / androidContext.resources.displayMetrics.density,
@@ -810,12 +837,14 @@ internal fun Launcher4MaxApp(
                 } != null && appended
             } else inventorySnapshot?.let {
                 favoriteEditor.updateComposition(transform = { aggregate ->
-                    val targetContainers = when (target.containerType) {
-                        FavoriteContainerType.VerticalList -> aggregate.verticalLists
-                        FavoriteContainerType.FavoriteBar -> aggregate.favoriteBars
+                    val moduleType = when (target.containerType) {
+                        FavoriteContainerType.VerticalList -> OrderedFavoriteModuleType.Vertical
+                        FavoriteContainerType.FavoriteBar -> OrderedFavoriteModuleType.Ribbon
                     }
                     val container = target.containerId?.let { containerId ->
-                        targetContainers.firstOrNull { it.id == containerId }
+                        aggregate.modules.firstOrNull {
+                            it.id == containerId && it.type == moduleType
+                        }
                     }
                     if (target.containerId != null && container == null) {
                         targetInvalid = true
@@ -832,8 +861,8 @@ internal fun Launcher4MaxApp(
                     }
                     val updatedContainer = container?.copy(
                         identities = container.identities + appendable,
-                    ) ?: FavoriteContainer(
-                        id = nextFavoriteContainerId(
+                    ) ?: OrderedFavoriteModule(
+                        id = nextOrderedModuleId(
                             prefix = if (target.containerType ==
                                 FavoriteContainerType.VerticalList
                             ) {
@@ -841,42 +870,24 @@ internal fun Launcher4MaxApp(
                             } else {
                                 "favorite-bar"
                             },
-                            containers = aggregate.verticalLists + aggregate.favoriteBars,
+                            modules = aggregate.modules,
                         ),
-                        type = target.containerType,
+                        type = moduleType,
                         identities = appendable,
-                        listSize = FavoriteListSize.Medium,
                     )
-                    val updated = when (target.containerType) {
-                        FavoriteContainerType.VerticalList -> {
-                            if (target.provisional) {
-                                aggregate.copy(
-                                    verticalLists = aggregate.verticalLists + updatedContainer,
-                                )
-                            } else {
-                                aggregate.updateVerticalList(updatedContainer.id) {
+                    val updated = aggregate.copy(
+                        modules = if (target.provisional) {
+                            aggregate.modules + updatedContainer
+                        } else {
+                            aggregate.modules.map { existing ->
+                                if (existing.id == updatedContainer.id) {
                                     updatedContainer
+                                } else {
+                                    existing
                                 }
                             }
-                        }
-                        FavoriteContainerType.FavoriteBar -> {
-                            if (target.provisional) {
-                                aggregate.copy(
-                                    favoriteBars = aggregate.favoriteBars + updatedContainer,
-                                )
-                            } else {
-                                aggregate.copy(
-                                    favoriteBars = aggregate.favoriteBars.map { existing ->
-                                        if (existing.id == updatedContainer.id) {
-                                            updatedContainer
-                                        } else {
-                                            existing
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                    }
+                        },
+                    )
                     updatedAggregate = updated
                     updated
                 })
@@ -1643,81 +1654,68 @@ internal fun Launcher4MaxApp(
 
 private class InMemoryFavoriteStore : FavoriteStore {
     private val mutableState = kotlinx.coroutines.flow.MutableStateFlow<FavoriteReadState>(
-        FavoriteReadState.Readable(emptyList()),
+        FavoriteReadState.Readable(
+            aggregate = FavoriteAggregate(),
+            orderedModules = emptyList(),
+            orderedAggregate = OrderedFavoriteAggregate(),
+        ),
     )
     override val state: kotlinx.coroutines.flow.StateFlow<FavoriteReadState> = mutableState
     override suspend fun load() = Unit
     override suspend fun add(identity: LaunchableIdentity): Boolean {
-        val current = mutableState.value as FavoriteReadState.Readable
-        if (identity !in current.identities) {
-            mutableState.value = FavoriteReadState.Readable(
-                current.aggregate.replaceVerticalList(
-                    id = PRIMARY_LIST_ID,
-                    identities = current.primaryIdentities + identity,
-                ),
-            )
-        }
-        return true
+        return updateOrderedAggregate { aggregate ->
+            if (identity in aggregate.identities) return@updateOrderedAggregate aggregate
+            val first = aggregate.modules.firstOrNull()
+            if (first?.type == OrderedFavoriteModuleType.Vertical) {
+                aggregate.copy(
+                    modules = listOf(first.copy(identities = first.identities + identity)) +
+                        aggregate.modules.drop(1),
+                )
+            } else {
+                aggregate.copy(
+                    modules = aggregate.modules + OrderedFavoriteModule(
+                        id = nextOrderedModuleId("vertical-list", aggregate.modules),
+                        type = OrderedFavoriteModuleType.Vertical,
+                        identities = listOf(identity),
+                    ),
+                )
+            }
+        } != null
     }
-    override suspend fun remove(identity: LaunchableIdentity): Boolean {
-        val current = mutableState.value as FavoriteReadState.Readable
-        mutableState.value = FavoriteReadState.Readable(
-            current.aggregate.removeIdentity(identity),
-        )
-        return true
-    }
-    override suspend fun removeAll(identities: Set<LaunchableIdentity>): Boolean {
-        val current = mutableState.value as FavoriteReadState.Readable
-        mutableState.value = FavoriteReadState.Readable(
-            current.aggregate.removeIdentities(identities),
-        )
-        return true
-    }
-    override suspend fun replaceOrder(identities: List<LaunchableIdentity>): Boolean {
-        val current = mutableState.value as? FavoriteReadState.Readable ?: return false
-        if (!isValidReplacement(current.primaryIdentities, identities)) return false
-        mutableState.value = FavoriteReadState.Readable(
-            current.aggregate.replaceVerticalList(
-                id = PRIMARY_LIST_ID,
-                identities = identities,
-            ),
-        )
-        return true
+    override suspend fun remove(identity: LaunchableIdentity): Boolean =
+        removeAll(setOf(identity))
+
+    override suspend fun removeAll(identities: Set<LaunchableIdentity>): Boolean =
+        updateOrderedAggregate { aggregate ->
+            identities.fold(aggregate) { current, identity ->
+                removeOrderedFavorite(current, identity)
+            }
+        } != null
+
+    override suspend fun replaceModuleOrder(moduleIds: List<String>): Boolean {
+        val current = (mutableState.value as? FavoriteReadState.Readable)
+            ?.orderedAggregate ?: return false
+        val modulesById = current.modules.associateBy { it.id }
+        if (moduleIds.size != modulesById.size ||
+            moduleIds.toSet() != modulesById.keys
+        ) return false
+        return updateOrderedAggregate { aggregate ->
+            aggregate.copy(modules = moduleIds.map(modulesById::getValue))
+        } != null
     }
 
-    override suspend fun replaceComposition(
-        primaryIdentities: List<LaunchableIdentity>,
-        companionIdentities: List<LaunchableIdentity>,
-    ): Boolean {
-        val current = mutableState.value as? FavoriteReadState.Readable ?: return false
-        val replacement = primaryIdentities + companionIdentities
-        val currentVerticalIdentities =
-            current.aggregate.verticalLists.flatMap(FavoriteContainer::identities)
-        if (!isValidReplacement(currentVerticalIdentities, replacement)) {
-            return false
-        }
+    override suspend fun updateOrderedAggregate(
+        transform: (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
+    ): OrderedFavoriteAggregate? {
+        val current = (mutableState.value as? FavoriteReadState.Readable)
+            ?.orderedAggregate ?: return null
+        val updated = transform(current)
+        if (!isValidOrderedFavoriteAggregate(updated)) return null
         mutableState.value = FavoriteReadState.Readable(
-            current.aggregate.replaceVerticalComposition(
-                primaryIdentities,
-                companionIdentities,
-            ),
+            aggregate = updated.toLegacyAggregate(),
+            orderedModules = updated.modules,
+            orderedAggregate = updated,
         )
-        return true
-    }
-
-    override suspend fun replaceAggregate(aggregate: FavoriteAggregate): Boolean {
-        if (!isValidAggregate(aggregate)) return false
-        mutableState.value = FavoriteReadState.Readable(aggregate)
-        return true
-    }
-
-    override suspend fun updateAggregate(
-        transform: (FavoriteAggregate) -> FavoriteAggregate,
-    ): FavoriteAggregate? {
-        val current = mutableState.value as? FavoriteReadState.Readable ?: return null
-        val updated = transform(current.aggregate)
-        if (!isValidAggregate(updated)) return null
-        mutableState.value = FavoriteReadState.Readable(updated)
         return updated
     }
 }

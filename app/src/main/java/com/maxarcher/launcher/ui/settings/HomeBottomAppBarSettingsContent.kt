@@ -57,6 +57,7 @@ internal fun HomeBottomAppBarSettingsContent(
         val measuredSafeWidthDp = homeSafeWidthDp ?: maxWidth.value
         val capacity = homeBottomAppBarCapacity(
             safeWidthDp = measuredSafeWidthDp,
+            outerMarginDp = dimensionResource(R.dimen.home_bottom_app_bar_outer_margin).value,
             iconSizeDp = dimensionResource(state.iconSize.iconSizeResource()).value,
             horizontalInsetDp = dimensionResource(
                 R.dimen.home_bottom_app_bar_preview_horizontal_inset,
@@ -158,6 +159,9 @@ internal fun HomeBottomAppBarSettingsContent(
                         optionEnabled = iconTiers.map { tier ->
                             homeBottomAppBarCapacity(
                                 safeWidthDp = measuredSafeWidthDp,
+                                outerMarginDp = dimensionResource(
+                                    R.dimen.home_bottom_app_bar_outer_margin,
+                                ).value,
                                 iconSizeDp = dimensionResource(tier.iconSizeResource()).value,
                                 horizontalInsetDp = dimensionResource(
                                     R.dimen.home_bottom_app_bar_preview_horizontal_inset,

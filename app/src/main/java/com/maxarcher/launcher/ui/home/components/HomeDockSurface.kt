@@ -183,6 +183,7 @@ internal fun HomeDockSurface(
     val capacity = homeBottomAppBarCapacity(
         safeWidthDp = safeWidthDp,
         iconSizeDp = iconDimension.value,
+        outerMarginDp = outerMargin.value,
         horizontalInsetDp = horizontalInset.value,
         iconGapDp = iconGap.value,
     )

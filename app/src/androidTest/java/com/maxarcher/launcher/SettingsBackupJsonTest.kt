@@ -399,9 +399,10 @@ class SettingsBackupJsonTest {
         )
 
         assertEquals(
-            identities.take(2),
+            identities.take(1),
             aggregate.restoreHomeBottomAppBarForWidth(
                 safeWidthDp = 120f,
+                outerMarginDp = 16f,
                 horizontalInsetDp = 16f,
                 iconGapDp = 16f,
                 iconSizeDp = { 40f },
@@ -410,6 +411,7 @@ class SettingsBackupJsonTest {
         assertNull(
             aggregate.restoreHomeBottomAppBarForWidth(
                 safeWidthDp = 0f,
+                outerMarginDp = 16f,
                 horizontalInsetDp = 16f,
                 iconGapDp = 16f,
                 iconSizeDp = { 40f },

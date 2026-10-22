@@ -654,6 +654,9 @@ internal class SettingsBackupController(
         val resources = context.resources
         val aggregate = backup.aggregate.restoreHomeBottomAppBarForWidth(
             safeWidthDp = safeWidthDp,
+            outerMarginDp = resources.getDimension(
+                R.dimen.home_bottom_app_bar_outer_margin,
+            ) / resources.displayMetrics.density,
             horizontalInsetDp = resources.getDimension(
                 R.dimen.home_bottom_app_bar_preview_horizontal_inset,
             ) / resources.displayMetrics.density,

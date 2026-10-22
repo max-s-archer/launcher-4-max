@@ -207,21 +207,14 @@ class HomeScreenTest {
             type = OrderedFavoriteModuleType.Vertical,
             identities = listOf(identity),
         )
-        var persisted = FavoriteAggregate(
-            verticalLists = listOf(
-                FavoriteContainer(
-                    id = module.id,
-                    type = FavoriteContainerType.VerticalList,
-                    identities = module.identities,
-                ),
-            ),
-        )
+        var persisted = OrderedFavoriteAggregate(modules = listOf(module))
         composeRule.setContent {
             Launcher4MaxTheme {
                 HomeScreen(
                     favoriteState = FavoriteReadState.Readable(
-                        aggregate = persisted,
+                        aggregate = persisted.toLegacyAggregate(),
                         orderedModules = listOf(module),
+                        orderedAggregate = persisted,
                     ),
                     editMode = true,
                     stylePanelExpanded = true,
@@ -241,7 +234,7 @@ class HomeScreenTest {
         composeRule.runOnIdle {
             assertEquals(
                 FavoriteNamePlacement.Below,
-                persisted.verticalLists.single().namePlacement,
+                persisted.modules.single().namePlacement,
             )
         }
     }
@@ -523,32 +516,27 @@ class HomeScreenTest {
             label = "Reliable refreshed application",
             icon = ColorDrawable(Color.TRANSPARENT),
         )
-        val initial = FavoriteAggregate(
-            verticalLists = listOf(
-                FavoriteContainer(
+        val initial = OrderedFavoriteAggregate(
+            modules = listOf(
+                OrderedFavoriteModule(
                     id = "inventory-interruption-list",
-                    type = FavoriteContainerType.VerticalList,
+                    type = OrderedFavoriteModuleType.Vertical,
                     identities = listOf(removedEntry.identity),
                 ),
             ),
         )
         val refreshed = initial.copy(
-            verticalLists = listOf(
-                initial.verticalLists.single().copy(
+            modules = listOf(
+                initial.modules.single().copy(
                     identities = listOf(refreshedEntry.identity),
                 ),
             ),
         )
         val favoriteState = mutableStateOf<FavoriteReadState>(
             FavoriteReadState.Readable(
-                aggregate = initial,
-                orderedModules = listOf(
-                    OrderedFavoriteModule(
-                        id = "inventory-interruption-list",
-                        type = OrderedFavoriteModuleType.Vertical,
-                        identities = listOf(removedEntry.identity),
-                    ),
-                ),
+                aggregate = initial.toLegacyAggregate(),
+                orderedModules = initial.modules,
+                orderedAggregate = initial,
             ),
         )
         var saveAttempts = 0
@@ -567,14 +555,9 @@ class HomeScreenTest {
                     onCommitFavoriteComposition = {
                         saveAttempts += 1
                         favoriteState.value = FavoriteReadState.Readable(
-                            aggregate = refreshed,
-                            orderedModules = listOf(
-                                OrderedFavoriteModule(
-                                    id = "inventory-interruption-list",
-                                    type = OrderedFavoriteModuleType.Vertical,
-                                    identities = listOf(refreshedEntry.identity),
-                                ),
-                            ),
+                            aggregate = refreshed.toLegacyAggregate(),
+                            orderedModules = refreshed.modules,
+                            orderedAggregate = refreshed,
                         )
                         null
                     },
@@ -2078,76 +2061,60 @@ private fun completeSnapshot(vararg entries: LaunchableEntry): LaunchableInvento
     )
 
 private class TestFavoriteStore(initial: List<LaunchableIdentity>) : FavoriteStore {
+    private val initialAggregate = OrderedFavoriteAggregate(
+        modules = if (initial.isEmpty()) emptyList() else listOf(
+            OrderedFavoriteModule(PRIMARY_LIST_ID, OrderedFavoriteModuleType.Vertical, initial),
+        ),
+    )
     private val mutableState = MutableStateFlow<FavoriteReadState>(
-        FavoriteReadState.Readable(initial),
+        FavoriteReadState.Readable(
+            aggregate = initialAggregate.toLegacyAggregate(),
+            orderedModules = initialAggregate.modules,
+            orderedAggregate = initialAggregate,
+        ),
     )
     override val state: StateFlow<FavoriteReadState> = mutableState
     override suspend fun load() = Unit
     override suspend fun add(identity: LaunchableIdentity): Boolean {
-        val readable = mutableState.value as FavoriteReadState.Readable
-        if (identity !in readable.identities) {
-            mutableState.value = FavoriteReadState.Readable(
-                readable.aggregate.replaceVerticalList(
-                    id = PRIMARY_LIST_ID,
-                    identities = readable.primaryIdentities + identity,
-                ),
+        return updateOrderedAggregate { aggregate ->
+            if (identity in aggregate.identities) return@updateOrderedAggregate aggregate
+            val first = aggregate.modules.firstOrNull()
+            aggregate.copy(
+                modules = if (first == null) {
+                    listOf(
+                        OrderedFavoriteModule(
+                            PRIMARY_LIST_ID, OrderedFavoriteModuleType.Vertical, listOf(identity),
+                        ),
+                    )
+                } else {
+                    listOf(first.copy(identities = first.identities + identity)) +
+                        aggregate.modules.drop(1)
+                },
             )
-        }
-        return true
+        } != null
     }
     override suspend fun remove(identity: LaunchableIdentity): Boolean =
         removeAll(setOf(identity))
     override suspend fun removeAll(identities: Set<LaunchableIdentity>): Boolean {
-        val readable = mutableState.value as FavoriteReadState.Readable
+        return updateOrderedAggregate { aggregate ->
+            identities.fold(aggregate) { current, identity ->
+                removeOrderedFavorite(current, identity)
+            }
+        } != null
+    }
+
+    override suspend fun updateOrderedAggregate(
+        transform: (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
+    ): OrderedFavoriteAggregate? {
+        val current = (mutableState.value as? FavoriteReadState.Readable)
+            ?.orderedAggregate ?: return null
+        val updated = transform(current)
+        if (!isValidOrderedFavoriteAggregate(updated)) return null
         mutableState.value = FavoriteReadState.Readable(
-            readable.aggregate.removeIdentities(identities),
+            aggregate = updated.toLegacyAggregate(),
+            orderedModules = updated.modules,
+            orderedAggregate = updated,
         )
-        return true
-    }
-
-    override suspend fun replaceOrder(identities: List<LaunchableIdentity>): Boolean {
-        val readable = mutableState.value as? FavoriteReadState.Readable ?: return false
-        if (!isValidReplacement(readable.primaryIdentities, identities)) return false
-        mutableState.value = FavoriteReadState.Readable(
-            readable.aggregate.replaceVerticalList(
-                id = PRIMARY_LIST_ID,
-                identities = identities,
-            ),
-        )
-        return true
-    }
-
-    override suspend fun replaceComposition(
-        primaryIdentities: List<LaunchableIdentity>,
-        companionIdentities: List<LaunchableIdentity>,
-    ): Boolean {
-        val readable = mutableState.value as? FavoriteReadState.Readable ?: return false
-        val replacement = primaryIdentities + companionIdentities
-        val currentVerticalIdentities =
-            readable.aggregate.verticalLists.flatMap(FavoriteContainer::identities)
-        if (!isValidReplacement(currentVerticalIdentities, replacement)) return false
-        mutableState.value = FavoriteReadState.Readable(
-            readable.aggregate.replaceVerticalComposition(
-                primaryIdentities,
-                companionIdentities,
-            ),
-        )
-        return true
-    }
-
-    override suspend fun replaceAggregate(aggregate: FavoriteAggregate): Boolean {
-        if (!isValidAggregate(aggregate)) return false
-        mutableState.value = FavoriteReadState.Readable(aggregate)
-        return true
-    }
-
-    override suspend fun updateAggregate(
-        transform: (FavoriteAggregate) -> FavoriteAggregate,
-    ): FavoriteAggregate? {
-        val current = mutableState.value as? FavoriteReadState.Readable ?: return null
-        val updated = transform(current.aggregate)
-        if (!isValidAggregate(updated)) return null
-        mutableState.value = FavoriteReadState.Readable(updated)
         return updated
     }
 

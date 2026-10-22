@@ -451,46 +451,6 @@ internal class OrderedFavoriteStoreAdapter private constructor(
             },
         )
 
-    override suspend fun replaceOrder(identities: List<LaunchableIdentity>): Boolean =
-        updateAggregate { aggregate ->
-            aggregate.replaceVerticalList(
-                aggregate.verticalLists.firstOrNull()?.id ?: PRIMARY_LIST_ID,
-                identities,
-            )
-        } != null
-
-    override suspend fun replaceComposition(
-        primaryIdentities: List<LaunchableIdentity>,
-        companionIdentities: List<LaunchableIdentity>,
-    ): Boolean = updateAggregate { aggregate ->
-        aggregate.replaceVerticalComposition(primaryIdentities, companionIdentities)
-    } != null
-
-    override suspend fun replaceAggregate(aggregate: FavoriteAggregate): Boolean =
-        mutationMutex.withLock {
-            store.replaceAggregate(
-                currentOrderedAggregate().replaceWithLegacyAggregate(aggregate),
-            ).also {
-                if (it) publish()
-            }
-        }
-
-    override suspend fun updateAggregate(
-        transform: (FavoriteAggregate) -> FavoriteAggregate,
-    ): FavoriteAggregate? = mutationMutex.withLock {
-        val current = (mutableState.value as? FavoriteReadState.Readable)
-            ?: return@withLock null
-        val updated = transform(current.aggregate)
-        if (!store.replaceAggregate(
-                currentOrderedAggregate().replaceWithLegacyAggregate(updated),
-            )
-        ) {
-            return@withLock null
-        }
-        publish()
-        updated
-    }
-
     override suspend fun replaceModuleOrder(moduleIds: List<String>): Boolean =
         mutationMutex.withLock {
             val current = currentOrderedAggregate()
@@ -552,7 +512,7 @@ internal class OrderedFavoriteStoreAdapter private constructor(
     }
 }
 
-private fun OrderedFavoriteAggregate.toLegacyAggregate(): FavoriteAggregate {
+internal fun OrderedFavoriteAggregate.toLegacyAggregate(): FavoriteAggregate {
     val vertical = modules.filter { it.type == OrderedFavoriteModuleType.Vertical }
         .map { module ->
             FavoriteContainer(
@@ -576,64 +536,6 @@ private fun OrderedFavoriteAggregate.toLegacyAggregate(): FavoriteAggregate {
         }
     return FavoriteAggregate(verticalLists = vertical, favoriteBars = bars)
 }
-
-private fun OrderedFavoriteAggregate.replaceWithLegacyAggregate(
-    aggregate: FavoriteAggregate,
-): OrderedFavoriteAggregate {
-    val containersById = (aggregate.verticalLists + aggregate.favoriteBars)
-        .associateBy(FavoriteContainer::id)
-    val updatedModules = modules.mapNotNull { module ->
-        containersById[module.id]
-            ?.takeIf { it.identities.isNotEmpty() }
-            ?.let { container ->
-            val type = container.type.toOrderedFavoriteModuleType()
-            if (module.type == type &&
-                module.identities == container.identities &&
-                module.iconSize == container.iconSize &&
-                module.textSize == container.textSize &&
-                module.namePlacement == container.namePlacement &&
-                module.itemsPerRow == container.itemsPerRow
-            ) {
-                module
-            } else {
-                module.copy(
-                    type = type,
-                    identities = container.identities,
-                    iconSize = container.iconSize,
-                    textSize = container.textSize,
-                    namePlacement = container.namePlacement,
-                    itemsPerRow = container.itemsPerRow,
-                )
-            }
-        }
-    }
-    val existingIds = updatedModules.map(OrderedFavoriteModule::id).toSet()
-    val appendedModules = (aggregate.verticalLists + aggregate.favoriteBars)
-        .asSequence()
-        .filterNot { it.id in existingIds }
-        .filter { it.identities.isNotEmpty() }
-        .map { container ->
-            OrderedFavoriteModule(
-                id = container.id,
-                type = container.type.toOrderedFavoriteModuleType(),
-                identities = container.identities,
-                iconSize = container.iconSize,
-                textSize = container.textSize,
-                namePlacement = container.namePlacement,
-                itemsPerRow = container.itemsPerRow,
-            )
-        }
-        .toList()
-    return copy(
-        modules = updatedModules + appendedModules,
-    )
-}
-
-private fun FavoriteContainerType.toOrderedFavoriteModuleType(): OrderedFavoriteModuleType =
-    when (this) {
-        FavoriteContainerType.VerticalList -> OrderedFavoriteModuleType.Vertical
-        FavoriteContainerType.FavoriteBar -> OrderedFavoriteModuleType.Ribbon
-    }
 
 internal fun isValidOrderedFavoriteAggregate(
     aggregate: OrderedFavoriteAggregate,
@@ -680,7 +582,7 @@ private fun legacyAdoptionLists(
     }
 }
 
-private fun nextOrderedModuleId(
+internal fun nextOrderedModuleId(
     prefix: String,
     modules: List<OrderedFavoriteModule>,
 ): String {

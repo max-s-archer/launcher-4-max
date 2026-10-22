@@ -103,8 +103,8 @@ internal fun HomeScreen(
     homeBottomAppBarExpanded: Boolean = false,
     onHomeBottomAppBarExpandedChange: (Boolean) -> Unit = {},
     onCommitFavoriteComposition: suspend (
-        transform: (FavoriteAggregate) -> FavoriteAggregate,
-    ) -> FavoriteAggregate? = { transform -> transform(FavoriteAggregate()) },
+        transform: (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
+    ) -> OrderedFavoriteAggregate? = { transform -> transform(OrderedFavoriteAggregate()) },
     onCommitModuleOrder: suspend (List<String>) -> Boolean = { false },
     accessibilityLockController: AccessibilityLockController = EmptyAccessibilityLockController,
     quickActionBindings: QuickActionBindings = QuickActionBindings(),
@@ -190,7 +190,7 @@ internal fun HomeScreen(
             snackbarHostState.currentSnackbarData?.dismiss()
         } else {
             orchestration.editTransaction.enter(
-                (currentFavoriteState as? FavoriteReadState.Readable)?.aggregate,
+                (currentFavoriteState as? FavoriteReadState.Readable)?.orderedAggregate,
             )
         }
     }
@@ -245,15 +245,16 @@ internal fun HomeScreen(
     LaunchedEffect(favoriteState, editMode) {
         val readable = favoriteState as? FavoriteReadState.Readable
             ?: return@LaunchedEffect
+        val currentAggregate = readable.orderedAggregate ?: return@LaunchedEffect
         val committed = orchestration.editTransaction.committedAggregate ?: return@LaunchedEffect
         if (editMode &&
-            readable.aggregate != committed &&
+            currentAggregate != committed &&
             orchestration.editMutationJob?.isActive != true &&
             // The saved application order is the pending handoff, not an external edit.
             orderedApplicationMovement.pendingChange == null
         ) {
             orchestration.cancelActiveDragSessions()
-            if (orchestration.editTransaction.reconcileExternal(readable.aggregate)) {
+            if (orchestration.editTransaction.reconcileExternal(currentAggregate)) {
                 snackbarHostState.currentSnackbarData?.dismiss()
             }
         }
@@ -272,7 +273,8 @@ internal fun HomeScreen(
             .orEmpty()
         var moduleStylePreview by remember { mutableStateOf<OrderedFavoriteModule?>(null) }
         val previewAggregate = orchestration.editTransaction.previewAggregate(
-            (favoriteState as? FavoriteReadState.Readable)?.aggregate ?: FavoriteAggregate(),
+            (favoriteState as? FavoriteReadState.Readable)?.orderedAggregate
+                ?: OrderedFavoriteAggregate(),
         )
         val displayedModules = orderedModules.withPresentationFrom(previewAggregate).map { module ->
             moduleStylePreview?.takeIf { it.id == module.id } ?: module
@@ -506,7 +508,8 @@ internal fun HomeScreen(
                             )
                         } else if (orderedModules != null) {
                             val previewAggregate = orchestration.editTransaction.previewAggregate(
-                                favoriteState.aggregate,
+                                favoriteState.orderedAggregate
+                                    ?: OrderedFavoriteAggregate(modules = orderedModules),
                             )
                             val styledModules = orderedModules
                                 .withPresentationFrom(previewAggregate)

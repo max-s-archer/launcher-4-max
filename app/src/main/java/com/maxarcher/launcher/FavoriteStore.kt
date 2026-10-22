@@ -95,15 +95,6 @@ internal interface FavoriteStore {
     suspend fun add(identity: LaunchableIdentity): Boolean
     suspend fun remove(identity: LaunchableIdentity): Boolean
     suspend fun removeAll(identities: Set<LaunchableIdentity>): Boolean
-    suspend fun replaceOrder(identities: List<LaunchableIdentity>): Boolean
-    suspend fun replaceComposition(
-        primaryIdentities: List<LaunchableIdentity>,
-        companionIdentities: List<LaunchableIdentity>,
-    ): Boolean
-    suspend fun replaceAggregate(aggregate: FavoriteAggregate): Boolean
-    suspend fun updateAggregate(
-        transform: (FavoriteAggregate) -> FavoriteAggregate,
-    ): FavoriteAggregate?
     suspend fun replaceModuleOrder(moduleIds: List<String>): Boolean = false
     suspend fun updateOrderedAggregate(
         transform: (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
@@ -230,7 +221,7 @@ internal class AtomicFileFavoriteStore private constructor(
             writeSucceeded
         }
 
-    override suspend fun replaceOrder(identities: List<LaunchableIdentity>): Boolean =
+    suspend fun replaceOrder(identities: List<LaunchableIdentity>): Boolean =
         mutationMutex.withLock {
             val readable = mutableState.value as? FavoriteReadState.Readable ?: return false
             if (!isValidReplacement(readable.primaryIdentities, identities)) return false
@@ -256,7 +247,7 @@ internal class AtomicFileFavoriteStore private constructor(
             writeSucceeded
         }
 
-    override suspend fun replaceComposition(
+    suspend fun replaceComposition(
         primaryIdentities: List<LaunchableIdentity>,
         companionIdentities: List<LaunchableIdentity>,
     ): Boolean = mutationMutex.withLock {
@@ -289,7 +280,7 @@ internal class AtomicFileFavoriteStore private constructor(
         writeSucceeded
     }
 
-    override suspend fun replaceAggregate(aggregate: FavoriteAggregate): Boolean =
+    suspend fun replaceAggregate(aggregate: FavoriteAggregate): Boolean =
         mutationMutex.withLock {
             val readable = mutableState.value as? FavoriteReadState.Readable ?: return false
             if (!isValidAggregate(aggregate)) return false
@@ -309,28 +300,6 @@ internal class AtomicFileFavoriteStore private constructor(
             }
             writeSucceeded
         }
-
-    override suspend fun updateAggregate(
-        transform: (FavoriteAggregate) -> FavoriteAggregate,
-    ): FavoriteAggregate? = mutationMutex.withLock {
-        val readable = mutableState.value as? FavoriteReadState.Readable ?: return null
-        val updated = transform(readable.aggregate)
-        if (!isValidAggregate(updated)) return null
-        if (updated == readable.aggregate) return readable.aggregate
-        val writeSucceeded = withContext(Dispatchers.IO) {
-            try {
-                writeDocument(updated)
-                true
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (_: Exception) {
-                false
-            }
-        }
-        if (!writeSucceeded) return@withLock null
-        mutableState.value = FavoriteReadState.Readable(updated)
-        updated
-    }
 
     private data class FavoriteDocument(
         val schemaVersion: Int,
@@ -545,15 +514,6 @@ internal fun FavoriteAggregate.replaceVerticalComposition(
     }
     return copy(verticalLists = updatedLists)
 }
-
-internal fun FavoriteAggregate.updateVerticalList(
-    id: String,
-    transform: (FavoriteContainer) -> FavoriteContainer?,
-): FavoriteAggregate = copy(
-    verticalLists = verticalLists.mapNotNull { container ->
-        if (container.id == id) transform(container) else container
-    },
-)
 
 internal fun FavoriteAggregate.moveFavorite(
     sourceContainerId: String,

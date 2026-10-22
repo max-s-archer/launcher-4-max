@@ -13,18 +13,17 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntSize
-import com.maxarcher.launcher.FavoriteAggregate
 import com.maxarcher.launcher.FavoriteAvailability
-import com.maxarcher.launcher.FavoriteContainer
 import com.maxarcher.launcher.FavoriteReadState
 import com.maxarcher.launcher.HomeApplicationMovement
 import com.maxarcher.launcher.HomeEditTransaction
 import com.maxarcher.launcher.LaunchableIdentity
 import com.maxarcher.launcher.ModuleDragSession
+import com.maxarcher.launcher.OrderedFavoriteAggregate
 import com.maxarcher.launcher.OrderedFavoriteModule
+import com.maxarcher.launcher.OrderedFavoriteModuleType
 import com.maxarcher.launcher.R
-import com.maxarcher.launcher.isValidAggregate
-import com.maxarcher.launcher.updateVerticalList
+import com.maxarcher.launcher.isValidOrderedFavoriteAggregate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -59,9 +58,11 @@ internal class HomeFavoriteEditOrchestration(
     var moduleStyleSaveFailureMessage by mutableStateOf("")
     var moduleOrderSaveFailureMessage by mutableStateOf("")
     var onCommitFavoriteComposition by mutableStateOf<
-        suspend ((FavoriteAggregate) -> FavoriteAggregate) -> FavoriteAggregate?
+        suspend (
+            (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
+        ) -> OrderedFavoriteAggregate?
     >(
-        { transform -> transform(FavoriteAggregate()) },
+        { transform -> transform(OrderedFavoriteAggregate()) },
     )
     var onCommitModuleOrder by mutableStateOf<suspend (List<String>) -> Boolean>({ false })
 
@@ -148,7 +149,7 @@ internal class HomeFavoriteEditOrchestration(
     }
 
     fun commitEditAggregate(
-        transform: (FavoriteAggregate) -> FavoriteAggregate,
+        transform: (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
         message: String = "",
         recordUndo: Boolean = false,
         onCommitted: () -> Unit = {},
@@ -164,11 +165,11 @@ internal class HomeFavoriteEditOrchestration(
         val session = editTransaction.sessionId
         enqueueEditMutation mutation@{
             val base = editTransaction.baseAggregate(
-                (favoriteState as? FavoriteReadState.Readable)?.aggregate,
+                (favoriteState as? FavoriteReadState.Readable)?.orderedAggregate,
             )
                 ?: return@mutation
             val updated = transform(base)
-            if (!isValidAggregate(updated)) return@mutation
+            if (!isValidOrderedFavoriteAggregate(updated)) return@mutation
             editTransaction.beginMutation(updated)
             val persisted = onCommitFavoriteComposition(transform)
             if (session != editTransaction.sessionId || !editMode) return@mutation
@@ -177,7 +178,7 @@ internal class HomeFavoriteEditOrchestration(
                 withFrameNanos { }
                 if (session != editTransaction.sessionId || !editMode) return@mutation
                 editTransaction.restoreCommitted(
-                    (favoriteState as? FavoriteReadState.Readable)?.aggregate,
+                    (favoriteState as? FavoriteReadState.Readable)?.orderedAggregate,
                 )
                 cancelActiveDragSessions()
                 onFailed()
@@ -220,12 +221,18 @@ internal class HomeFavoriteEditOrchestration(
 
     fun commitVerticalModuleStyle(
         moduleId: String,
-        transform: (FavoriteContainer) -> FavoriteContainer,
+        transform: (OrderedFavoriteModule) -> OrderedFavoriteModule,
     ) {
         if (editMutationJob?.isActive == true || applicationEditingSaving) return
         commitEditAggregate(
             transform = { aggregate ->
-                aggregate.updateVerticalList(moduleId, transform)
+                aggregate.copy(
+                    modules = aggregate.modules.map { module ->
+                        if (module.id == moduleId &&
+                            module.type == OrderedFavoriteModuleType.Vertical
+                        ) transform(module) else module
+                    },
+                )
             },
             onFailed = {
                 Toast.makeText(

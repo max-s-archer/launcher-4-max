@@ -125,7 +125,7 @@ class HomeFavoriteEditorTest {
     }
 
     @Test
-    fun barRemovalRestoresFormerPlaceUntilTheCapturedCapacityIsFull() {
+    fun barRemovalRestoresFormerPlaceOnlyWhenCurrentCapacityHasRoom() {
         val original = OrderedFavoriteAggregate(
             homeBottomAppBar = HomeBottomAppBarState(
                 enabled = true,
@@ -138,7 +138,7 @@ class HomeFavoriteEditorTest {
         val removed = removeOrderedFavorite(aggregate = original, identity = identity(serial = 1))
         assertEquals(
             listOf(identity(serial = 1), identity(serial = 2)),
-            restoreOrderedFavorite(aggregate = removed, snapshot = snapshot)
+            restoreOrderedFavorite(aggregate = removed, snapshot = snapshot, barCapacity = 2)
                 ?.homeBottomAppBar
                 ?.identities,
         )
@@ -147,7 +147,125 @@ class HomeFavoriteEditorTest {
                 identities = listOf(identity(serial = 3), identity(serial = 4)),
             ),
         )
-        assertNull(restoreOrderedFavorite(aggregate = filled, snapshot = snapshot))
+        assertNull(
+            restoreOrderedFavorite(aggregate = filled, snapshot = snapshot, barCapacity = 2),
+        )
+        assertEquals(
+            listOf(identity(1), identity(3), identity(4)),
+            restoreOrderedFavorite(aggregate = filled, snapshot = snapshot, barCapacity = 4)
+                ?.homeBottomAppBar?.identities,
+        )
+        assertNull(
+            restoreOrderedFavorite(aggregate = removed, snapshot = snapshot, barCapacity = 1),
+        )
+        assertNull(restoreOrderedFavorite(aggregate = removed, snapshot = snapshot))
+        assertNull(
+            restoreOrderedFavorite(
+                aggregate = removed.copy(
+                    homeBottomAppBar = removed.homeBottomAppBar.copy(enabled = false),
+                ),
+                snapshot = snapshot,
+                barCapacity = 4,
+            ),
+        )
+    }
+
+    @Test
+    fun barUndoUsesWidthAndIconSizeAtTransactionTime() = runBlocking {
+        for (width in listOf(100f, 200f)) {
+            val store = storeWith(emptyList())
+            store.updateOrderedAggregate {
+                it.copy(
+                    homeBottomAppBar = HomeBottomAppBarState(
+                        enabled = true,
+                        identities = listOf(identity(1), identity(2)),
+                    ),
+                )
+            }
+            val controlled = ControlledStore(store)
+            val editor = HomeFavoriteEditor(controlled)
+            assertTrue(editor.remove(identity(1)))
+            val snapshot = checkNotNull(editor.undoRemoval)
+            var currentWidth = 300f
+            val gate = CompletableDeferred<Unit>()
+            controlled.gate = gate
+            val pending = async(start = CoroutineStart.UNDISPATCHED) {
+                editor.undo(
+                    snapshot = snapshot,
+                    currentBarCapacity = { bar ->
+                        homeBottomAppBarCapacity(
+                            safeWidthDp = currentWidth,
+                            outerMarginDp = 16f,
+                            iconSizeDp = if (bar.iconSize == FavoriteListSize.Large) 80f else 40f,
+                            horizontalInsetDp = 0f,
+                            iconGapDp = 0f,
+                        )
+                    },
+                )
+            }
+            currentWidth = width
+            store.updateOrderedAggregate {
+                it.copy(
+                    homeBottomAppBar = it.homeBottomAppBar.copy(
+                        iconSize = FavoriteListSize.Large,
+                    ),
+                )
+            }
+            val before = store.currentOrderedAggregate()
+            gate.complete(Unit)
+            val expectedSuccess = width == 200f
+            assertEquals(expectedSuccess, pending.await())
+            assertNull(editor.undoRemoval)
+            assertFalse(editor.isSaving)
+            store.load()
+            if (expectedSuccess) {
+                assertEquals(
+                    listOf(identity(1), identity(2)),
+                    store.currentOrderedAggregate()?.homeBottomAppBar?.identities,
+                )
+            } else {
+                assertEquals(before, store.currentOrderedAggregate())
+            }
+            assertFalse(editor.undo(snapshot, currentBarCapacity = { 10 }))
+        }
+    }
+
+    @Test
+    fun barUndoRejectsUnknownZeroAndDisabledCapacityWithoutChangingData() = runBlocking {
+        for ((enabled, capacity) in listOf(true to null, true to 0, true to 1, false to 4)) {
+            val store = storeWith(emptyList())
+            store.updateOrderedAggregate {
+                it.copy(
+                    homeBottomAppBar = HomeBottomAppBarState(
+                        enabled = enabled,
+                        identities = listOf(identity(1), identity(2)),
+                    ),
+                )
+            }
+            val editor = HomeFavoriteEditor(store)
+            assertTrue(editor.remove(identity(1)))
+            val snapshot = checkNotNull(editor.undoRemoval)
+            val before = store.currentOrderedAggregate()
+            assertFalse(editor.undo(snapshot, currentBarCapacity = { capacity }))
+            assertNull(editor.undoRemoval)
+            store.load()
+            assertEquals(before, store.currentOrderedAggregate())
+        }
+    }
+
+    @Test
+    fun ordinaryModuleUndoDoesNotReadBarCapacity() = runBlocking {
+        val store = storeWith(listOf(module("list", listOf(identity(1)))))
+        val editor = HomeFavoriteEditor(store)
+        assertTrue(editor.remove(identity(1)))
+        assertTrue(
+            editor.undo(
+                snapshot = checkNotNull(editor.undoRemoval),
+                currentBarCapacity = { error("Ordinary modules do not need bar capacity") },
+            ),
+        )
+        store.load()
+        assertEquals(listOf(identity(1)), store.currentOrderedAggregate()?.identities)
     }
 
     @Test
@@ -531,6 +649,108 @@ class HomeFavoriteEditorTest {
             assertTrue(modules(store = store).isEmpty())
         },
     )
+
+    @Test
+    fun compositionPreservesMixedOrderStylesAndBarAcrossReload() = runBlocking {
+        val ribbon = module("ribbon", listOf(identity(1)), OrderedFavoriteModuleType.Ribbon)
+        val vertical = module("vertical", listOf(identity(2)))
+        val last = module("last", listOf(identity(3)), OrderedFavoriteModuleType.Ribbon)
+        val store = storeWith(listOf(ribbon, vertical, last))
+        val bar = HomeBottomAppBarState(enabled = true, identities = listOf(identity(4)))
+        checkNotNull(store.updateOrderedAggregate { it.copy(homeBottomAppBar = bar) })
+        val editor = HomeFavoriteEditor(store)
+
+        val saved = editor.updateComposition { aggregate ->
+            aggregate.copy(
+                modules = aggregate.modules.map {
+                    if (it.id == vertical.id) {
+                        it.copy(
+                            identities = it.identities + identity(5),
+                            iconSize = FavoriteListSize.Small,
+                        )
+                    } else it
+                },
+            )
+        }
+
+        val expected = listOf(
+            ribbon,
+            vertical.copy(
+                identities = listOf(identity(2), identity(5)),
+                iconSize = FavoriteListSize.Small,
+            ),
+            last,
+        )
+        assertEquals(OrderedFavoriteAggregate(expected, bar), saved)
+        store.load()
+        assertEquals(saved, store.currentOrderedAggregate())
+        assertFalse(editor.isSaving)
+    }
+
+    @Test
+    fun failedAndUnchangedCompositionKeepUndoButSuccessfulEditInvalidatesIt() = runBlocking {
+        val store = storeWith(listOf(module("list", listOf(identity(1), identity(2)))))
+        val controlled = ControlledStore(store)
+        val editor = HomeFavoriteEditor(controlled)
+        assertTrue(editor.remove(identity(1)))
+        val undo = checkNotNull(editor.undoRemoval)
+        val before = store.currentOrderedAggregate()
+        controlled.failWrites = true
+
+        assertNull(editor.updateComposition { it.copy(modules = emptyList()) })
+        assertEquals(before, store.currentOrderedAggregate())
+        assertSame(undo, editor.undoRemoval)
+        assertFalse(editor.isSaving)
+
+        controlled.failWrites = false
+        assertEquals(before, editor.updateComposition { it })
+        assertSame(undo, editor.undoRemoval)
+        assertNull(editor.updateComposition {
+            it.copy(modules = it.modules + it.modules.single())
+        })
+        assertSame(undo, editor.undoRemoval)
+        assertEquals(before, store.currentOrderedAggregate())
+        assertEquals(OrderedFavoriteAggregate(), editor.updateComposition {
+            it.copy(modules = emptyList())
+        })
+        assertNull(editor.undoRemoval)
+    }
+
+    @Test
+    fun compositionUsesLatestStateAfterConcurrentReconciliationAndRejectsOverlap() = runBlocking {
+        val store = storeWith(
+            listOf(
+                module("first", listOf(identity(1))),
+                module("target", listOf(identity(2), identity(3))),
+            ),
+        )
+        val controlled = ControlledStore(store)
+        val gate = CompletableDeferred<Unit>()
+        controlled.gate = gate
+        val editor = HomeFavoriteEditor(controlled)
+        val pending = async(start = CoroutineStart.UNDISPATCHED) {
+            editor.updateComposition { aggregate ->
+                aggregate.copy(
+                    modules = aggregate.modules.map {
+                        if (it.id == "target") it.copy(textSize = FavoriteListSize.Small) else it
+                    },
+                )
+            }
+        }
+        assertTrue(editor.isSaving)
+        assertNull(editor.updateComposition { it.copy(modules = emptyList()) })
+        assertFalse(editor.remove(identity(2)))
+        assertTrue(store.removeAll(setOf(identity(1), identity(3))))
+        gate.complete(Unit)
+
+        val saved = checkNotNull(pending.await())
+        assertEquals(listOf(identity(2)), saved.identities)
+        assertEquals(FavoriteListSize.Small, saved.modules.single().textSize)
+        assertEquals(1, controlled.writeAttempts)
+        assertFalse(editor.isSaving)
+        store.load()
+        assertEquals(saved, store.currentOrderedAggregate())
+    }
 
     private class ControlledStore(private val delegate: FavoriteStore) : FavoriteStore by delegate {
         var failWrites = false
