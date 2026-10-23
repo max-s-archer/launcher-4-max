@@ -2,6 +2,9 @@ package com.maxarcher.launcher.ui.settings
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -14,19 +17,32 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -34,12 +50,18 @@ import androidx.compose.ui.unit.Dp
 import com.maxarcher.launcher.FavoriteListSize
 import com.maxarcher.launcher.HomeBottomAppBarPresentation
 import com.maxarcher.launcher.HomeBottomAppBarState
+import com.maxarcher.launcher.IconShapeClipMode
+import com.maxarcher.launcher.IconShapeSettings
 import com.maxarcher.launcher.R
 import com.maxarcher.launcher.homeBottomAppBarCapacity
 import com.maxarcher.launcher.iconSizeResource
+import com.maxarcher.launcher.platform.icons.OEM_ICON_CLIP
+import com.maxarcher.launcher.platform.icons.clipLauncherIcon
+import com.maxarcher.launcher.platform.icons.prepareLauncherIconBitmap
 import com.maxarcher.launcher.ui.style.StyleTitleLine
 import com.maxarcher.launcher.ui.style.StyleTwoOptionSelector
 import com.maxarcher.launcher.ui.style.styleSettingsPanelSurface
+import kotlin.math.roundToInt
 
 @Composable
 internal fun HomeBottomAppBarSettingsContent(
@@ -47,6 +69,7 @@ internal fun HomeBottomAppBarSettingsContent(
     onStateChange: (HomeBottomAppBarState) -> Unit,
     saveInFlight: Boolean = false,
     homeSafeWidthDp: Float? = null,
+    iconShapeSettings: IconShapeSettings = IconShapeSettings(),
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
@@ -74,31 +97,55 @@ internal fun HomeBottomAppBarSettingsContent(
         Column(modifier = Modifier.fillMaxSize()) {
             HomeBottomAppBarSwitch(
                 enabled = state.enabled,
-                interactive = !saveInFlight,
-                onEnabledChange = { onStateChange(state.copy(enabled = it)) },
+                onEnabledChange = { enabled ->
+                    if (enabled != state.enabled) onStateChange(state.copy(enabled = enabled))
+                },
             )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .clipToBounds(),
+                    .clipToBounds()
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(
+                                requireUnconsumed = false,
+                                pass = PointerEventPass.Initial,
+                            ).consume()
+                            do {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                event.changes.forEach { change -> change.consume() }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    },
             ) {
+                val windowInset = dimensionResource(
+                    R.dimen.home_bottom_app_bar_preview_window_inset,
+                )
+                val windowCorner = dimensionResource(
+                    R.dimen.home_bottom_app_bar_preview_window_corner_radius,
+                )
                 Box(
                     modifier = Modifier
-                        .padding(
-                            horizontal = dimensionResource(
-                                R.dimen.icon_shape_preview_window_inset,
-                            ),
-                            vertical = dimensionResource(
-                                R.dimen.icon_shape_preview_window_inset,
-                            ),
-                        )
+                        .padding(all = windowInset)
                         .fillMaxSize()
                         .clipToBounds()
+                        .drawWithContent {
+                            // Clear only this window in the enclosing Settings offscreen layer.
+                            drawRoundRect(
+                                color = Color.Transparent,
+                                cornerRadius = CornerRadius(windowCorner.toPx()),
+                                blendMode = BlendMode.Clear,
+                            )
+                            drawContent()
+                        }
                         .testTag("home_bottom_app_bar_preview_window"),
                 ) {
                     HomeBottomAppBarPreview(
                         state = state,
+                        capacity = capacity,
+                        homeSafeWidthDp = measuredSafeWidthDp,
+                        iconShapeSettings = iconShapeSettings,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -205,7 +252,6 @@ internal fun HomeBottomAppBarSettingsContent(
 @Composable
 private fun HomeBottomAppBarSwitch(
     enabled: Boolean,
-    interactive: Boolean,
     onEnabledChange: (Boolean) -> Unit,
 ) {
     val description = stringResource(R.string.home_bottom_app_bar_enable)
@@ -225,7 +271,6 @@ private fun HomeBottomAppBarSwitch(
         )
         Switch(
             checked = enabled,
-            enabled = interactive,
             onCheckedChange = onEnabledChange,
             modifier = Modifier.semantics {
                 contentDescription = description
@@ -270,78 +315,103 @@ private fun HomeBottomAppBarSelectorRow(
 @Composable
 private fun HomeBottomAppBarPreview(
     state: HomeBottomAppBarState,
+    capacity: Int,
+    homeSafeWidthDp: Float,
+    iconShapeSettings: IconShapeSettings,
     modifier: Modifier = Modifier,
 ) {
-    val icon = painterResource(R.mipmap.ic_launcher_foreground)
-    val iconDimension = dimensionResource(state.iconSize.iconSizeResource())
-    val fullHeight = iconDimension + dimensionResource(
-        R.dimen.home_bottom_app_bar_preview_vertical_padding,
-    ) * 2
+    val context = LocalContext.current
+    val pixels = with(LocalDensity.current) {
+        dimensionResource(state.iconSize.iconSizeResource()).roundToPx()
+    }
+    val clip = if (iconShapeSettings.mode == IconShapeClipMode.Oem) {
+        OEM_ICON_CLIP
+    } else {
+        iconShapeSettings.freeformClip
+    }
+    val bitmap = remember(clip, pixels) {
+        val source = prepareLauncherIconBitmap(
+            context.packageManager.defaultActivityIcon,
+            pixels,
+            context.resources,
+        )
+        clipLauncherIcon(source = source, clip = clip).asImageBitmap()
+    }
+    val collapsed = state.presentation == HomeBottomAppBarPresentation.SemiHidden
     val previewDescription = stringResource(R.string.home_bottom_app_bar_preview)
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .clipToBounds()
             .semantics { contentDescription = previewDescription }
             .testTag("home_bottom_app_bar_preview"),
         contentAlignment = Alignment.BottomCenter,
     ) {
-        val collapsed = state.enabled &&
-            state.presentation == HomeBottomAppBarPresentation.SemiHidden
+        val scale = if (homeSafeWidthDp <= 0f) 0f else maxWidth.value / homeSafeWidthDp
+        val iconSize = dimensionResource(state.iconSize.iconSizeResource()) * scale
+        val verticalPadding = dimensionResource(
+            R.dimen.home_bottom_app_bar_preview_vertical_padding,
+        ) * scale
+        val fullHeight = iconSize + verticalPadding * 2
+        val exposure = dimensionResource(R.dimen.home_bottom_app_bar_collapsed_exposure) * scale
+        val outerMargin = dimensionResource(R.dimen.home_bottom_app_bar_outer_margin) * scale
+        val corner = dimensionResource(R.dimen.home_bottom_app_bar_corner_radius) * scale
+        val gap = dimensionResource(R.dimen.home_bottom_app_bar_preview_icon_gap) * scale
+        val inset = dimensionResource(
+            R.dimen.home_bottom_app_bar_preview_horizontal_inset,
+        ) * scale
+        val backgroundAlpha = integerResource(
+            R.integer.home_bottom_app_bar_background_alpha_percent,
+        ) / 100f
+        val collapsedAlpha = integerResource(
+            R.integer.home_bottom_app_bar_semi_hidden_alpha_percent,
+        ) / 100f
         Box(
             modifier = Modifier
+                .padding(start = outerMargin, end = outerMargin, bottom = outerMargin)
                 .fillMaxWidth()
-                .height(
-                    if (collapsed) {
-                        dimensionResource(R.dimen.home_bottom_app_bar_collapsed_exposure)
-                    } else {
-                        fullHeight
-                    },
-                )
-                .clipToBounds()
-                .align(Alignment.BottomCenter),
+                .height(fullHeight)
+                .graphicsLayer {
+                    translationY = if (collapsed) (fullHeight - exposure).toPx() else 0f
+                    alpha = if (collapsed) collapsedAlpha else 1f
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                }
+                .clipToBounds(),
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .requiredHeight(fullHeight)
-                    .background(colorResource(R.color.home_bottom_app_bar_preview_background)),
+                    .align(Alignment.TopCenter)
+                    .clip(RoundedCornerShape(corner))
+                    .background(
+                        colorResource(R.color.home_bottom_app_bar_preview_background).copy(
+                            alpha = backgroundAlpha,
+                        ),
+                    )
+                    .border(
+                        width = dimensionResource(R.dimen.home_favorite_bar_border_width) * scale,
+                        color = MaterialTheme.colorScheme.onBackground.copy(
+                            alpha = integerResource(
+                                R.integer.home_favorite_bar_border_alpha_percent,
+                            ) / 100f,
+                        ),
+                        shape = RoundedCornerShape(corner),
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Row(
-                    modifier = Modifier.padding(
-                        horizontal = dimensionResource(
-                            R.dimen.home_bottom_app_bar_preview_horizontal_inset,
-                        ),
-                    ),
-                    horizontalArrangement = Arrangement.spacedBy(
-                        dimensionResource(R.dimen.home_bottom_app_bar_preview_icon_gap),
-                    ),
+                    modifier = Modifier.padding(horizontal = inset),
+                    horizontalArrangement = Arrangement.spacedBy(gap),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    repeat(4) {
+                    repeat(capacity) {
                         Image(
-                            painter = icon,
+                            bitmap = bitmap,
                             contentDescription = null,
-                            modifier = Modifier.size(iconDimension),
+                            modifier = Modifier.size(iconSize),
                         )
                     }
                 }
-            }
-            if (collapsed) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .requiredHeight(fullHeight)
-                        .background(
-                            color = colorResource(
-                                R.color.home_bottom_app_bar_preview_background,
-                            ).copy(
-                                alpha = integerResource(
-                                    R.integer.home_bottom_app_bar_semi_hidden_alpha_percent,
-                                ) / 100f,
-                            ),
-                        ),
-                )
             }
         }
     }

@@ -325,7 +325,9 @@ internal fun Launcher4MaxApp(
         (favoriteState as? FavoriteReadState.Readable)
             ?.orderedAggregate
             ?.homeBottomAppBar
-    LaunchedEffect(persistedHomeBottomAppBarState, homeBottomAppBarSaveInFlight) {
+    // Preview follows the local selection. The saved aggregate is applied only before a
+    // selection and after a failed save, so a successful write does not redraw the preview.
+    LaunchedEffect(persistedHomeBottomAppBarState) {
         if (!homeBottomAppBarSaveInFlight && persistedHomeBottomAppBarState != null) {
             homeBottomAppBarState = persistedHomeBottomAppBarState
         }
@@ -1235,7 +1237,10 @@ internal fun Launcher4MaxApp(
             } while (pointersRemainPressed)
         }
     }
-    val iconShapePageOpen = settingsOpen && settingsPage == SettingsPage.IconShape
+    val wallpaperPreviewOpen = settingsOpen && (
+        settingsPage == SettingsPage.IconShape ||
+            settingsPage == SettingsPage.HomeBottomAppBar
+        )
 
     BoxWithConstraints(
         modifier = Modifier
@@ -1257,20 +1262,22 @@ internal fun Launcher4MaxApp(
         val measuredHomeSafeWidthDp = maxWidth -
             homeSafeInsets.calculateLeftPadding(layoutDirection) -
             homeSafeInsets.calculateRightPadding(layoutDirection)
-        homeSafeWidthDp = measuredHomeSafeWidthDp.value
+        if (homeSafeWidthDp != measuredHomeSafeWidthDp.value) {
+            homeSafeWidthDp = measuredHomeSafeWidthDp.value
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(
-                    if (settingsOpen && settingsPage == SettingsPage.IconShape) {
+                    if (wallpaperPreviewOpen) {
                         0f
                     } else {
                         (1f - (2f * progress)).coerceIn(0f, 1f)
                     },
                 )
-                .then(if (iconShapePageOpen) Modifier else homePointerSafetyModifier)
+                .then(if (wallpaperPreviewOpen) Modifier else homePointerSafetyModifier)
                 .then(
-                    if (iconShapePageOpen || homeCoordinator.editMode) {
+                    if (wallpaperPreviewOpen || homeCoordinator.editMode) {
                         Modifier
                     } else {
                         gestureModifier
@@ -1360,13 +1367,13 @@ internal fun Launcher4MaxApp(
                     .fillMaxSize()
                     .offset { IntOffset(0, drawerOffsetPx.roundToInt()) }
                     .alpha(
-                        if (settingsOpen && settingsPage == SettingsPage.IconShape) {
+                        if (wallpaperPreviewOpen) {
                             0f
                         } else {
                             (2f * progress).coerceIn(0f, 1f)
                         },
                     )
-                    .then(if (iconShapePageOpen) Modifier else drawerPointerSafetyModifier)
+                    .then(if (wallpaperPreviewOpen) Modifier else drawerPointerSafetyModifier)
                     .testTag("drawer_surface"),
             ) {
                 DrawerScreen(
@@ -1579,7 +1586,8 @@ internal fun Launcher4MaxApp(
                 onHomeBottomAppBarStateChange = { nextState ->
                     if (
                         !homeBottomAppBarSaveInFlight &&
-                        favoriteState is FavoriteReadState.Readable
+                        favoriteState is FavoriteReadState.Readable &&
+                        nextState != homeBottomAppBarState
                     ) {
                         val previousState = homeBottomAppBarState
                         homeBottomAppBarState = nextState

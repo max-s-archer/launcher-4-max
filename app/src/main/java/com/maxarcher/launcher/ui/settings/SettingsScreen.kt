@@ -187,7 +187,10 @@ internal fun SettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer {
-                compositingStrategy = if (page == SettingsPage.IconShape) {
+                compositingStrategy = if (
+                    page == SettingsPage.IconShape ||
+                    page == SettingsPage.HomeBottomAppBar
+                ) {
                     CompositingStrategy.Offscreen
                 } else {
                     CompositingStrategy.Auto
@@ -238,6 +241,7 @@ internal fun SettingsScreen(
                     state = homeBottomAppBarState,
                     saveInFlight = homeBottomAppBarSaveInFlight,
                     homeSafeWidthDp = homeBottomAppBarSafeWidthDp,
+                    iconShapeSettings = iconShapeSettings,
                     onStateChange = onHomeBottomAppBarStateChange,
                     modifier = Modifier.weight(1f),
                 )

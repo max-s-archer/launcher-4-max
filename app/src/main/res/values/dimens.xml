@@ -243,6 +243,8 @@
     <dimen name="icon_shape_preview_row_gap">16dp</dimen>
     <dimen name="icon_shape_preview_window_inset">64dp</dimen>
     <dimen name="icon_shape_settings_bottom_margin">32dp</dimen>
+    <dimen name="home_bottom_app_bar_preview_window_inset">16dp</dimen>
+    <dimen name="home_bottom_app_bar_preview_window_corner_radius">12dp</dimen>
     <dimen name="home_bottom_app_bar_preview_vertical_padding">8dp</dimen>
     <dimen name="home_bottom_app_bar_preview_horizontal_inset">16dp</dimen>
     <dimen name="home_bottom_app_bar_outer_margin">16dp</dimen>
