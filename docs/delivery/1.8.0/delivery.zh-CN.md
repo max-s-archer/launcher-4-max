@@ -55,7 +55,7 @@
 | --- | --- | --- | --- |
 | [迭代 35：图标形状配置](iteration-35-icon-shape-customization.zh-CN.md) | `Completed` | 2026-10-16 | 全部改动已获作者验收通过，并已合入 `main`。 |
 | [迭代 36：Home 底部应用栏](iteration-36-home-bottom-app-bar.zh-CN.md) | `Completed` | 2026-10-20 | 作者已验收应用栏实现。 |
-| [迭代 37：Home 编辑模式交互](iteration-37-home-edit-mode-interaction.zh-CN.md) | `Planned` | 2026-10-14 | 作者确认模块标题属于 Home 编辑模式交互修改。 |
+| [迭代 37：Home 编辑模式交互](iteration-37-home-edit-mode-interaction.zh-CN.md) | `In Progress` | 2026-10-23 | 作者已授权生产实现。 |
 | [迭代 38：Home 收藏放置与布局](iteration-38-home-favorite-placement-layout.zh-CN.md) | `Planned` | 2026-10-14 | 已接受的 Home 放置与布局更新形成独立可验收的放置旅程。 |
 | [迭代 39：Home 加载与收尾](iteration-39-home-loading-closure.zh-CN.md) | `Planned` | 2026-10-14 | 作者要求最后一个迭代处理 Home 加载与小范围已定义问题。 |
 
@@ -93,7 +93,7 @@
 
 ### 迭代 37：Home 编辑模式交互
 
-[契约](iteration-37-home-edit-mode-interaction.zh-CN.md)。状态：`Planned`。尚无实现证据。后续责任人：项目作者。最终作者决定：尚不适用。
+[契约](iteration-37-home-edit-mode-interaction.zh-CN.md)。状态：`In Progress`。作者于 2026-10-23 在既定契约范围内授权生产实现，分三个切片执行。尚无实现证据。后续责任人：项目作者。最终作者决定：尚不适用。
 
 ### 迭代 38：Home 收藏放置与布局
 
@@ -131,4 +131,4 @@
 
 ## 完成结果
 
-1.8.0 版本尚未完成。截至 2026-10-20，迭代 35 和迭代 36 均为 `Completed`，并已获作者验收。迭代 37–39 仍为 `Planned`。
+1.8.0 版本尚未完成。截至 2026-10-23，迭代 35 和迭代 36 均为 `Completed`，并已获作者验收。迭代 37 为 `In Progress`。迭代 38 和 39 仍为 `Planned`。
