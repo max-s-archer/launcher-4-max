@@ -99,7 +99,6 @@ internal fun HomeScreen(
     onAddFavoritesToBar: (String) -> Unit = {},
     onAddProvisionalFavoriteBar: () -> Unit = {},
     onAddToHomeBottomAppBar: () -> Unit = {},
-    onReorderHomeBottomAppBar: (List<LaunchableIdentity>) -> Unit = {},
     homeBottomAppBarExpanded: Boolean = false,
     onHomeBottomAppBarExpandedChange: (Boolean) -> Unit = {},
     onCommitFavoriteComposition: suspend (
@@ -596,13 +595,8 @@ internal fun HomeScreen(
                     onLongPress = onLongPressFavorite,
                     onRemove = onRemoveApplication,
                     onAdd = onAddToHomeBottomAppBar,
-                    onReorder = onReorderHomeBottomAppBar,
                     onDragPreviewChange = { homeDockDragPreview = it },
-                    onCommitApplicationOrder = { change ->
-                        onCommitApplicationOrder(change) {
-                            orderedApplicationMovement.complete(change = change)
-                        }
-                    },
+                    onCommitApplicationOrder = onCommitApplicationOrder,
                     movement = orderedApplicationMovement,
                 )
             }

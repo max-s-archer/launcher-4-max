@@ -1323,31 +1323,6 @@ internal fun Launcher4MaxApp(
                 onAddFavoritesToBar = ::openFavoriteBarSelection,
                 onAddProvisionalFavoriteBar = ::openProvisionalFavoriteBarSelection,
                 onAddToHomeBottomAppBar = ::openHomeBottomAppBarSelection,
-                onReorderHomeBottomAppBar = { identities ->
-                    scope.launch {
-                        val saved = effectiveFavoriteStore.updateOrderedAggregate { aggregate ->
-                            if (aggregate.homeBottomAppBar.identities.toSet() !=
-                                identities.toSet() ||
-                                aggregate.homeBottomAppBar.identities.size != identities.size
-                            ) {
-                                aggregate
-                            } else {
-                                aggregate.copy(
-                                    homeBottomAppBar = aggregate.homeBottomAppBar.copy(
-                                        identities = identities,
-                                    ),
-                                )
-                            }
-                        } != null
-                        if (!saved) {
-                            Toast.makeText(
-                                androidContext,
-                                R.string.drawer_drag_unable_to_save_favorite,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                    }
-                },
                 homeBottomAppBarExpanded = homeBottomAppBarExpanded,
                 onHomeBottomAppBarExpandedChange = { homeBottomAppBarExpanded = it },
                 onCommitFavoriteComposition = homeCoordinator::commitFavoriteComposition,

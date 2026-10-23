@@ -14,7 +14,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputScope
-import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import androidx.compose.ui.platform.testTag
 import com.maxarcher.launcher.FavoriteAvailability
@@ -103,8 +103,13 @@ internal suspend fun PointerInputScope.detectModuleReorderDrag(
                     cancelled = true
                     break
                 }
+                val normalRelease = change.changedToUp()
+                if (!change.pressed && !normalRelease) {
+                    cancelled = true
+                    break
+                }
                 val movement = change.positionChangeIgnoreConsumed()
-                if (change.changedToUpIgnoreConsumed()) {
+                if (normalRelease) {
                     if (movement != Offset.Zero) onDrag(movement)
                     change.consume()
                     break

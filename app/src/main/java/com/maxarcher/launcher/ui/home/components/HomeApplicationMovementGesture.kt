@@ -8,7 +8,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
-import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.input.pointer.changedToUp
 import com.maxarcher.launcher.ApplicationOrderChange
 import com.maxarcher.launcher.HomeApplicationMovement
 import com.maxarcher.launcher.LaunchableIdentity
@@ -34,10 +34,12 @@ internal suspend fun PointerInputScope.detectHomeApplicationMovement(
                 while (true) {
                     val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                     val owner = event.changes.firstOrNull(predicate = { it.id == down.id }) ?: break
+                    val normalRelease = owner.changedToUp()
+                    if (!owner.pressed && !normalRelease) break
                     // Additional pointers never take over, trigger controls, or affect the preview.
                     event.changes.forEach(action = { it.consume() })
                     movement.move(pointer = movement.viewport.topLeft + owner.position)
-                    if (owner.changedToUpIgnoreConsumed()) {
+                    if (normalRelease) {
                         movement.finish()?.let(block = { change ->
                             onCommit(change)
                             handedOff = true

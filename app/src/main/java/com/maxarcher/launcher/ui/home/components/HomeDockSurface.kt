@@ -51,6 +51,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -132,9 +133,11 @@ internal fun HomeDockSurface(
     onLongPress: (LaunchableEntry) -> Unit,
     onRemove: (LaunchableIdentity) -> Unit,
     onAdd: () -> Unit,
-    onReorder: (List<LaunchableIdentity>) -> Unit,
     onDragPreviewChange: (HomeDockDragPreview?) -> Unit,
-    onCommitApplicationOrder: (ApplicationOrderChange) -> Unit = {},
+    onCommitApplicationOrder: (
+        ApplicationOrderChange,
+        () -> Unit,
+    ) -> Unit = { _, complete -> complete() },
     movement: HomeApplicationMovement? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -178,6 +181,7 @@ internal fun HomeDockSurface(
     val identities = state.identities
     var draggingIndex by remember(identities) { mutableIntStateOf(-1) }
     var insertionIndex by remember(identities) { mutableIntStateOf(-1) }
+    var pendingIdentity by remember { mutableStateOf<LaunchableIdentity?>(null) }
     var barCoordinates by remember(identities) { mutableStateOf<LayoutCoordinates?>(null) }
     val iconBounds = remember(identities) { mutableStateMapOf<Int, LayoutCoordinates>() }
     val capacity = homeBottomAppBarCapacity(
@@ -253,15 +257,22 @@ internal fun HomeDockSurface(
                     return@pointerInput
                 }
                 val slop = viewConfiguration.touchSlop
-                awaitEachGesture {
+                fun clearLocalPreview() {
+                    onDragPreviewChange(null)
+                    draggingIndex = -1
+                    insertionIndex = -1
+                    pendingIdentity = null
+                }
+                suspend fun AwaitPointerEventScope.trackDockGesture() {
                     val down = awaitFirstDown(
                         requireUnconsumed = false,
                         pass = PointerEventPass.Initial,
                     )
-                    val bar = barCoordinates?.takeIf { it.isAttached } ?: return@awaitEachGesture
+                    if (pendingIdentity != null) return
+                    val bar = barCoordinates?.takeIf { it.isAttached } ?: return
                     val startIndex = dockIconAt(iconBounds, bar, down.position)
-                        ?: return@awaitEachGesture
-                    val startCoordinates = iconBounds[startIndex] ?: return@awaitEachGesture
+                        ?: return
+                    val startCoordinates = iconBounds[startIndex] ?: return
                     val origin = startCoordinates.positionInWindow()
                     val size = startCoordinates.size
                     var moved = false
@@ -293,6 +304,7 @@ internal fun HomeDockSurface(
                     suspend fun AwaitPointerEventScope.handOff(
                         pointer: Offset,
                         pointerId: PointerId,
+                        released: Boolean,
                     ): Boolean {
                         val identity = identities.getOrNull(startIndex) ?: return false
                         val availability = availabilityByIdentity[identity] ?: return false
@@ -318,19 +330,26 @@ internal fun HomeDockSurface(
                         draggingIndex = -1
                         insertionIndex = -1
                         var committed = false
+                        var currentPointer = pointer
+                        var normalRelease = released
                         try {
                             while (true) {
-                                val next = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                val owner = next.changes.firstOrNull { it.id == pointerId } ?: break
-                                next.changes.forEach { it.consume() }
-                                movement.move(pointer = bar.localToWindow(owner.position))
-                                if (!owner.pressed) {
+                                movement.move(pointer = currentPointer)
+                                if (normalRelease) {
                                     movement.finish()?.let { order ->
-                                        onCommitApplicationOrder(order)
+                                        onCommitApplicationOrder(order) {
+                                            movement.complete(change = order)
+                                        }
                                         committed = true
                                     }
                                     break
                                 }
+                                val next = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                val owner = next.changes.firstOrNull { it.id == pointerId } ?: break
+                                normalRelease = owner.changedToUp()
+                                if (!owner.pressed && !normalRelease) break
+                                next.changes.forEach { it.consume() }
+                                currentPointer = bar.localToWindow(owner.position)
                             }
                         } finally {
                             if (!committed) movement.cancel()
@@ -339,7 +358,17 @@ internal fun HomeDockSurface(
                     }
                     while (true) {
                         val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null) {
+                            clearLocalPreview()
+                            return
+                        }
+                        // Cancellation is a consumed synthetic up; inspect before consuming.
+                        val normalRelease = change.changedToUp()
+                        if (!change.pressed && !normalRelease) {
+                            clearLocalPreview()
+                            return
+                        }
                         val horizontal = change.position.x - change.previousPosition.x
                         val vertical = change.position.y - change.previousPosition.y
                         totalX += horizontal
@@ -348,7 +377,7 @@ internal fun HomeDockSurface(
                         if (!moved && (abs(totalX) > slop || abs(totalY) > slop)) {
                             if (abs(totalY) > abs(totalX)) {
                                 change.consume()
-                                if (handOff(windowPointer, down.id)) return@awaitEachGesture
+                                if (handOff(windowPointer, down.id, normalRelease)) return
                             }
                             moved = true
                             change.consume()
@@ -370,7 +399,7 @@ internal fun HomeDockSurface(
                             change.consume()
                             val outside = dockBounds?.contains(windowPointer) == false &&
                                 abs(totalY) > slop
-                            if (outside && handOff(windowPointer, down.id)) return@awaitEachGesture
+                            if (outside && handOff(windowPointer, down.id, normalRelease)) return
                             onDragPreviewChange(
                                 barDragPreview(
                                     identities = identities,
@@ -384,20 +413,39 @@ internal fun HomeDockSurface(
                             )
                             insertionIndex = insertionTarget()
                         }
-                        if (!change.pressed) break
+                        if (normalRelease) break
                     }
                     val target = if (moved) insertionTarget() else startIndex
-                    onDragPreviewChange(null)
-                    draggingIndex = -1
                     insertionIndex = -1
                     if (moved && target != startIndex) {
                         val movedIdentity = identities[startIndex]
-                        onReorder(
-                            identities.toMutableList().apply {
-                                removeAt(startIndex)
-                                add(target.coerceIn(0, this.size), movedIdentity)
-                            },
-                        )
+                        pendingIdentity = movedIdentity
+                        try {
+                            onCommitApplicationOrder(
+                                ApplicationOrderChange(
+                                    moduleId = HOME_BOTTOM_APP_BAR_DESTINATION_ID,
+                                    identity = movedIdentity,
+                                    originalOrder = identities,
+                                    boundary = target,
+                                    destinationBar = true,
+                                    barCapacity = capacity,
+                                ),
+                                ::clearLocalPreview,
+                            )
+                        } catch (failure: Throwable) {
+                            clearLocalPreview()
+                            throw failure
+                        }
+                    } else {
+                        clearLocalPreview()
+                    }
+                }
+                awaitEachGesture {
+                    try {
+                        trackDockGesture()
+                    } finally {
+                        // A submitted save owns completion across pointer input restarts.
+                        if (pendingIdentity == null) clearLocalPreview()
                     }
                 }
             }
@@ -470,7 +518,9 @@ internal fun HomeDockSurface(
             ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val visibleIdentities = if (draggingIndex in identities.indices) {
+            val visibleIdentities = if (pendingIdentity != null) {
+                identities.filterNot { it == pendingIdentity }
+            } else if (draggingIndex in identities.indices) {
                 identities.filterIndexed { index, _ -> index != draggingIndex }
             } else {
                 identities
@@ -671,8 +721,8 @@ internal fun HomeDockDragGhost(
                 height = with(density) { preview.size.height.toDp() },
             )
             .shadow(elevation = elevation, clip = false)
-            .clearAndSetSemantics {}
-            .testTag("home_bottom_app_bar_drag_preview"),
+            .testTag("home_bottom_app_bar_drag_preview")
+            .clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
     ) {
         HomeDockIconArtwork(
