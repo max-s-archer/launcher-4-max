@@ -96,7 +96,7 @@ Author-reported acceptance of all iteration 35 changes: `Passed` on 2026-10-16.
 
 ### Iteration 37: Home Edit Mode Interaction
 
-[Contract](iteration-37-home-edit-mode-interaction.md). Status: `In Progress`. The author authorized production implementation on 2026-10-23 within the accepted contract, in three slices. No implementation evidence exists yet. Follow-up owner: project author. Final author decision: not applicable yet.
+[Contract](iteration-37-home-edit-mode-interaction.md). Status: `In Progress`. The author authorized production implementation on 2026-10-23 within the accepted contract, in three slices. The module-name slice adds a persisted name and name visibility to every module. Ordered-favorite store schema v5 and backup schema v7 carry both fields. Earlier data and backups restore unnamed modules with hidden names. Present fields of the wrong type reject the backup. Ordinary Home shows a non-interactive `40dp` title row only while the name is shown, and uses the default label when the module is unnamed. Author-reported build and run of the changed tests: `Passed` on 2026-10-23. Device acceptance: not yet reported. Follow-up owner: project author. Final author decision: not applicable yet.
 
 ### Iteration 38: Home Favorite Placement and Layout
 
