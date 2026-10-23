@@ -13,7 +13,7 @@
   往返 Settings 不重试也不清除该 Error。
 - 从 Error 进入后，备份、恢复、快捷操作设置和隐私等 Settings 入口仍按既有规则可用，
   无需等待应用清单恢复。备份和恢复操作已保存的收藏与设置，不修复应用清单读取失败。
-- Settings 使用不透明的标准 Material 3 dark color scheme。它与 Home、Drawer 的区别是会绘制 Material 表面背景，不透出应用下方的系统背景。图标形状设置页是唯一例外：其实时预览窗口完全透明，按 [icon-shape.zh-CN.md](../features/icon-shape.zh-CN.md) 的定义透出系统壁纸而不读取壁纸。Settings 其余全部区域保持不透明。
+- Settings 使用不透明的标准 Material 3 dark color scheme。它与 Home、Drawer 的区别是会绘制 Material 表面背景，不透出应用下方的系统背景。两个预览窗口是透明例外：[icon-shape.zh-CN.md](../features/icon-shape.zh-CN.md) 定义的图标形状窗口，以及 [home-bottom-app-bar.zh-CN.md](../features/home-bottom-app-bar.zh-CN.md) 定义的主页底部常驻应用栏窗口。二者都透出系统壁纸而不读取壁纸。Settings 其余全部区域保持不透明。
 
 ## 当前契约
 

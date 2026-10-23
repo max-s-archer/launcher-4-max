@@ -1,6 +1,6 @@
 # 图标形状交互规格
 
-> 英文公共语义源：[icon-shape.md](icon-shape.md)。Settings 入口、其位置与不透明例外记录在 [Settings 交互规格](../surfaces/settings.zh-CN.md)；页面与预览窗口的精确几何属于 [Settings 表现规范](../presentation/settings.zh-CN.md#图标形状设置页)。
+> 英文公共语义源：[icon-shape.md](icon-shape.md)。Settings 入口、其位置与透明例外记录在 [Settings 交互规格](../surfaces/settings.zh-CN.md)；页面与预览窗口的精确几何属于 [Settings 表现规范](../presentation/settings.zh-CN.md#图标形状设置页)。
 
 ## 目的与范围
 
@@ -41,7 +41,7 @@ Settings 包含一个标题为 `图标形状` 的主要设置项，位于 `快�
   它不读取、采样、复制或绘制壁纸。系统壁纸透过该内部保持可见。
   预览区域占满应用栏与设置块之间的空间；窗口在该区域内内缩，具体定义见
   [Settings 表现规范](../presentation/settings.zh-CN.md#图标形状设置页)。
-  页面自身不滚动。窗口是 Settings 中唯一透出壁纸的位置。
+  页面自身不滚动。该窗口与主页底部常驻应用栏预览窗口是 Settings 中透出壁纸的两处位置。
   窗口内部，准确三个纵向堆叠、不可交互的行在窗口内水平与垂直居中，
   每行对应一个图标档位：大、中、小，并以当前偏好结果渲染固定样例图标，
   即系统默认应用图标。预览样例不使用真实已安装应用。

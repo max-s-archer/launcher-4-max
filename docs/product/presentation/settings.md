@@ -52,7 +52,8 @@ This document owns exact Settings typography and row geometry. [Settings behavio
   potentially zero on short screens; preview drawing stays inside the region and window bounds,
   prioritizing settings-block visibility.
   The window does not read, sample, copy, or draw wallpaper; the system wallpaper shows through.
-  It is the only transparent region of Settings and adds no dimming, scrim, blur, or overlay.
+  It adds no dimming, scrim, blur, or overlay.
+  The Home bottom app bar preview window is the other transparent Settings exception.
   Every other region keeps the standard opaque Settings surface.
 - Inside the window, three vertically stacked non-interactive rows form a group centered
   horizontally and vertically, with `16dp` between rows. The group height follows its row
@@ -83,6 +84,27 @@ This document owns exact Settings typography and row geometry. [Settings behavio
   The `232dp` width is a tentatively accepted value. Its height, boundary, corner treatment,
   label treatment, and targets remain the shared treatment.
 - The `Corner radius` block title row is followed by one content row reusing the shared background-row geometry: a fixed-width integer-percentage readout measured at the widest value `100%`, a `16dp` gap, and one continuous slider filling the remaining row width with a full-row-height interaction target. The readout uses the shared secondary text treatment and `primaryTextColor`; the slider's active track, thumb, and announcement behavior follow the shared slider treatment. While `OEM clip` is selected, the slider reports unavailable with the shared disabled presentation and the saved percentage is unchanged.
+
+## Home bottom app bar settings page
+
+- The `Home bottom app bar` page reuses the Settings top app bar, non-scrolling page, preview-region
+  placement, settings-block placement, and `32dp` safe-area bottom padding defined for the
+  [Icon shape settings page](#icon-shape-settings-page).
+- Its preview window is inset `16dp` from all four edges of the preview region. That page inset is
+  fixed and is not scaled. The window is fully transparent, uses `12dp` corners, and reveals the
+  system wallpaper without reading, sampling, copying, or drawing it. Parent bounds may reduce it
+  to zero while keeping the settings block visible.
+- The window's bottom edge represents the screen bottom. The preview bar is aligned to that edge.
+  Fixed presentation shows the complete bar. Semi-hidden presentation shows the ordinary collapsed
+  bar, with its lower portion cut off by the window's bottom edge. The preview does not expand.
+- The preview count is the current maximum capacity for the selected icon tier and the real Home
+  safe width. It is not recalculated from the scaled preview dimensions. The icons use the default
+  platform application icon and the current icon-shape preference. They show no names.
+- One scale applies to the complete Home bar presentation:
+  `preview-window interior width / Home safe width`. It is recalculated only when either width
+  changes. The scale covers icon size, icon gap, the bar's fixed outer margins and inner padding,
+  corner radius, border width, bar height, and collapsed exposure together. The preview does not
+  reuse those Home dimensions at their unscaled values.
 
 ## Informational Bottom Sheets
 

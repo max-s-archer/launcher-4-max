@@ -1,6 +1,6 @@
 # Icon Shape Interaction Specification
 
-> Public semantic source: English. Chinese counterpart: [icon-shape.zh-CN.md](icon-shape.zh-CN.md). The Settings entry, its position, and the Settings opacity exception are recorded in the [Settings interaction specification](../surfaces/settings.md); exact page and preview geometry belongs to the [Settings presentation specification](../presentation/settings.md#icon-shape-settings-page).
+> Public semantic source: English. Chinese counterpart: [icon-shape.zh-CN.md](icon-shape.zh-CN.md). The Settings entry, its position, and the Settings transparency exceptions are recorded in the [Settings interaction specification](../surfaces/settings.md); exact page and preview geometry belongs to the [Settings presentation specification](../presentation/settings.md#icon-shape-settings-page).
 
 ## Purpose and scope
 
@@ -45,7 +45,8 @@ Settings contains one primary item titled `Icon shape`, placed directly below `Q
   through that interior. The preview region fills the space between the app bar and the settings
   block; the window is inset within that region as defined by the
   [Settings presentation specification](../presentation/settings.md#icon-shape-settings-page).
-  The page itself does not scroll. The window is the only place in Settings that reveals wallpaper.
+  The page itself does not scroll. This window and the Home bottom app bar preview window are
+  the Settings regions that reveal wallpaper.
   Inside the window, exactly three vertically stacked, non-interactive rows are centered
   horizontally and vertically, one per icon-size stop: large, medium, small. Each renders the
   fixed sample icon, the system default application icon, with the current preference result.

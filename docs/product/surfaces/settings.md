@@ -15,7 +15,7 @@
 - Settings entries, including backup, restore, quick-action settings, and Privacy, remain
   available from Error under their existing rules without waiting for inventory recovery.
   Backup and restore operate on saved favorites and settings; neither repairs inventory failure.
-- Settings uses an opaque standard Material 3 dark color scheme. Unlike Home and Drawer, it paints its Material surface background rather than exposing the system background beneath the application. The icon-shape settings page is the one exception: its live-preview window is fully transparent and reveals the system wallpaper without reading it, as defined by [icon-shape.md](../features/icon-shape.md). Every other region of Settings remains opaque.
+- Settings uses an opaque standard Material 3 dark color scheme. Unlike Home and Drawer, it paints its Material surface background rather than exposing the system background beneath the application. Two preview windows are transparent exceptions: the icon-shape window defined by [icon-shape.md](../features/icon-shape.md), and the Home bottom app bar window defined by [home-bottom-app-bar.md](../features/home-bottom-app-bar.md). Both reveal the system wallpaper without reading it. Every other region of Settings remains opaque.
 
 ## Current contract
 

@@ -28,7 +28,7 @@ The accepted Settings entry and page title are `Home bottom app bar` in English 
   [application action sheet](../surfaces/app-action-sheet.md#launcher-actions).
   Reordering can also begin from a fully presented favorite in normal Home, as defined by
   [one-shot operation](../surfaces/home.md#one-shot-operation).
-- The preview shows the bottom row without names on one opaque built-in image. It does not sample the current wallpaper. It does not decide capacity. Home's available width does.
+- The preview window is non-interactive and shows the current selected presentation: the complete bar when fixed, or the ordinary collapsed bar when semi-hidden. It does not expand, launch, or accept changes. While the master switch is off, the preview still shows that selected presentation, and the settings below it remain disabled. The preview does not decide capacity. Home's available width does. Exact preview geometry belongs to the [Settings presentation specification](../presentation/settings.md#home-bottom-app-bar-settings-page).
 - Every settings change applies immediately and starts one exclusive save of the complete bar
   settings state. While that save is unresolved, other bar-setting changes are unavailable, but
   leaving the page remains available. A save failure restores the last successfully saved complete
