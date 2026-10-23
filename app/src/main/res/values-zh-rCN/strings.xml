@@ -94,6 +94,8 @@
     <string name="home_ribbon_fixed_style">收藏织带使用固定样式</string>
     <string name="home_add_favorite_list">新增收藏列表</string>
     <string name="home_add_favorite_ribbon">新增收藏织带</string>
+    <string name="home_module_default_name_list">收藏列表</string>
+    <string name="home_module_default_name_ribbon">收藏织带</string>
     <string name="home_add_favorite">新增收藏</string>
     <string name="home_application_size">应用大小 · 文字大小</string>
     <string name="home_name_right">右侧</string>

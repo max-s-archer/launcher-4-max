@@ -31,6 +31,9 @@ internal data class OrderedFavoriteModule(
     val textSize: FavoriteListSize = FavoriteListSize.Medium,
     val namePlacement: FavoriteNamePlacement = FavoriteNamePlacement.Right,
     val itemsPerRow: Int = 1,
+    /** The persisted module name. An empty name keeps the module unnamed. */
+    val name: String = "",
+    val nameVisible: Boolean = false,
 ) {
     init {
         require(id.isNotBlank())
@@ -247,6 +250,17 @@ internal class OrderedFavoriteModuleStore private constructor(
                     } else {
                         1
                     }
+                    // Modules saved before module names existed stay unnamed and hidden.
+                    val name = if (schemaVersion >= MODULE_NAME_SCHEMA_VERSION) {
+                        input.readUTF()
+                    } else {
+                        ""
+                    }
+                    val nameVisible = if (schemaVersion >= MODULE_NAME_SCHEMA_VERSION) {
+                        input.readBoolean()
+                    } else {
+                        false
+                    }
                     val identityCount = input.readInt()
                     require(identityCount > 0) { "Empty ordered favorite module" }
                     add(
@@ -257,6 +271,8 @@ internal class OrderedFavoriteModuleStore private constructor(
                             textSize = textSize,
                             namePlacement = namePlacement,
                             itemsPerRow = itemsPerRow,
+                            name = name,
+                            nameVisible = nameVisible,
                             identities = buildList {
                                 repeat(identityCount) {
                                     val serial = input.readLong()
@@ -329,6 +345,8 @@ internal class OrderedFavoriteModuleStore private constructor(
                 data.writeInt(module.textSize.ordinal)
                 data.writeInt(module.namePlacement.ordinal)
                 data.writeInt(module.itemsPerRow)
+                data.writeUTF(module.name)
+                data.writeBoolean(module.nameVisible)
                 data.writeInt(module.identities.size)
                 module.identities.forEach { identity ->
                     data.writeLong(identity.profileSerialNumber)
@@ -360,7 +378,8 @@ internal class OrderedFavoriteModuleStore private constructor(
         const val STYLE_SCHEMA_VERSION = 2
         const val INDEPENDENT_SIZE_SCHEMA_VERSION = 3
         const val HOME_BOTTOM_APP_BAR_SCHEMA_VERSION = 4
-        const val SCHEMA_VERSION = HOME_BOTTOM_APP_BAR_SCHEMA_VERSION
+        const val MODULE_NAME_SCHEMA_VERSION = 5
+        const val SCHEMA_VERSION = MODULE_NAME_SCHEMA_VERSION
         const val LEGACY_MAGIC = 0x4156454E
         const val LEGACY_SCHEMA_VERSION = 1
         const val LEGACY_COMPOSITION_SCHEMA_VERSION = 2

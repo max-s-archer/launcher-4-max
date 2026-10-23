@@ -72,7 +72,7 @@ private const val BACKUP_TIMESTAMP_PATTERN = "yyyyMMddHHmm"
  * present section restores that field's default value.
  */
 internal object SettingsBackupJson {
-    const val BACKUP_SCHEMA_VERSION = 6
+    const val BACKUP_SCHEMA_VERSION = 7
 
     fun serialize(
         aggregate: OrderedFavoriteAggregate,
@@ -92,6 +92,8 @@ internal object SettingsBackupJson {
                             .put("textSize", module.textSize.storageValue)
                             .put("namePlacement", module.namePlacement.storageValue)
                             .put("itemsPerRow", module.itemsPerRow)
+                            .put("name", module.name)
+                            .put("nameVisible", module.nameVisible)
                             .put(
                                 "identities",
                                 module.identities.toJson(),
@@ -214,6 +216,17 @@ internal object SettingsBackupJson {
                 default = FavoriteNamePlacement.Right,
             ) { value -> favoriteNamePlacementFromStorageValue(value) } ?: return null,
             itemsPerRow = module.optInt("itemsPerRow", 1),
+            // Backups written before module names existed restore unnamed, hidden modules.
+            name = if (module.has("name")) {
+                module.get("name") as? String ?: return null
+            } else {
+                ""
+            },
+            nameVisible = if (module.has("nameVisible")) {
+                module.get("nameVisible") as? Boolean ?: return null
+            } else {
+                false
+            },
             identities = parseIdentities(
                 module.optJSONArray("identities") ?: return null,
             ),

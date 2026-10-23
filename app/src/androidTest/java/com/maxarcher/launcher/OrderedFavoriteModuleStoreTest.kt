@@ -168,11 +168,14 @@ class OrderedFavoriteModuleStoreTest {
                     textSize = FavoriteListSize.Small,
                     namePlacement = FavoriteNamePlacement.Below,
                     itemsPerRow = 4,
+                    name = "Work",
+                    nameVisible = true,
                 ),
                 OrderedFavoriteModule(
                     id = "ribbon-1",
                     type = OrderedFavoriteModuleType.Ribbon,
                     identities = listOf(second),
+                    name = "Hidden name",
                 ),
             ),
             homeBottomAppBar = HomeBottomAppBarState(
@@ -229,6 +232,43 @@ class OrderedFavoriteModuleStoreTest {
             ),
             store.state.value,
         )
+        file.delete()
+    }
+
+    @Test
+    fun versionFourOrderedModuleLoadsUnnamedWithHiddenName(): Unit = runBlocking {
+        val file = temporaryFile()
+        val identity = LaunchableIdentity(1, ComponentName("com.example", "Main"))
+        DataOutputStream(file.outputStream()).use { output ->
+            output.writeInt(0x41464D31)
+            output.writeInt(4)
+            output.writeInt(1)
+            output.writeUTF("vertical-1")
+            output.writeInt(OrderedFavoriteModuleType.Vertical.ordinal)
+            output.writeInt(FavoriteListSize.Large.ordinal)
+            output.writeInt(FavoriteListSize.Small.ordinal)
+            output.writeInt(FavoriteNamePlacement.Below.ordinal)
+            output.writeInt(3)
+            output.writeInt(1)
+            output.writeLong(identity.profileSerialNumber)
+            output.writeUTF(identity.componentName.flattenToString())
+            output.writeBoolean(false)
+            output.writeInt(HomeBottomAppBarPresentation.SemiHidden.ordinal)
+            output.writeInt(FavoriteListSize.Medium.ordinal)
+            output.writeInt(0)
+        }
+
+        val store = OrderedFavoriteModuleStore(file)
+        store.load()
+
+        val module = (store.state.value as OrderedFavoriteReadState.Readable)
+            .aggregate
+            .modules
+            .single()
+        assertEquals("", module.name)
+        assertFalse(module.nameVisible)
+        assertEquals(FavoriteListSize.Large, module.iconSize)
+        assertEquals(3, module.itemsPerRow)
         file.delete()
     }
 

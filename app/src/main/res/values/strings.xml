@@ -95,6 +95,8 @@
     <string name="home_ribbon_fixed_style">Favorite ribbons use a fixed style</string>
     <string name="home_add_favorite_list">Add favorite list</string>
     <string name="home_add_favorite_ribbon">Add favorite ribbon</string>
+    <string name="home_module_default_name_list">Favorite list</string>
+    <string name="home_module_default_name_ribbon">Favorite ribbon</string>
     <string name="home_add_favorite">Add favorite</string>
     <string name="home_application_size">Application size · Text size</string>
     <string name="home_name_right">Right</string>

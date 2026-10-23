@@ -68,6 +68,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
@@ -153,6 +154,41 @@ internal fun HomeEditDock(
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         }
+    }
+}
+
+@Composable
+internal fun OrderedFavoriteModule.displayName(): String = name.ifEmpty {
+    stringResource(
+        when (type) {
+            OrderedFavoriteModuleType.Vertical -> R.string.home_module_default_name_list
+            OrderedFavoriteModuleType.Ribbon -> R.string.home_module_default_name_ribbon
+        },
+    )
+}
+
+/** The non-interactive ordinary-Home title row of a module whose name is shown. */
+@Composable
+internal fun HomeModuleTitleRow(module: OrderedFavoriteModule) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(dimensionResource(R.dimen.home_module_header_height))
+            .padding(horizontal = dimensionResource(R.dimen.home_module_header_content_inset))
+            .testTag("home_module_title_${module.id}"),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(
+            text = module.displayName(),
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            fontSize = dimensionResource(R.dimen.style_settings_secondary_text_size).value.sp,
+            lineHeight = dimensionResource(
+                R.dimen.style_settings_secondary_line_height,
+            ).value.sp,
+            style = LocalTextStyle.current.copy(shadow = drawerForegroundShadow()),
+        )
     }
 }
 
@@ -395,22 +431,27 @@ internal fun HomeOrderedModuleComposition(
                 } else {
                     null
                 }
-                HomeOrderedModuleContent(
-                    enterBatch = enterBatch,
-                    module = module,
-                    availabilityByIdentity = availabilityByIdentity,
-                    ribbonListState = ribbonListState,
-                    editMode = editMode,
-                    showAddEntry = showModuleAddEntries,
-                    addEntryEnabled = addEntriesEnabled,
-                    onAddToModule = { onAddToModule(module) },
-                    onLaunchFavorite = onLaunchFavorite,
-                    onLongPressFavorite = onLongPressFavorite,
-                    applicationEditing = editMode && !selectionEnabled,
-                    applicationMutationEnabled = addEntriesEnabled,
-                    onRemoveFavorite = onRemoveFavorite,
-                    applicationMovement = applicationMovement,
-                )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    if (!editMode && module.nameVisible) {
+                        HomeModuleTitleRow(module = module)
+                    }
+                    HomeOrderedModuleContent(
+                        enterBatch = enterBatch,
+                        module = module,
+                        availabilityByIdentity = availabilityByIdentity,
+                        ribbonListState = ribbonListState,
+                        editMode = editMode,
+                        showAddEntry = showModuleAddEntries,
+                        addEntryEnabled = addEntriesEnabled,
+                        onAddToModule = { onAddToModule(module) },
+                        onLaunchFavorite = onLaunchFavorite,
+                        onLongPressFavorite = onLongPressFavorite,
+                        applicationEditing = editMode && !selectionEnabled,
+                        applicationMutationEnabled = addEntriesEnabled,
+                        onRemoveFavorite = onRemoveFavorite,
+                        applicationMovement = applicationMovement,
+                    )
+                }
                 if (selectionEnabled) {
                     HomeModuleSelectionLayer(
                         modifier = Modifier.matchParentSize(),

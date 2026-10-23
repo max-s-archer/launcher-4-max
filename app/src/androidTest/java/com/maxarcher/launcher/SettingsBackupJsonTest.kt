@@ -419,6 +419,38 @@ class SettingsBackupJsonTest {
         )
     }
 
+    @Test
+    fun missingModuleNameFieldsRestoreUnnamedHiddenModules() {
+        val document = validBackupDocument().put("schemaVersion", 6)
+        val modules = document.getJSONObject("favorites").getJSONArray("modules")
+        repeat(modules.length()) { index ->
+            modules.getJSONObject(index).apply {
+                remove("name")
+                remove("nameVisible")
+            }
+        }
+
+        val parsed = SettingsBackupJson.parse(document.toString())
+
+        assertEquals(
+            testAggregate().modules.map { it.copy(name = "", nameVisible = false) },
+            parsed?.aggregate?.modules,
+        )
+    }
+
+    @Test
+    fun invalidModuleNameFieldsRejectBackup() {
+        val invalid = listOf("name" to 7, "name" to JSONObject.NULL, "nameVisible" to "true")
+        invalid.forEach { (field, value) ->
+            val document = validBackupDocument()
+            document.getJSONObject("favorites").getJSONArray("modules")
+                .getJSONObject(0)
+                .put(field, value)
+
+            assertNull(SettingsBackupJson.parse(document.toString()))
+        }
+    }
+
     private fun validBackupDocument(): JSONObject =
         JSONObject(
             SettingsBackupJson.serialize(
@@ -444,6 +476,8 @@ class SettingsBackupJsonTest {
                 textSize = FavoriteListSize.Small,
                 namePlacement = FavoriteNamePlacement.Below,
                 itemsPerRow = 3,
+                name = "Work",
+                nameVisible = true,
             ),
             OrderedFavoriteModule(
                 id = "favorite-bar-1",

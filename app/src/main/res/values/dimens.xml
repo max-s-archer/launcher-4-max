@@ -114,6 +114,10 @@
     <dimen name="home_module_selection_stroke">2dp</dimen>
     <dimen name="home_module_selection_radius">12dp</dimen>
 
+    <!-- Home screen / Module header -->
+    <dimen name="home_module_header_height">40dp</dimen>
+    <dimen name="home_module_header_content_inset">4dp</dimen>
+
     <!-- Home screen / Edit mode / Favorite application reordering feedback -->
     <dimen name="home_reorder_handle_size">24dp</dimen>
     <dimen name="home_reorder_handle_target_size">40dp</dimen>
