@@ -96,7 +96,26 @@ Author-reported acceptance of all iteration 35 changes: `Passed` on 2026-10-16.
 
 ### Iteration 37: Home Edit Mode Interaction
 
-[Contract](iteration-37-home-edit-mode-interaction.md). Status: `In Progress`. The author authorized production implementation on 2026-10-23 within the accepted contract, in three slices. The module-name slice adds a persisted name and name visibility to every module. Ordered-favorite store schema v5 and backup schema v7 carry both fields. Earlier data and backups restore unnamed modules with hidden names. Present fields of the wrong type reject the backup. Ordinary Home shows a non-interactive `40dp` title row only while the name is shown, and uses the default label when the module is unnamed. The edit-mode interaction slice replaces the edit dock with per-module operation headers, keeps style access in the module header, centralizes the open-style state, and limits module reordering to the header handle. The implementation is committed as `4d05f80`. Author-reported compilation and all changed tests: `Passed` on 2026-10-26. Device acceptance for the completed slices: not yet reported. Follow-up owner: project author. Final author decision: not applicable yet.
+[Contract](iteration-37-home-edit-mode-interaction.md). Status: `In Progress`. The author authorized
+production implementation on 2026-10-23 within the accepted contract, in three slices. The
+module-name slice adds a persisted name and name visibility to every module. Ordered-favorite store
+schema v5 and backup schema v7 carry both fields. Earlier data and backups restore unnamed modules
+with hidden names. Present fields of the wrong type reject the backup. Ordinary Home shows a
+non-interactive `40dp` title row only while the name is shown, and uses the default label when the
+module is unnamed. The edit-mode interaction slice replaces the edit dock with per-module
+operation headers, keeps style access in the module header, centralizes the open-style state, and
+limits module reordering to the header handle. The implementation is committed as `4d05f80`.
+Author-reported compilation and all changed tests for that slice: `Passed` on 2026-10-26. The
+initial whole-module removal slice is committed as `7566b30`. The author reported that its
+functional checks basically passed, then reported acceptance of the corrected header-test
+journey: `Passed` on 2026-10-26. Subsequent review found remaining Undo contract gaps; this earlier
+evidence does not validate the lifecycle corrections. The correction committed as `17a5f33`
+unifies the latest removal snapshot, restores only the deleted complete module, preserves unrelated
+edits, and covers addition, navigation, inventory, dismissal, and failure boundaries. On 2026-10-26,
+the author reported that device testing and unit tests for this correction basically passed; exact
+commands and test coverage were not specified. This observation is not full iteration acceptance.
+Agent-run Gradle build and tests: `Not run`. Final device acceptance: `Unknown`.
+Final author closure decision: not yet reported. Follow-up owner: project author.
 
 ### Iteration 38: Home Favorite Placement and Layout
 
