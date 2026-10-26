@@ -16,7 +16,44 @@ internal data class FavoriteRemovalSnapshot(
     val moduleOrder: List<String>,
     val barIndex: Int? = null,
     val barOrder: List<LaunchableIdentity> = emptyList(),
-)
+    val wholeModule: Boolean = false,
+) {
+    val identities: List<LaunchableIdentity>
+        get() = if (wholeModule) checkNotNull(module).identities else listOf(identity)
+}
+
+internal fun captureModuleRemoval(
+    aggregate: OrderedFavoriteAggregate,
+    moduleId: String,
+): FavoriteRemovalSnapshot? {
+    val index = aggregate.modules.indexOfFirst { it.id == moduleId }
+    if (index < 0) return null
+    val module = aggregate.modules[index]
+    return FavoriteRemovalSnapshot(
+        identity = module.identities.first(),
+        module = module,
+        moduleIndex = index,
+        applicationIndex = -1,
+        moduleOrder = aggregate.modules.map { it.id },
+        wholeModule = true,
+    )
+}
+
+internal fun restoreRemovedModule(
+    aggregate: OrderedFavoriteAggregate,
+    snapshot: FavoriteRemovalSnapshot,
+): OrderedFavoriteAggregate? {
+    val module = snapshot.module ?: return null
+    if (aggregate.modules.any { it.id == module.id } ||
+        snapshot.identities.any { it in aggregate.identities }
+    ) return null
+    val modules = aggregate.modules.toMutableList()
+    modules.add(
+        restoredFavoritePosition(snapshot.moduleOrder, snapshot.moduleIndex, modules.map { it.id }),
+        module,
+    )
+    return aggregate.copy(modules = modules)
+}
 
 internal fun captureFavoriteRemoval(
     aggregate: OrderedFavoriteAggregate,
@@ -148,15 +185,48 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
         private set
 
     private var undoGeneration = 0L
+    private var applicationUndoGeneration = 0L
     private val confirmedAbsent = mutableSetOf<LaunchableIdentity>()
+    private var observedAggregate: OrderedFavoriteAggregate? = null
 
     fun invalidateUndo() {
         undoGeneration += 1
         undoRemoval = null
     }
 
+    /** Edit exit and the favorite multi-selection journey invalidate only application Undo. */
+    fun invalidateApplicationUndo() {
+        applicationUndoGeneration += 1
+        if (undoRemoval?.wholeModule != true) undoRemoval = null
+    }
+
+    fun reconcileComposition(
+        before: OrderedFavoriteAggregate?,
+        after: OrderedFavoriteAggregate,
+    ) {
+        val snapshot = undoRemoval ?: return
+        if (!snapshot.wholeModule) {
+            if (before != null && before != after) invalidateUndo()
+            return
+        }
+        val addition = before != null && after.identities.any { it !in before.identities }
+        if (addition || after.modules.any { it.id == snapshot.module?.id } ||
+            snapshot.identities.any { it in after.identities }
+        ) invalidateUndo()
+    }
+
+    /** Observes writes outside this editor without expiring Undo on inventory refresh alone. */
+    fun observeComposition(aggregate: OrderedFavoriteAggregate) {
+        // Composition can deliver an older collected value after a completed editor write.
+        val current = (store.state.value as? FavoriteReadState.Readable)?.orderedAggregate
+        if (aggregate != current) return
+        if (undoRemoval?.wholeModule == true) reconcileComposition(observedAggregate, aggregate)
+        observedAggregate = aggregate
+    }
+
     fun dismissUndo(snapshot: FavoriteRemovalSnapshot) {
-        if (undoRemoval === snapshot) invalidateUndo()
+        // Dismissing this message must not suppress a later removal already being saved.
+        if (undoRemoval === snapshot) undoRemoval = null
     }
 
     fun reconcileAvailability(availability: Map<LaunchableIdentity, FavoriteAvailability>) {
@@ -170,14 +240,41 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
                 }
             },
         )
-        val removedIdentity = undoRemoval?.identity
-        if (removedIdentity != null && removedIdentity in confirmedAbsent) invalidateUndo()
+        if (undoRemoval?.identities?.any { it in confirmedAbsent } == true) invalidateUndo()
+    }
+
+    suspend fun removeModule(moduleId: String): Boolean {
+        if (isSaving) return false
+        isSaving = true
+        val generation = undoGeneration
+        var snapshot: FavoriteRemovalSnapshot? = null
+        return try {
+            val persisted = store.updateOrderedAggregate { aggregate ->
+                snapshot = captureModuleRemoval(aggregate, moduleId)
+                aggregate.copy(modules = aggregate.modules.filterNot { it.id == moduleId })
+            } ?: return false
+            val removed = snapshot ?: return false
+            if (persisted.modules.any { it.id == moduleId }) return false
+            observedAggregate = persisted
+            if (generation == undoGeneration) {
+                invalidateUndo()
+                if (removed.identities.none { it in confirmedAbsent }) undoRemoval = removed
+            }
+            true
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            false
+        } finally {
+            isSaving = false
+        }
     }
 
     suspend fun remove(identity: LaunchableIdentity): Boolean {
         if (isSaving) return false
         isSaving = true
         val generation = undoGeneration
+        val applicationGeneration = applicationUndoGeneration
         var snapshot: FavoriteRemovalSnapshot? = null
         return try {
             val persisted = store.updateOrderedAggregate(
@@ -186,9 +283,14 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
                     removeOrderedFavorite(aggregate = aggregate, identity = identity)
                 },
             ) ?: return false
-            if (snapshot != null && identity !in persisted.identities && generation == undoGeneration) {
+            observedAggregate = persisted
+            if (snapshot != null && identity !in persisted.identities &&
+                generation == undoGeneration
+            ) {
                 invalidateUndo()
-                if (identity !in confirmedAbsent) undoRemoval = snapshot
+                if (applicationGeneration == applicationUndoGeneration &&
+                    identity !in confirmedAbsent
+                ) undoRemoval = snapshot
             }
             true
         } catch (cancellation: CancellationException) {
@@ -207,12 +309,20 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
     ): Boolean {
         if (isSaving || undoRemoval !== snapshot) return false
         isSaving = true
+        var restoredModule = false
         return try {
             if (!revalidate()) return false
             val persisted = store.updateOrderedAggregate(
                 transform = { aggregate ->
-                    if (undoRemoval !== snapshot || snapshot.identity in confirmedAbsent) {
+                    if (snapshot.wholeModule) reconcileComposition(observedAggregate, aggregate)
+                    if (undoRemoval !== snapshot ||
+                        snapshot.identities.any { it in confirmedAbsent }
+                    ) {
                         aggregate
+                    } else if (snapshot.wholeModule) {
+                        restoreRemovedModule(aggregate, snapshot)?.also {
+                            restoredModule = true
+                        } ?: aggregate
                     } else {
                         restoreOrderedFavorite(
                             aggregate = aggregate,
@@ -226,7 +336,12 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
                     }
                 },
             )
-            persisted != null && snapshot.identity in persisted.identities
+            if (persisted != null) observedAggregate = persisted
+            persisted != null && if (snapshot.wholeModule) {
+                restoredModule && persisted.modules.any { it == snapshot.module }
+            } else {
+                snapshot.identity in persisted.identities
+            }
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (_: Exception) {
@@ -259,7 +374,12 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
                     }
                 },
             )
-            (persisted != null && applied).also(block = { saved -> if (saved) invalidateUndo() })
+            if (persisted != null && applied) {
+                reconcileComposition(null, persisted)
+                invalidateApplicationUndo()
+                observedAggregate = persisted
+            }
+            persisted != null && applied
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (_: Exception) {
@@ -275,12 +395,16 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
         if (isSaving) return null
         isSaving = true
         return try {
-            val before = store.state.value
-            store.updateOrderedAggregate(transform = transform).also(
-                block = { saved ->
-                    if (saved != null && before != store.state.value) invalidateUndo()
-                },
-            )
+            var before: OrderedFavoriteAggregate? = null
+            store.updateOrderedAggregate { aggregate ->
+                before = aggregate
+                transform(aggregate)
+            }.also { saved ->
+                if (saved != null) {
+                    reconcileComposition(before, saved)
+                    observedAggregate = saved
+                }
+            }
         } finally {
             isSaving = false
         }
@@ -293,7 +417,7 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
             val before = store.state.value
             store.replaceModuleOrder(moduleIds = moduleIds).also(
                 block = { saved ->
-                    if (saved && before != store.state.value) invalidateUndo()
+                    if (saved && before != store.state.value) invalidateApplicationUndo()
                 },
             )
         } finally {

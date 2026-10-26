@@ -1,7 +1,6 @@
 package com.maxarcher.launcher
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -32,32 +31,16 @@ class HomeEditTransactionTest {
     }
 
     @Test
-    fun undoCanOnlyBeConsumedOnceForItsSequence() {
-        val transaction = HomeEditTransaction()
-        val snapshot = aggregate("undo")
-
-        val sequence = transaction.recordUndo(snapshot)
-
-        assertNull(transaction.consumeUndo(sequence + 1))
-        assertEquals(snapshot, transaction.consumeUndo(sequence))
-        assertNull(transaction.consumeUndo(sequence))
-    }
-
-    @Test
-    fun externalReconciliationClearsPendingAndInvalidatesUndo() {
+    fun externalReconciliationClearsPendingAndRefreshesPresentation() {
         val transaction = HomeEditTransaction()
         val initial = aggregate("initial")
         val pending = aggregate("pending")
         val external = aggregate("external")
         transaction.enter(initial)
         transaction.beginMutation(pending)
-        transaction.recordUndo(initial)
-
-        assertTrue(transaction.reconcileExternal(external))
+        transaction.reconcileExternal(external)
         assertEquals(external, transaction.committedAggregate)
         assertNull(transaction.pendingAggregate)
-        assertNull(transaction.undoAggregate)
-        assertFalse(transaction.reconcileExternal(external))
     }
 
     @Test
@@ -65,7 +48,6 @@ class HomeEditTransactionTest {
         val transaction = HomeEditTransaction()
         transaction.enter(aggregate("initial"))
         transaction.beginMutation(aggregate("pending"))
-        transaction.recordUndo(aggregate("undo"))
         transaction.beginModuleOrder(emptyList())
         val activeSession = transaction.sessionId
 
@@ -74,33 +56,7 @@ class HomeEditTransactionTest {
         assertTrue(transaction.sessionId > activeSession)
         assertNull(transaction.pendingAggregate)
         assertNull(transaction.committedAggregate)
-        assertNull(transaction.undoAggregate)
         assertNull(transaction.pendingModuleOrder)
-    }
-
-    @Test
-    fun leavingPreservesUndoThatSurvivesTheEditSession() {
-        val transaction = HomeEditTransaction()
-        val snapshot = aggregate("undo")
-        transaction.enter(aggregate("initial"))
-        val sequence = transaction.recordUndo(aggregate = snapshot, survivesEditSession = true)
-
-        transaction.leave()
-
-        assertEquals(snapshot, transaction.consumeUndo(sequence))
-    }
-
-    @Test
-    fun externalChangeInvalidatesUndoThatSurvivedTheEditSession() {
-        val transaction = HomeEditTransaction()
-        val initial = aggregate("initial")
-        val external = aggregate("external")
-        transaction.enter(initial)
-        transaction.recordUndo(aggregate = initial, survivesEditSession = true)
-        transaction.leave()
-
-        assertTrue(transaction.reconcileExternal(external))
-        assertNull(transaction.undoAggregate)
     }
 
     private fun aggregate(id: String) = OrderedFavoriteAggregate(

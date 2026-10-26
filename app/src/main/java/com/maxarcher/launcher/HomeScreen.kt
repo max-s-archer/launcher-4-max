@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -43,6 +45,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
@@ -76,6 +79,7 @@ internal fun HomeScreen(
     openStyleModuleId: String? = null,
     applicationEditingSaving: Boolean = false,
     onRemoveApplication: (LaunchableIdentity) -> Unit = {},
+    onRemoveModule: (String) -> Unit = {},
     onCommitApplicationOrder: (
         change: ApplicationOrderChange,
         onComplete: () -> Unit,
@@ -144,9 +148,6 @@ internal fun HomeScreen(
     }
     val edgeScrollStartDelayMillis =
         integerResource(R.integer.home_favorite_edge_scroll_start_delay_ms).toLong()
-    val undoLabel = stringResource(R.string.undo)
-    val undoUnavailableMessage = stringResource(R.string.favorite_undo_unavailable)
-    val wholeModuleRemovalMessage = stringResource(R.string.home_module_removed)
     val moduleStyleSaveFailureMessage = stringResource(
         R.string.unable_to_save_module_style,
     )
@@ -158,7 +159,6 @@ internal fun HomeScreen(
     val orchestration = remember {
         HomeFavoriteEditOrchestration(
             orderedApplicationMovement = orderedApplicationMovement,
-            snackbarHostState = snackbarHostState,
             editScope = editScope,
             context = context,
         )
@@ -168,9 +168,6 @@ internal fun HomeScreen(
     orchestration.openStyleModuleId = openStyleModuleId
     orchestration.favoriteState = currentFavoriteState
     orchestration.favoriteAvailability = favoriteAvailability
-    orchestration.undoLabel = undoLabel
-    orchestration.undoUnavailableMessage = undoUnavailableMessage
-    orchestration.wholeModuleRemovalMessage = wholeModuleRemovalMessage
     orchestration.moduleStyleSaveFailureMessage = moduleStyleSaveFailureMessage
     orchestration.moduleOrderSaveFailureMessage = moduleOrderSaveFailureMessage
     orchestration.moduleNameSaveFailureMessage = moduleNameSaveFailureMessage
@@ -179,11 +176,9 @@ internal fun HomeScreen(
 
     LaunchedEffect(editMode) {
         if (!editMode) {
-            val preserveUndo = orchestration.editTransaction.undoSurvivesEditSession
             orchestration.editTransaction.leave()
             orchestration.cancelActiveDragSessions()
             orchestration.editMutationJob?.cancel()
-            if (!preserveUndo) snackbarHostState.currentSnackbarData?.dismiss()
         } else {
             orchestration.editTransaction.enter(
                 (currentFavoriteState as? FavoriteReadState.Readable)?.orderedAggregate,
@@ -239,16 +234,14 @@ internal fun HomeScreen(
             ?: return@LaunchedEffect
         val currentAggregate = readable.orderedAggregate ?: return@LaunchedEffect
         val committed = orchestration.editTransaction.committedAggregate ?: return@LaunchedEffect
-        if ((editMode || orchestration.editTransaction.undoAggregate != null) &&
+        if (editMode &&
             currentAggregate != committed &&
             orchestration.editMutationJob?.isActive != true &&
             // The saved application order is the pending handoff, not an external edit.
             orderedApplicationMovement.pendingChange == null
         ) {
             orchestration.cancelActiveDragSessions()
-            if (orchestration.editTransaction.reconcileExternal(currentAggregate)) {
-                snackbarHostState.currentSnackbarData?.dismiss()
-            }
+            orchestration.editTransaction.reconcileExternal(currentAggregate)
         }
     }
 
@@ -422,7 +415,9 @@ internal fun HomeScreen(
                                     )
                                 },
                                 onRemoveModule = { module ->
-                                    orchestration.removeModule(module.id)
+                                    if (!styleSaving && !applicationMovementActive) {
+                                        onRemoveModule(module.id)
+                                    }
                                 },
                                 stylePanel = { module ->
                                     HomeModuleStylePanelSlot(
@@ -515,7 +510,8 @@ internal fun HomeScreen(
                                 TextButton(
                                     enabled = !applicationEditingSaving &&
                                         orchestration.editMutationJob?.isActive != true &&
-                                            !applicationMovementActive,
+                                        orchestration.moduleDragSession == null &&
+                                        !applicationMovementActive,
                                     onClick = { data.performAction() },
                                     content = {
                                         Text(
@@ -526,6 +522,18 @@ internal fun HomeScreen(
                                 )
                             },
                         )
+                    },
+                    dismissAction = if (data.visuals.withDismissAction) {
+                        {
+                            IconButton(onClick = { data.dismiss() }) {
+                                Icon(
+                                    painterResource(R.drawable.ic_close),
+                                    stringResource(R.string.home_removal_dismiss),
+                                )
+                            }
+                        }
+                    } else {
+                        null
                     },
                     content = { Text(text = data.visuals.message) },
                 )

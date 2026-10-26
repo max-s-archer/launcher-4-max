@@ -16,9 +16,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -272,6 +270,7 @@ internal fun Launcher4MaxApp(
     }
     var drawerDisplaySettingsSaving by remember { mutableStateOf(false) }
     var favoriteAddTarget by remember { mutableStateOf<FavoriteAddTarget?>(null) }
+    var favoriteSelectionJourneyActive by remember { mutableStateOf(false) }
     var favoriteSelection by remember { mutableStateOf<List<LaunchableIdentity>>(emptyList()) }
     var favoriteSelectionSaving by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
@@ -295,8 +294,6 @@ internal fun Launcher4MaxApp(
     val createFavoriteBarLabel = stringResource(
         R.string.drawer_selection_create_favorite_bar,
     )
-    val removedMessage = stringResource(id = R.string.favorite_removed)
-    val undoLabel = stringResource(id = R.string.undo)
     val durableDrawerDisplaySettings =
         (drawerDisplaySettingsState as? DrawerDisplaySettingsReadState.Readable)?.settings
     val presentedDrawerDisplaySettings = drawerDisplaySettingsCandidate
@@ -360,76 +357,54 @@ internal fun Launcher4MaxApp(
         )
     }
 
-    LaunchedEffect(
-        key1 = favoriteEditor.undoRemoval,
-        block = {
-            val snapshot = favoriteEditor.undoRemoval ?: return@LaunchedEffect
-            val result = removalSnackbarHostState.showSnackbar(
-                message = removedMessage,
-                actionLabel = undoLabel,
-                duration = SnackbarDuration.Long,
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                // The save belongs to the App scope, not this Snackbar's cancellable effect.
-                scope.launch(
-                    block = {
-                        val restored = favoriteEditor.undo(
-                            snapshot = snapshot,
-                            currentBarCapacity = { bar ->
-                                // Read live width and transaction state after inventory validation.
-                                val width = homeSafeWidthDp
-                                if (!width.isFinite() || width <= 0f) {
-                                    null
-                                } else {
-                                    val resources = androidContext.resources
-                                    val density = resources.displayMetrics.density
-                                    homeBottomAppBarCapacity(
-                                        safeWidthDp = width,
-                                        outerMarginDp = resources.getDimension(
-                                            R.dimen.home_bottom_app_bar_outer_margin,
-                                        ) / density,
-                                        iconSizeDp = resources.getDimension(
-                                            bar.iconSize.iconSizeResource(),
-                                        ) / density,
-                                        horizontalInsetDp = resources.getDimension(
-                                            R.dimen.home_bottom_app_bar_preview_horizontal_inset,
-                                        ) / density,
-                                        iconGapDp = resources.getDimension(
-                                            R.dimen.home_bottom_app_bar_preview_icon_gap,
-                                        ) / density,
-                                    )
-                                }
-                            },
-                            revalidate = {
-                                val inventory = (inventoryCoordinator.state.value
-                                    as? LaunchableInventoryState.Content)?.snapshot
-                                if (inventory == null) {
-                                    false
-                                } else {
-                                    val resolved = inventoryCoordinator.resolveFavorites(
-                                        identities = listOf(element = snapshot.identity),
-                                        snapshot = inventory,
-                                    )
-                                    favoriteEditor.reconcileAvailability(availability = resolved)
-                                    resolved[snapshot.identity] != FavoriteAvailability.ConfirmedRemoved
-                                }
-                            },
-                        )
-                        homeCoordinator.refreshEditMembership()
-                        if (!restored) {
-                            Toast.makeText(
-                                androidContext,
-                                R.string.favorite_undo_unavailable,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                    },
-                )
+    HomeRemovalFeedback(
+        editor = favoriteEditor,
+        hostState = removalSnackbarHostState,
+        currentBarCapacity = { bar ->
+            // Read live width and transaction state after inventory validation.
+            val width = homeSafeWidthDp
+            if (!width.isFinite() || width <= 0f) {
+                null
             } else {
-                favoriteEditor.dismissUndo(snapshot = snapshot)
+                val resources = androidContext.resources
+                val density = resources.displayMetrics.density
+                homeBottomAppBarCapacity(
+                    safeWidthDp = width,
+                    outerMarginDp = resources.getDimension(
+                        R.dimen.home_bottom_app_bar_outer_margin,
+                    ) / density,
+                    iconSizeDp = resources.getDimension(bar.iconSize.iconSizeResource()) / density,
+                    horizontalInsetDp = resources.getDimension(
+                        R.dimen.home_bottom_app_bar_preview_horizontal_inset,
+                    ) / density,
+                    iconGapDp = resources.getDimension(
+                        R.dimen.home_bottom_app_bar_preview_icon_gap,
+                    ) / density,
+                )
             }
         },
+        revalidate = { snapshot ->
+            val inventory = (inventoryCoordinator.state.value
+                as? LaunchableInventoryState.Content)?.snapshot
+            if (inventory == null) {
+                false
+            } else {
+                val resolved = inventoryCoordinator.resolveFavorites(
+                    identities = snapshot.identities,
+                    snapshot = inventory,
+                )
+                favoriteEditor.reconcileAvailability(availability = resolved)
+                resolved.values.none { it == FavoriteAvailability.ConfirmedRemoved }
+            }
+        },
+        onRestored = homeCoordinator::refreshEditMembership,
     )
+
+    LaunchedEffect(favoriteState) {
+        (favoriteState as? FavoriteReadState.Readable)?.orderedAggregate?.let {
+            favoriteEditor.observeComposition(it)
+        }
+    }
 
     // The graph performs the one process-wide read before the first frame; this effect
     // only covers hosts with composition-scoped stores and leaves committed state alone.
@@ -505,7 +480,7 @@ internal fun Launcher4MaxApp(
 
     LaunchedEffect(homeCoordinator.editMode) {
         if (!homeCoordinator.editMode) {
-            favoriteEditor.invalidateUndo()
+            favoriteEditor.invalidateApplicationUndo()
             homeBottomAppBarExpanded = false
         }
     }
@@ -550,13 +525,13 @@ internal fun Launcher4MaxApp(
         inventoryState,
         effectiveFavoriteStore,
         inventoryCoordinator,
-        favoriteEditor.undoRemoval?.identity,
+        favoriteEditor.undoRemoval,
     ) {
         val identities = favoriteMembership ?: return@LaunchedEffect
         val completeInventory = inventoryState as? LaunchableInventoryState.Content
             ?: return@LaunchedEffect
         val resolved = inventoryCoordinator.resolveFavorites(
-            identities = (identities + listOfNotNull(element = favoriteEditor.undoRemoval?.identity)).toList(),
+            identities = (identities + favoriteEditor.undoRemoval?.identities.orEmpty()).toList(),
             snapshot = completeInventory.snapshot,
         )
         favoriteAvailability = resolved
@@ -676,7 +651,8 @@ internal fun Launcher4MaxApp(
                 it.id == containerId && it.type == OrderedFavoriteModuleType.Vertical
             }
         ) return
-        favoriteEditor.invalidateUndo()
+        favoriteEditor.invalidateApplicationUndo()
+        favoriteSelectionJourneyActive = true
         favoriteAddTarget = FavoriteAddTarget(
             containerId = containerId,
             containerType = FavoriteContainerType.VerticalList,
@@ -693,7 +669,8 @@ internal fun Launcher4MaxApp(
         if (favoriteEditor.isSaving) return
         val state = favoriteState
         if (state !is FavoriteReadState.Readable) return
-        favoriteEditor.invalidateUndo()
+        favoriteEditor.invalidateApplicationUndo()
+        favoriteSelectionJourneyActive = true
         favoriteAddTarget = FavoriteAddTarget(
             containerId = null,
             containerType = FavoriteContainerType.VerticalList,
@@ -727,7 +704,8 @@ internal fun Launcher4MaxApp(
         )
         val remainingPlaces = (capacity - bar.identities.size).coerceAtLeast(0)
         if (remainingPlaces == 0) return
-        favoriteEditor.invalidateUndo()
+        favoriteEditor.invalidateApplicationUndo()
+        favoriteSelectionJourneyActive = true
         favoriteAddTarget = FavoriteAddTarget(
             containerId = null,
             containerType = FavoriteContainerType.FavoriteBar,
@@ -750,7 +728,8 @@ internal fun Launcher4MaxApp(
                 it.id == containerId && it.type == OrderedFavoriteModuleType.Ribbon
             }
         ) return
-        favoriteEditor.invalidateUndo()
+        favoriteEditor.invalidateApplicationUndo()
+        favoriteSelectionJourneyActive = true
         favoriteAddTarget = FavoriteAddTarget(
             containerId = containerId,
             containerType = FavoriteContainerType.FavoriteBar,
@@ -766,7 +745,8 @@ internal fun Launcher4MaxApp(
     fun openProvisionalFavoriteBarSelection() {
         if (favoriteEditor.isSaving) return
         if (favoriteState !is FavoriteReadState.Readable) return
-        favoriteEditor.invalidateUndo()
+        favoriteEditor.invalidateApplicationUndo()
+        favoriteSelectionJourneyActive = true
         favoriteAddTarget = FavoriteAddTarget(
             containerId = null,
             containerType = FavoriteContainerType.FavoriteBar,
@@ -796,6 +776,7 @@ internal fun Launcher4MaxApp(
                 .orEmpty()
             var updatedAggregate: OrderedFavoriteAggregate? = null
             var targetInvalid = false
+            var addedToModule = false
             val saved = if (target.homeBottomAppBar) {
                 var appended = false
                 effectiveFavoriteStore.updateOrderedAggregate { aggregate ->
@@ -890,10 +871,11 @@ internal fun Launcher4MaxApp(
                             }
                         },
                     )
+                    addedToModule = true
                     updatedAggregate = updated
                     updated
-                })
-            }
+                }) != null && addedToModule
+            } ?: false
             if (targetInvalid) {
                 favoriteSelectionSaving = false
                 Toast.makeText(
@@ -903,7 +885,8 @@ internal fun Launcher4MaxApp(
                 ).show()
                 return@launch
             }
-            if (saved == true) {
+            if (saved) {
+                favoriteEditor.invalidateUndo()
                 updatedAggregate?.let(homeCoordinator::updateEditMembership)
                 closeFavoriteSelection()
             } else {
@@ -1006,12 +989,16 @@ internal fun Launcher4MaxApp(
         },
     )
 
-    LaunchedEffect(
-        key1 = settledSurface,
-        block = {
-            if (settledSurface != AppSurface.Home) favoriteEditor.invalidateUndo()
-        },
-    )
+    LaunchedEffect(settledSurface, favoriteAddTarget, settingsOpen) {
+        if (settingsOpen ||
+            (settledSurface != AppSurface.Home && !favoriteSelectionJourneyActive)
+        ) {
+            favoriteEditor.invalidateUndo()
+        }
+        if (settledSurface == AppSurface.Home && favoriteAddTarget == null) {
+            favoriteSelectionJourneyActive = false
+        }
+    }
 
     BackHandler(enabled = favoriteAddTarget != null && !favoriteSelectionSaving) {
         closeFavoriteSelection()
@@ -1312,6 +1299,19 @@ internal fun Launcher4MaxApp(
                 openStyleModuleId = homeCoordinator.openStyleModuleId,
                 applicationEditingSaving = favoriteEditor.isSaving,
                 onRemoveApplication = { identity -> removeHomeFavorite(identity = identity) },
+                onRemoveModule = { moduleId ->
+                    if (!favoriteEditor.isSaving) scope.launch {
+                        val saved = favoriteEditor.removeModule(moduleId)
+                        homeCoordinator.refreshEditMembership()
+                        if (!saved) {
+                            Toast.makeText(
+                                androidContext,
+                                R.string.favorite_remove_failed,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }
+                },
                 onCommitApplicationOrder = homeCoordinator::commitApplicationOrder,
                 removalSnackbarHostState = removalSnackbarHostState,
                 onRetryFavorites = { scope.launch { effectiveFavoriteStore.load() } },

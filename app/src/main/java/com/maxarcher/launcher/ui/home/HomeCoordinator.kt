@@ -99,7 +99,7 @@ internal class HomeCoordinator(
 
     fun startDrawerDrag(journey: DrawerDragJourney): Boolean {
         if (favoriteEditor.isSaving) return false
-        favoriteEditor.invalidateUndo()
+        favoriteEditor.invalidateApplicationUndo()
         drawerDragJourney = journey
         drawerDragTouchPosition = journey.touchStartInWindow
         editMode = true

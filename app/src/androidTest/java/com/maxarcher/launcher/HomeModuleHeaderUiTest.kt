@@ -1,9 +1,14 @@
 package com.maxarcher.launcher
 
 import android.content.ComponentName
+import android.content.Context
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
@@ -11,11 +16,15 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -26,6 +35,8 @@ class HomeModuleHeaderUiTest {
     val composeRule = createComposeRule()
 
     private val first = module(id = "first", serial = 1)
+    private val context = ApplicationProvider.getApplicationContext<Context>()
+    private val undoLabel get() = context.getString(R.string.undo)
     private val second = module(
         id = "second",
         serial = 2,
@@ -135,7 +146,7 @@ class HomeModuleHeaderUiTest {
         composeRule.runOnIdle {
             assertEquals(listOf("second"), persisted.modules.map { it.id })
         }
-        composeRule.onNodeWithText("Undo").performClick()
+        composeRule.onNodeWithText(undoLabel).assertIsDisplayed().performClick()
         composeRule.waitForIdle()
         composeRule.runOnIdle {
             assertEquals(listOf(original, second), persisted.modules)
@@ -155,9 +166,13 @@ class HomeModuleHeaderUiTest {
         )
 
         composeRule.onNodeWithTag("home_module_remove_first").performClick()
+        composeRule.onNodeWithText(undoLabel).assertIsDisplayed()
+        composeRule.runOnIdle {
+            assertEquals(listOf(second), persisted.modules)
+        }
         composeRule.runOnIdle { editing = false }
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("Undo").performClick()
+        composeRule.onNodeWithText(undoLabel).assertIsDisplayed().performClick()
         composeRule.waitForIdle()
 
         composeRule.runOnIdle {
@@ -179,7 +194,41 @@ class HomeModuleHeaderUiTest {
         composeRule.runOnIdle {
             assertEquals(listOf("first", "second"), persisted.modules.map { it.id })
         }
-        composeRule.onNodeWithText("Undo").assertDoesNotExist()
+        composeRule.onNodeWithText(undoLabel).assertDoesNotExist()
+    }
+
+    @Test
+    fun laterWholeRemovalReplacesTheSnackbarAndRestoresOnlyTheLatestModule() {
+        show(aggregate(first, second))
+        composeRule.onNodeWithTag("home_module_remove_first").performClick()
+        composeRule.onNodeWithText(undoLabel).assertIsDisplayed()
+        composeRule.onNodeWithTag("home_module_remove_second").performClick()
+        composeRule.onNodeWithText(undoLabel).assertIsDisplayed().performClick()
+
+        composeRule.onNodeWithTag("home_module_header_first").assertDoesNotExist()
+        composeRule.onNodeWithTag("home_module_header_second").assertIsDisplayed()
+    }
+
+    @Test
+    fun unrelatedNameChangePreservesUndoAndIsNotRolledBackByRestoration() {
+        show(aggregate(first, second))
+        composeRule.onNodeWithTag("home_module_remove_first").performClick()
+        composeRule.onNodeWithTag("home_module_name_second").performTextReplacement("Updated")
+        composeRule.onNodeWithText(undoLabel).assertIsDisplayed().performClick()
+
+        composeRule.onNodeWithTag("home_module_header_first").assertIsDisplayed()
+        composeRule.onNodeWithTag("home_module_name_second").assertTextContains("Updated")
+    }
+
+    @Test
+    fun dismissingTheWholeRemovalSnackbarDiscardsUndoWithoutRestoringTheModule() {
+        show(aggregate(first, second))
+        composeRule.onNodeWithTag("home_module_remove_first").performClick()
+        composeRule.onNodeWithContentDescription(context.getString(R.string.home_removal_dismiss))
+            .performClick()
+
+        composeRule.onNodeWithText(undoLabel).assertDoesNotExist()
+        composeRule.onNodeWithTag("home_module_header_first").assertDoesNotExist()
     }
 
     private fun show(
@@ -189,26 +238,72 @@ class HomeModuleHeaderUiTest {
         openModuleId: () -> String? = { null },
         onToggle: (String) -> Unit = {},
         applicationEditingSaving: Boolean = false,
-        onCommit: suspend (
+        onCommit: (suspend (
             (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
-        ) -> OrderedFavoriteAggregate? = { transform -> transform(aggregate) },
+        ) -> OrderedFavoriteAggregate?)? = null,
     ) {
+        val store = HeaderTestStore(aggregate, onCommit)
+        val editor = HomeFavoriteEditor(store)
+        val hostState = SnackbarHostState()
         composeRule.setContent {
             Launcher4MaxTheme {
+                val presentedState by store.state.collectAsState()
+                val scope = rememberCoroutineScope()
+                val editing = editMode()
+                LaunchedEffect(editing) {
+                    if (!editing) editor.invalidateApplicationUndo()
+                }
+                HomeRemovalFeedback(editor, hostState)
                 HomeScreen(
-                    favoriteState = FavoriteReadState.Readable(
-                        aggregate = aggregate.toLegacyAggregate(),
-                        orderedModules = aggregate.modules,
-                        orderedAggregate = aggregate,
-                    ),
+                    favoriteState = presentedState,
                     favoriteListState = listState,
-                    editMode = editMode(),
+                    editMode = editing,
                     openStyleModuleId = openModuleId(),
                     onToggleModuleStylePanel = onToggle,
-                    applicationEditingSaving = applicationEditingSaving,
-                    onCommitFavoriteComposition = onCommit,
+                    applicationEditingSaving = applicationEditingSaving || editor.isSaving,
+                    removalSnackbarHostState = hostState,
+                    onRemoveModule = { id -> scope.launch { editor.removeModule(id) } },
+                    onRemoveApplication = { id -> scope.launch { editor.remove(id) } },
+                    onCommitFavoriteComposition = editor::updateComposition,
+                    onCommitModuleOrder = editor::reorderModules,
                 )
             }
+        }
+    }
+
+    /** Publishes successful writes like the application store, including removal and Undo. */
+    private class HeaderTestStore(
+        initial: OrderedFavoriteAggregate,
+        val commit: (suspend (
+            (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
+        ) -> OrderedFavoriteAggregate?)?,
+    ) : FavoriteStore {
+        override val state = MutableStateFlow<FavoriteReadState>(readable(initial))
+
+        override suspend fun load() = Unit
+        override suspend fun add(identity: LaunchableIdentity): Boolean = error("Not used")
+        override suspend fun remove(identity: LaunchableIdentity): Boolean = error("Not used")
+        override suspend fun removeAll(identities: Set<LaunchableIdentity>): Boolean =
+            error("Not used")
+
+        override suspend fun updateOrderedAggregate(
+            transform: (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
+        ): OrderedFavoriteAggregate? {
+            val result = if (commit != null) {
+                commit.invoke(transform)
+            } else {
+                val current = (state.value as FavoriteReadState.Readable).orderedAggregate
+                transform(checkNotNull(current))
+            }
+            return result?.also { state.value = readable(it) }
+        }
+
+        companion object {
+            private fun readable(value: OrderedFavoriteAggregate) = FavoriteReadState.Readable(
+                aggregate = value.toLegacyAggregate(),
+                orderedModules = value.modules,
+                orderedAggregate = value,
+            )
         }
     }
 

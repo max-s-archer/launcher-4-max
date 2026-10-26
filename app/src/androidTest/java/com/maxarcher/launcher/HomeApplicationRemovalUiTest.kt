@@ -218,6 +218,88 @@ class HomeApplicationRemovalUiTest {
         composeRule.onNodeWithTag("remove_favorite_item").assertIsDisplayed()
     }
 
+    @Test
+    fun wholeUndoSurvivesSelectionCancellationButSuccessfulModuleAdditionInvalidatesIt() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val removedEntry = entry()
+        val retainedEntry = removedEntry.copy(
+            identity = removedEntry.identity.copy(
+                componentName = ComponentName("com.target", "Main"),
+            ),
+            label = "Retained application",
+        )
+        val candidate = removedEntry.copy(
+            identity = removedEntry.identity.copy(componentName = ComponentName("com.new", "Main")),
+            label = "New application",
+        )
+        val removed = OrderedFavoriteModule(
+            id = "removed",
+            type = OrderedFavoriteModuleType.Vertical,
+            identities = listOf(removedEntry.identity),
+            name = "Work",
+            nameVisible = true,
+        )
+        val retained = OrderedFavoriteModule(
+            id = "retained",
+            type = OrderedFavoriteModuleType.Vertical,
+            identities = listOf(retainedEntry.identity),
+        )
+        val initial = OrderedFavoriteAggregate(listOf(removed, retained))
+        val file = files.newFolder().resolve("favorites.bin")
+        val store = OrderedFavoriteModuleStore(file)
+        runBlocking {
+            store.load()
+            assertTrue(store.replaceAggregate(initial))
+        }
+        val adapter = OrderedFavoriteStoreAdapter(file)
+        composeRule.setContent {
+            Launcher4MaxTheme {
+                Launcher4MaxApp(
+                    inventoryLoader = LaunchableInventoryLoader {
+                        LaunchableInventorySnapshot(
+                            entries = listOf(removedEntry, retainedEntry, candidate),
+                            profileReadStatus = mapOf(
+                                removedEntry.identity.profileSerialNumber to
+                                    ProfileInventoryReadStatus.Complete,
+                            ),
+                        )
+                    },
+                    favoriteStore = adapter,
+                )
+            }
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithText(retainedEntry.label).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText(retainedEntry.label).performTouchInput { longClick(center) }
+        composeRule.onNodeWithTag("edit_favorites_action").performClick()
+        composeRule.onNodeWithTag("home_module_remove_removed").performClick()
+        val undo = context.getString(R.string.undo)
+        composeRule.onNodeWithText(undo).assertIsDisplayed()
+        composeRule.onNodeWithTag("home_add_favorite_retained").performClick()
+        composeRule.onNodeWithTag("drawer_favorite_selection_cancel")
+            .assertIsDisplayed().performClick()
+        composeRule.onNodeWithText(undo).assertIsDisplayed().performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            (adapter.state.value as? FavoriteReadState.Readable)?.orderedAggregate == initial
+        }
+
+        composeRule.onNodeWithTag("home_module_remove_removed").performClick()
+        composeRule.onNodeWithText(undo).assertIsDisplayed()
+        composeRule.onNodeWithTag("home_add_favorite_retained").performClick()
+        composeRule.onNodeWithText(candidate.label).performClick()
+        composeRule.onNodeWithTag("drawer_favorite_selection_confirm").performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            val aggregate = (adapter.state.value as? FavoriteReadState.Readable)?.orderedAggregate
+            aggregate?.modules?.singleOrNull()?.identities ==
+                listOf(retainedEntry.identity, candidate.identity)
+        }
+        composeRule.onNodeWithTag("drawer_favorite_selection_cancel").assertDoesNotExist()
+        composeRule.onNodeWithText(undo).assertDoesNotExist()
+        composeRule.onNodeWithTag("home_module_header_removed").assertDoesNotExist()
+        composeRule.onNodeWithTag("home_module_header_retained").assertIsDisplayed()
+    }
+
     private fun entry(): LaunchableEntry = LaunchableEntry(
         identity = LaunchableIdentity(
             profileSerialNumber = 1,

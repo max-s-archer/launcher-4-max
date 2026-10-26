@@ -17,33 +17,18 @@ internal class HomeEditTransaction {
     var committedAggregate by mutableStateOf<OrderedFavoriteAggregate?>(null)
         private set
 
-    var undoAggregate by mutableStateOf<OrderedFavoriteAggregate?>(null)
-        private set
-
-    var undoSequence by mutableIntStateOf(0)
-        private set
-
-    var undoSurvivesEditSession by mutableStateOf(false)
-        private set
-
     var pendingModuleOrder by mutableStateOf<List<OrderedFavoriteModule>?>(null)
         private set
 
     fun enter(initialAggregate: OrderedFavoriteAggregate?) {
         sessionId += 1
-        if (!undoSurvivesEditSession) committedAggregate = initialAggregate
+        committedAggregate = initialAggregate
     }
 
     fun leave() {
-        val preserveUndo = undoSurvivesEditSession
         sessionId += 1
-        if (!preserveUndo) {
-            undoSequence += 1
-            undoAggregate = null
-            undoSurvivesEditSession = false
-        }
         pendingAggregate = null
-        if (!preserveUndo) committedAggregate = null
+        committedAggregate = null
         pendingModuleOrder = null
     }
 
@@ -78,36 +63,8 @@ internal class HomeEditTransaction {
         pendingModuleOrder = null
     }
 
-    fun clearUndo() {
-        undoSequence += 1
-        undoAggregate = null
-        undoSurvivesEditSession = false
-    }
-
-    fun recordUndo(
-        aggregate: OrderedFavoriteAggregate,
-        survivesEditSession: Boolean = false,
-    ): Int {
-        undoSequence += 1
-        undoAggregate = aggregate
-        undoSurvivesEditSession = survivesEditSession
-        return undoSequence
-    }
-
-    fun consumeUndo(expectedSequence: Int): OrderedFavoriteAggregate? {
-        if (expectedSequence != undoSequence) return null
-        val snapshot = undoAggregate ?: return null
-        undoAggregate = null
-        undoSurvivesEditSession = false
-        undoSequence += 1
-        return snapshot
-    }
-
-    fun reconcileExternal(aggregate: OrderedFavoriteAggregate): Boolean {
-        val dismissedUndo = undoAggregate != null
-        if (dismissedUndo) clearUndo()
+    fun reconcileExternal(aggregate: OrderedFavoriteAggregate) {
         pendingAggregate = null
         committedAggregate = aggregate
-        return dismissedUndo
     }
 }

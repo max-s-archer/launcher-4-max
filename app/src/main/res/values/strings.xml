@@ -96,6 +96,7 @@
     <string name="unable_to_save_module_name">Unable to save module name</string>
     <string name="home_module_remove_group">Remove the whole favorite group</string>
     <string name="home_module_removed">Removed the whole favorite group</string>
+    <string name="home_removal_dismiss">Dismiss removal message</string>
     <string name="home_module_show_name">Show module name</string>
     <string name="home_module_hide_name">Hide module name</string>
     <string name="home_module_reorder_handle">Reorder module</string>

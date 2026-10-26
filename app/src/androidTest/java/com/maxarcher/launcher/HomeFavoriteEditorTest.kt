@@ -752,6 +752,326 @@ class HomeFavoriteEditorTest {
         assertEquals(saved, store.currentOrderedAggregate())
     }
 
+    @Test
+    fun wholeUndoRestoresEveryFieldWithoutRollingBackOtherModulesOrTheBar() = runBlocking {
+        for (type in OrderedFavoriteModuleType.entries) {
+            val first = module("first", listOf(identity(1)))
+            val removed = module("removed", listOf(identity(2), identity(3)), type)
+                .copy(name = "Work", nameVisible = true)
+            val last = module("last", listOf(identity(4)))
+            val store = storeWith(listOf(first, removed, last))
+            val bar = HomeBottomAppBarState(
+                enabled = true,
+                identities = listOf(identity(5), identity(6)),
+            )
+            store.updateOrderedAggregate { it.copy(homeBottomAppBar = bar) }
+            val editor = HomeFavoriteEditor(store)
+            assertTrue(editor.removeModule(removed.id))
+            val snapshot = checkNotNull(editor.undoRemoval)
+            assertTrue(snapshot.wholeModule)
+            val updatedFirst = first.copy(name = "Updated", textSize = FavoriteListSize.Small)
+            val updatedBar = bar.copy(identities = bar.identities.reversed())
+            assertEquals(
+                OrderedFavoriteAggregate(listOf(updatedFirst, last), updatedBar),
+                editor.updateComposition {
+                    it.copy(modules = listOf(updatedFirst, last), homeBottomAppBar = updatedBar)
+                },
+            )
+            assertTrue(editor.reorderModules(listOf(last.id, first.id)))
+            editor.invalidateApplicationUndo()
+            assertSame(snapshot, editor.undoRemoval)
+
+            assertTrue(editor.undo(snapshot))
+            val expected = OrderedFavoriteAggregate(
+                modules = listOf(removed, last, updatedFirst),
+                homeBottomAppBar = updatedBar,
+            )
+            assertEquals(expected, store.currentOrderedAggregate())
+            assertFalse(editor.undo(snapshot))
+            store.load()
+            assertEquals(expected, store.currentOrderedAggregate())
+        }
+    }
+
+    @Test
+    fun applicationAndWholeRemovalsShareOnlyTheLatestSnapshot() = runBlocking {
+        val first = module("first", listOf(identity(1), identity(2)))
+        val second = module("second", listOf(identity(3), identity(4)))
+        val store = storeWith(listOf(first, second))
+        val editor = HomeFavoriteEditor(store)
+        assertTrue(editor.remove(identity(1)))
+        val application = checkNotNull(editor.undoRemoval)
+        assertTrue(editor.removeModule(second.id))
+        val whole = checkNotNull(editor.undoRemoval)
+        assertTrue(whole.wholeModule)
+        editor.dismissUndo(application)
+        assertSame(whole, editor.undoRemoval)
+        assertFalse(editor.undo(application))
+        assertTrue(editor.remove(identity(2)))
+        val latest = checkNotNull(editor.undoRemoval)
+        assertFalse(latest.wholeModule)
+        editor.dismissUndo(whole)
+        assertSame(latest, editor.undoRemoval)
+        assertFalse(editor.undo(whole))
+        assertTrue(editor.undo(latest))
+        assertEquals(listOf(first.copy(identities = listOf(identity(2)))), modules(store))
+    }
+
+    @Test
+    fun wholeUndoSurvivesUnrelatedMovementAndOrdinaryInventoryRefresh() = runBlocking {
+        val removed = module("removed", listOf(identity(1), identity(2)))
+        val retained = module("retained", listOf(identity(3), identity(4)))
+        val store = storeWith(listOf(removed, retained))
+        val editor = HomeFavoriteEditor(store)
+        assertTrue(editor.removeModule(removed.id))
+        val snapshot = checkNotNull(editor.undoRemoval)
+        assertTrue(editor.reorderApplication(
+            ApplicationOrderChange(
+                moduleId = retained.id,
+                identity = identity(3),
+                originalOrder = retained.identities,
+                boundary = 1,
+            ),
+        ))
+        editor.reconcileAvailability(
+            mapOf(
+                identity(1) to FavoriteAvailability.Unknown(presentationEntry = null),
+                identity(2) to FavoriteAvailability.Disabled(presentationEntry = null),
+            ),
+        )
+        editor.observeComposition(checkNotNull(store.currentOrderedAggregate()))
+        assertSame(snapshot, editor.undoRemoval)
+        editor.reconcileAvailability(mapOf(identity(2) to FavoriteAvailability.ConfirmedRemoved))
+        assertNull(editor.undoRemoval)
+        assertFalse(editor.undo(snapshot))
+        store.load()
+        assertEquals(
+            listOf(retained.copy(identities = listOf(identity(4), identity(3)))),
+            modules(store),
+        )
+    }
+
+    @Test
+    fun wholeUndoInvalidatesOnAnySuccessfulAdditionButNotFailedAddition() = runBlocking {
+        for (toBar in listOf(false, true)) {
+            val removed = module("removed", listOf(identity(1), identity(2)))
+            val target = module("target", listOf(identity(3)))
+            val store = storeWith(listOf(removed, target))
+            store.updateOrderedAggregate {
+                it.copy(homeBottomAppBar = HomeBottomAppBarState(enabled = true))
+            }
+            val controlled = ControlledStore(store)
+            val editor = HomeFavoriteEditor(controlled)
+            assertTrue(editor.removeModule(removed.id))
+            val snapshot = checkNotNull(editor.undoRemoval)
+            controlled.failWrites = true
+            val destination = if (toBar) HOME_BOTTOM_APP_BAR_DESTINATION_ID else target.id
+            assertFalse(editor.insertExternalFavorite(identity(4), destination, 0, null, 4))
+            assertSame(snapshot, editor.undoRemoval)
+            controlled.failWrites = false
+            assertTrue(editor.insertExternalFavorite(identity(4), destination, 0, null, 4))
+            assertNull(editor.undoRemoval)
+            assertFalse(editor.undo(snapshot))
+            store.load()
+            assertEquals(
+                setOf(identity(3), identity(4)),
+                store.currentOrderedAggregate()?.identities?.toSet(),
+            )
+        }
+    }
+
+    @Test
+    fun wholeUndoObservesExternalAdditionsButPreservesUnrelatedChanges() = runBlocking {
+        for (toBar in listOf(false, true)) {
+            val store = storeWith(listOf(module("removed", listOf(identity(1)))))
+            val editor = HomeFavoriteEditor(store)
+            assertTrue(editor.removeModule("removed"))
+            val snapshot = checkNotNull(editor.undoRemoval)
+            val changed = checkNotNull(store.updateOrderedAggregate {
+                it.copy(homeBottomAppBar = it.homeBottomAppBar.copy(enabled = true))
+            })
+            editor.observeComposition(changed)
+            assertSame(snapshot, editor.undoRemoval)
+            val added = checkNotNull(store.updateOrderedAggregate {
+                if (toBar) {
+                    it.copy(homeBottomAppBar = it.homeBottomAppBar.copy(
+                        identities = listOf(identity(2)),
+                    ))
+                } else {
+                    it.copy(modules = listOf(module("new", listOf(identity(2)))))
+                }
+            })
+            editor.observeComposition(added)
+            assertNull(editor.undoRemoval)
+            assertFalse(editor.undo(snapshot))
+            assertEquals(added, store.currentOrderedAggregate())
+        }
+    }
+
+    @Test
+    fun wholeUndoNeverPartiallyRestoresARefavoritedOrRecreatedModule() = runBlocking {
+        for (reuseModuleId in listOf(false, true)) {
+            val removed = module("removed", listOf(identity(1), identity(2)))
+            val store = storeWith(listOf(removed))
+            val editor = HomeFavoriteEditor(store)
+            assertTrue(editor.removeModule(removed.id))
+            val snapshot = checkNotNull(editor.undoRemoval)
+            val replacement = if (reuseModuleId) {
+                module(removed.id, listOf(identity(3)))
+            } else {
+                module("new", listOf(identity(2)))
+            }
+            val current = checkNotNull(store.updateOrderedAggregate {
+                it.copy(modules = listOf(replacement))
+            })
+            // Undo must check the latest store state even before its Flow is observed.
+            assertFalse(editor.undo(snapshot))
+            assertNull(editor.undoRemoval)
+            store.load()
+            assertEquals(current, store.currentOrderedAggregate())
+        }
+    }
+
+    @Test
+    fun wholeUndoFailureAndDismissalKeepTheDurableRemovalWithoutRetry() = runBlocking {
+        val removed = module("removed", listOf(identity(1), identity(2)))
+        val store = storeWith(listOf(removed))
+        val controlled = ControlledStore(store)
+        val editor = HomeFavoriteEditor(controlled)
+        assertTrue(editor.removeModule(removed.id))
+        val snapshot = checkNotNull(editor.undoRemoval)
+        assertNull(HomeFavoriteEditor(store).undoRemoval)
+        controlled.failWrites = true
+        assertFalse(editor.undo(snapshot))
+        assertNull(editor.undoRemoval)
+        assertFalse(editor.isSaving)
+        store.load()
+        assertTrue(modules(store).isEmpty())
+        controlled.failWrites = false
+        store.updateOrderedAggregate { it.copy(modules = listOf(removed)) }
+        assertTrue(editor.removeModule(removed.id))
+        val next = checkNotNull(editor.undoRemoval)
+        editor.dismissUndo(next)
+        assertNull(editor.undoRemoval)
+        assertFalse(editor.undo(next))
+        store.load()
+        assertTrue(modules(store).isEmpty())
+    }
+
+    @Test
+    fun wholeRemovalSaveSurvivesEditExitButNotAHomeInterruption() = runBlocking {
+        for (leaveHome in listOf(false, true)) {
+            val store = storeWith(listOf(module("removed", listOf(identity(1), identity(2)))))
+            val controlled = ControlledStore(store)
+            val gate = CompletableDeferred<Unit>()
+            controlled.gate = gate
+            val editor = HomeFavoriteEditor(controlled)
+            val pending = async(start = CoroutineStart.UNDISPATCHED) {
+                editor.removeModule("removed")
+            }
+            assertTrue(editor.isSaving)
+            assertFalse(editor.remove(identity(1)))
+            if (leaveHome) editor.invalidateUndo() else editor.invalidateApplicationUndo()
+            gate.complete(Unit)
+            assertTrue(pending.await())
+            assertEquals(!leaveHome, editor.undoRemoval?.wholeModule == true)
+            assertFalse(editor.isSaving)
+            store.load()
+            assertTrue(modules(store).isEmpty())
+        }
+    }
+
+    @Test
+    fun wholeUndoRechecksAdditionAndPermanentDisappearanceWhileWaitingForTheStore() = runBlocking {
+        for (addition in listOf(false, true)) {
+            val store = storeWith(listOf(module("removed", listOf(identity(1), identity(2)))))
+            val controlled = ControlledStore(store)
+            val editor = HomeFavoriteEditor(controlled)
+            assertTrue(editor.removeModule("removed"))
+            val snapshot = checkNotNull(editor.undoRemoval)
+            val gate = CompletableDeferred<Unit>()
+            controlled.gate = gate
+            val pending = async(start = CoroutineStart.UNDISPATCHED) { editor.undo(snapshot) }
+            if (addition) {
+                store.updateOrderedAggregate {
+                    it.copy(modules = listOf(module("new", listOf(identity(3)))))
+                }
+            } else {
+                editor.reconcileAvailability(
+                    mapOf(identity(2) to FavoriteAvailability.ConfirmedRemoved),
+                )
+            }
+            val current = store.currentOrderedAggregate()
+            gate.complete(Unit)
+            assertFalse(pending.await())
+            assertNull(editor.undoRemoval)
+            store.load()
+            assertEquals(current, store.currentOrderedAggregate())
+        }
+    }
+
+    @Test
+    fun staleCompositionEmissionCannotDiscardTheLatestWholeSnapshot() = runBlocking {
+        val store = storeWith(listOf(module("removed", listOf(identity(1), identity(2)))))
+        val editor = HomeFavoriteEditor(store)
+        val stale = store.currentOrderedAggregate()
+        editor.observeComposition(stale)
+        assertTrue(editor.removeModule("removed"))
+        val snapshot = checkNotNull(editor.undoRemoval)
+        editor.observeComposition(stale)
+        editor.observeComposition(store.currentOrderedAggregate())
+        assertSame(snapshot, editor.undoRemoval)
+        assertTrue(editor.undo(snapshot))
+    }
+
+    @Test
+    fun applicationRemovalReplacesWholeUndoEvenIfEditExitPreventsItsOwnSnapshot() = runBlocking {
+        val store = storeWith(listOf(
+            module("removed", listOf(identity(1), identity(2))),
+            module("retained", listOf(identity(3))),
+        ))
+        val controlled = ControlledStore(store)
+        val editor = HomeFavoriteEditor(controlled)
+        assertTrue(editor.removeModule("removed"))
+        val snapshot = checkNotNull(editor.undoRemoval)
+        val gate = CompletableDeferred<Unit>()
+        controlled.gate = gate
+        val pending = async(start = CoroutineStart.UNDISPATCHED) { editor.remove(identity(3)) }
+        editor.invalidateApplicationUndo()
+        assertSame(snapshot, editor.undoRemoval)
+        gate.complete(Unit)
+        assertTrue(pending.await())
+        assertNull(editor.undoRemoval)
+        assertFalse(editor.undo(snapshot))
+        store.load()
+        assertTrue(modules(store).isEmpty())
+    }
+
+    @Test
+    fun dismissingAnOlderSnackbarDuringTheNextSaveDoesNotSuppressTheNewSnapshot() = runBlocking {
+        val store = storeWith(listOf(
+            module("first", listOf(identity(1))),
+            module("second", listOf(identity(2))),
+        ))
+        val controlled = ControlledStore(store)
+        val editor = HomeFavoriteEditor(controlled)
+        assertTrue(editor.remove(identity(1)))
+        val first = checkNotNull(editor.undoRemoval)
+        val gate = CompletableDeferred<Unit>()
+        controlled.gate = gate
+        val pending = async(start = CoroutineStart.UNDISPATCHED) { editor.removeModule("second") }
+        editor.dismissUndo(first)
+        gate.complete(Unit)
+        assertTrue(pending.await())
+        val latest = checkNotNull(editor.undoRemoval)
+        assertTrue(latest.wholeModule)
+        assertEquals("second", latest.module?.id)
+        editor.dismissUndo(first)
+        assertSame(latest, editor.undoRemoval)
+        assertTrue(editor.undo(latest))
+        assertEquals(listOf(identity(2)), store.currentOrderedAggregate().identities)
+    }
+
     private class ControlledStore(private val delegate: FavoriteStore) : FavoriteStore by delegate {
         var failWrites = false
         var gate: CompletableDeferred<Unit>? = null
