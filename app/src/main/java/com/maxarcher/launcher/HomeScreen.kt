@@ -1,11 +1,6 @@
 package com.maxarcher.launcher
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
@@ -61,7 +56,6 @@ import com.maxarcher.launcher.ui.home.components.HomeDockDragGhost
 import com.maxarcher.launcher.ui.home.components.HomeDockDragPreview
 import com.maxarcher.launcher.ui.home.components.HomeDockSurface
 import com.maxarcher.launcher.ui.home.components.HomeDefaultLauncherPrompt
-import com.maxarcher.launcher.ui.home.components.HomeEditDock
 import com.maxarcher.launcher.ui.home.components.HomeFavoriteExitOverlay
 import com.maxarcher.launcher.ui.home.components.HomeFavoriteMessage
 import com.maxarcher.launcher.ui.home.components.HomeModuleDragPreview
@@ -79,8 +73,7 @@ internal fun HomeScreen(
     favoriteListState: LazyListState = rememberLazyListState(),
     favoriteNestedScrollConnection: NestedScrollConnection? = null,
     editMode: Boolean = false,
-    stylePanelExpanded: Boolean = false,
-    selectedModuleId: String? = null,
+    openStyleModuleId: String? = null,
     applicationEditingSaving: Boolean = false,
     onRemoveApplication: (LaunchableIdentity) -> Unit = {},
     onCommitApplicationOrder: (
@@ -90,8 +83,7 @@ internal fun HomeScreen(
     removalSnackbarHostState: SnackbarHostState? = null,
     onRetryFavorites: () -> Unit = {},
     onRequestEditMode: () -> Unit = {},
-    onStylePanelExpandedChange: (Boolean) -> Unit = {},
-    onSelectModule: (String) -> Unit = {},
+    onToggleModuleStylePanel: (String) -> Unit = {},
     onLaunchFavorite: (FavoriteAvailability) -> Unit = {},
     onLongPressFavorite: (LaunchableEntry) -> Unit = {},
     onAddFavoritesToList: (String) -> Unit = {},
@@ -124,7 +116,7 @@ internal fun HomeScreen(
         touchInWindow = drawerDragTouchInWindow,
         dropping = drawerDragDropping,
         editMode = editMode,
-        stylePanelExpanded = stylePanelExpanded,
+        openStyleModuleId = openStyleModuleId,
         favoriteState = favoriteState,
         favoriteAvailability = favoriteAvailability,
         onCommit = onDrawerDragCommit,
@@ -160,6 +152,7 @@ internal fun HomeScreen(
     val moduleOrderSaveFailureMessage = stringResource(
         R.string.unable_to_save_module_order,
     )
+    val moduleNameSaveFailureMessage = stringResource(R.string.unable_to_save_module_name)
 
     val orchestration = remember {
         HomeFavoriteEditOrchestration(
@@ -171,13 +164,14 @@ internal fun HomeScreen(
     }
     orchestration.editMode = editMode
     orchestration.applicationEditingSaving = applicationEditingSaving
-    orchestration.selectedModuleId = selectedModuleId
+    orchestration.openStyleModuleId = openStyleModuleId
     orchestration.favoriteState = currentFavoriteState
     orchestration.favoriteAvailability = favoriteAvailability
     orchestration.undoLabel = undoLabel
     orchestration.undoUnavailableMessage = undoUnavailableMessage
     orchestration.moduleStyleSaveFailureMessage = moduleStyleSaveFailureMessage
     orchestration.moduleOrderSaveFailureMessage = moduleOrderSaveFailureMessage
+    orchestration.moduleNameSaveFailureMessage = moduleNameSaveFailureMessage
     orchestration.onCommitFavoriteComposition = onCommitFavoriteComposition
     orchestration.onCommitModuleOrder = onCommitModuleOrder
 
@@ -237,10 +231,6 @@ internal fun HomeScreen(
         }
     }
 
-    LaunchedEffect(stylePanelExpanded) {
-        if (!stylePanelExpanded) orchestration.moduleDragSession = null
-    }
-
     LaunchedEffect(favoriteState, editMode) {
         val readable = favoriteState as? FavoriteReadState.Readable
             ?: return@LaunchedEffect
@@ -266,31 +256,13 @@ internal fun HomeScreen(
             .onGloballyPositioned { dragRootOriginInWindow = it.positionInWindow() },
     ) {
         val contentPadding = dimensionResource(R.dimen.home_content_padding)
-        val animationDuration = integerResource(R.integer.short_property_animation_duration_ms)
-        val orderedModules = (favoriteState as? FavoriteReadState.Readable)
-            ?.orderedModules
-            .orEmpty()
         var moduleStylePreview by remember { mutableStateOf<OrderedFavoriteModule?>(null) }
-        val previewAggregate = orchestration.editTransaction.previewAggregate(
-            (favoriteState as? FavoriteReadState.Readable)?.orderedAggregate
-                ?: OrderedFavoriteAggregate(),
-        )
-        val displayedModules = orderedModules.withPresentationFrom(previewAggregate).map { module ->
-            moduleStylePreview?.takeIf { it.id == module.id } ?: module
+        LaunchedEffect(editMode, openStyleModuleId) {
+            if (!editMode || moduleStylePreview?.id != openStyleModuleId) moduleStylePreview = null
         }
-        LaunchedEffect(editMode, stylePanelExpanded, selectedModuleId) {
-            if (!editMode || !stylePanelExpanded) moduleStylePreview = null
-        }
-        val selectedModule = displayedModules.firstOrNull { it.id == selectedModuleId }
         val styleSaving = applicationEditingSaving ||
             orchestration.editMutationJob?.isActive == true ||
                 orchestration.moduleDragSession != null
-        val stylePanelMaximumHeight = (
-                maxHeight -
-                        dimensionResource(R.dimen.home_edit_dock_height) -
-                        contentPadding -
-                        dimensionResource(R.dimen.home_style_panel_minimum_list_viewport)
-                ).coerceAtLeast(0.dp)
         val homeContentWidthDp = maxWidth.value
         val persistedBar = (favoriteState as? FavoriteReadState.Readable)
             ?.orderedAggregate
@@ -298,124 +270,29 @@ internal fun HomeScreen(
         val barVisible = persistedBar?.enabled == true &&
             (editMode || persistedBar.identities.isNotEmpty())
         Column(modifier = Modifier.fillMaxSize()) {
-            if (editMode) {
-                HomeEditDock(
-                    hasFavorites = orderedModules.isNotEmpty(),
-                    expanded = stylePanelExpanded,
-                    onToggleExpanded = {
-                        if (!applicationMovementActive) {
-                            onStylePanelExpandedChange(!stylePanelExpanded)
-                        }
-                    },
-                )
-                AnimatedContent(
-                    targetState = stylePanelExpanded,
-                    modifier = Modifier.padding(horizontal = contentPadding),
-                    transitionSpec = {
-                        expandVertically(
-                            animationSpec = tween(durationMillis = animationDuration),
-                            expandFrom = Alignment.Top,
-                        ) togetherWith shrinkVertically(
-                            animationSpec = tween(durationMillis = animationDuration),
-                            shrinkTowards = Alignment.Top,
-                        )
-                    },
-                    label = "home_panel_slot_swap",
-                ) { panelExpanded ->
-                    if (panelExpanded) {
-                        Column {
-                            HomeModuleStylePanel(
-                                selectedModule = selectedModule,
-                                enabled = !styleSaving,
-                                maximumHeight = stylePanelMaximumHeight,
-                                onPreviewSizes = { iconSize, textSize ->
-                                    selectedModule?.let { module ->
-                                        moduleStylePreview = module.copy(
-                                            iconSize = iconSize,
-                                            textSize = textSize,
-                                        )
-                                    }
-                                },
-                                onCommitIconSize = { iconSize ->
-                                    selectedModule?.let { module ->
-                                        moduleStylePreview = null
-                                        orchestration.commitVerticalModuleStyle(module.id) {
-                                            it.copy(iconSize = iconSize)
-                                        }
-                                    }
-                                },
-                                onCommitTextSize = { textSize ->
-                                    selectedModule?.let { module ->
-                                        moduleStylePreview = null
-                                        orchestration.commitVerticalModuleStyle(module.id) {
-                                            it.copy(textSize = textSize)
-                                        }
-                                    }
-                                },
-                                onChangeNamePlacement = { placement ->
-                                    selectedModule?.let { module ->
-                                        orchestration.commitVerticalModuleStyle(
-                                            module.id,
-                                        ) { container ->
-                                            container.copy(
-                                                namePlacement = placement,
-                                                itemsPerRow = container.itemsPerRow.coerceIn(
-                                                    when (placement) {
-                                                        FavoriteNamePlacement.Right -> 1..2
-                                                        FavoriteNamePlacement.Below -> 1..4
-                                                        FavoriteNamePlacement.Hidden -> 1..6
-                                                    },
-                                                ),
-                                            )
-                                        }
-                                    }
-                                },
-                                onChangeItemsPerRow = { count ->
-                                    selectedModule?.let { module ->
-                                        orchestration.commitVerticalModuleStyle(module.id) {
-                                            it.copy(itemsPerRow = count)
-                                        }
-                                    }
-                                },
-                            )
-                            Spacer(Modifier.height(dimensionResource(R.dimen.home_module_spacing)))
-                        }
-                    } else {
-                        Column {
-                            HomeBasicInformation(
-                                editMode = true,
-                                accessibilityLockController = accessibilityLockController,
-                                onRequestEditMode = onRequestEditMode,
-                                bindings = quickActionBindings,
-                            )
-                            Spacer(Modifier.height(dimensionResource(R.dimen.home_module_spacing)))
-                        }
-                    }
-                }
-            } else {
-                HomeBasicInformation(
-                    editMode = false,
-                    accessibilityLockController = accessibilityLockController,
-                    onRequestEditMode = onRequestEditMode,
-                    bindings = quickActionBindings,
+            // The basic-information region stays visible in edit mode; edit mode adds no dock.
+            HomeBasicInformation(
+                editMode = editMode,
+                accessibilityLockController = accessibilityLockController,
+                onRequestEditMode = onRequestEditMode,
+                bindings = quickActionBindings,
+                modifier = Modifier.padding(
+                    top = contentPadding,
+                    start = contentPadding,
+                    end = contentPadding,
+                ),
+            )
+            Spacer(Modifier.height(dimensionResource(R.dimen.home_module_spacing)))
+            if (showDefaultLauncherPrompt && !editMode) {
+                HomeDefaultLauncherPrompt(
+                    onSelect = onSelectDefaultLauncherPrompt,
+                    onDismiss = onDismissDefaultLauncherPrompt,
                     modifier = Modifier.padding(
-                        top = contentPadding,
                         start = contentPadding,
                         end = contentPadding,
                     ),
                 )
                 Spacer(Modifier.height(dimensionResource(R.dimen.home_module_spacing)))
-                if (showDefaultLauncherPrompt) {
-                    HomeDefaultLauncherPrompt(
-                        onSelect = onSelectDefaultLauncherPrompt,
-                        onDismiss = onDismissDefaultLauncherPrompt,
-                        modifier = Modifier.padding(
-                            start = contentPadding,
-                            end = contentPadding,
-                        ),
-                    )
-                    Spacer(Modifier.height(dimensionResource(R.dimen.home_module_spacing)))
-                }
             }
             Box(
                 modifier = Modifier
@@ -494,10 +371,6 @@ internal fun HomeScreen(
                                 listState = favoriteListState,
                                 nestedScrollConnection = favoriteNestedScrollConnection,
                                 editMode = false,
-                                selectionEnabled = false,
-                                selectionInteractionEnabled = false,
-                                selectedModuleId = null,
-                                onSelectModule = {},
                                 addEntriesEnabled = false,
                                 onAddToModule = {},
                                 onCreateVerticalModule = {},
@@ -525,14 +398,34 @@ internal fun HomeScreen(
                                 listState = favoriteListState,
                                 nestedScrollConnection = null,
                                 editMode = true,
-                                selectionEnabled = stylePanelExpanded,
-                                selectionInteractionEnabled = !applicationEditingSaving &&
-                                        orchestration.editMutationJob?.isActive != true &&
-                                        orchestration.moduleDragSession == null,
-                                selectionVisualEnabled = !applicationEditingSaving &&
-                                    orchestration.editMutationJob?.isActive != true,
-                                selectedModuleId = selectedModuleId,
-                                onSelectModule = onSelectModule,
+                                openStyleModuleId = openStyleModuleId,
+                                headerActionsEnabled = !styleSaving && !applicationMovementActive,
+                                editSaving = applicationEditingSaving ||
+                                    orchestration.editMutationJob?.isActive == true,
+                                // Name saves queue behind the current edit save, so typing stays
+                                // open; an unresolved favorite save makes the field read-only.
+                                moduleNameEditable = !applicationEditingSaving,
+                                moduleNameRestoreKey = orchestration.moduleNameRestoreCount,
+                                onToggleModuleStyle = { moduleId ->
+                                    if (!styleSaving && !applicationMovementActive) {
+                                        onToggleModuleStylePanel(moduleId)
+                                    }
+                                },
+                                onRenameModule = orchestration::commitModuleName,
+                                onToggleModuleNameVisible = { module ->
+                                    orchestration.commitModuleNameVisibility(
+                                        moduleId = module.id,
+                                        visible = !module.nameVisible,
+                                    )
+                                },
+                                stylePanel = { module ->
+                                    HomeModuleStylePanelSlot(
+                                        module = module,
+                                        enabled = !styleSaving,
+                                        orchestration = orchestration,
+                                        onPreview = { moduleStylePreview = it },
+                                    )
+                                },
                                 addEntriesEnabled = !applicationEditingSaving &&
                                         orchestration.editMutationJob?.isActive != true &&
                                         orchestration.moduleDragSession == null &&
@@ -640,6 +533,15 @@ internal fun HomeScreen(
             HomeModuleDragPreview(
                 session = session,
                 rootOriginInWindow = dragRootOriginInWindow,
+                // An open panel stays with its owning module while it moves.
+                stylePanel = { module ->
+                    HomeModuleStylePanelSlot(
+                        module = module,
+                        enabled = false,
+                        orchestration = orchestration,
+                        onPreview = {},
+                    )
+                },
             )
         }
         homeDockDragPreview?.let { preview ->
@@ -649,4 +551,46 @@ internal fun HomeScreen(
             )
         }
     }
+}
+
+/** Connects one module's inline style settings panel to its preview and complete-style saves. */
+@Composable
+private fun HomeModuleStylePanelSlot(
+    module: OrderedFavoriteModule,
+    enabled: Boolean,
+    orchestration: HomeFavoriteEditOrchestration,
+    onPreview: (OrderedFavoriteModule?) -> Unit,
+) {
+    HomeModuleStylePanel(
+        module = module,
+        enabled = enabled,
+        onPreviewSizes = { iconSize, textSize ->
+            onPreview(module.copy(iconSize = iconSize, textSize = textSize))
+        },
+        onCommitIconSize = { iconSize ->
+            onPreview(null)
+            orchestration.commitVerticalModuleStyle(module.id) { it.copy(iconSize = iconSize) }
+        },
+        onCommitTextSize = { textSize ->
+            onPreview(null)
+            orchestration.commitVerticalModuleStyle(module.id) { it.copy(textSize = textSize) }
+        },
+        onChangeNamePlacement = { placement ->
+            orchestration.commitVerticalModuleStyle(module.id) { container ->
+                container.copy(
+                    namePlacement = placement,
+                    itemsPerRow = container.itemsPerRow.coerceIn(
+                        when (placement) {
+                            FavoriteNamePlacement.Right -> 1..2
+                            FavoriteNamePlacement.Below -> 1..4
+                            FavoriteNamePlacement.Hidden -> 1..6
+                        },
+                    ),
+                )
+            }
+        },
+        onChangeItemsPerRow = { count ->
+            orchestration.commitVerticalModuleStyle(module.id) { it.copy(itemsPerRow = count) }
+        },
+    )
 }

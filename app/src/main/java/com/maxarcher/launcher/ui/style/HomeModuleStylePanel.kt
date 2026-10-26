@@ -7,11 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +23,6 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import com.maxarcher.launcher.FavoriteListSize
 import com.maxarcher.launcher.FavoriteNamePlacement
@@ -34,11 +30,14 @@ import com.maxarcher.launcher.OrderedFavoriteModule
 import com.maxarcher.launcher.OrderedFavoriteModuleType
 import com.maxarcher.launcher.R
 
+/**
+ * The inline style settings panel of one module. It measures to its content and does not
+ * scroll inside itself; the Home main list scrolls it with its owning module.
+ */
 @Composable
 internal fun HomeModuleStylePanel(
-    selectedModule: OrderedFavoriteModule?,
+    module: OrderedFavoriteModule,
     enabled: Boolean,
-    maximumHeight: Dp,
     onPreviewSizes: (FavoriteListSize, FavoriteListSize) -> Unit,
     onCommitIconSize: (FavoriteListSize) -> Unit,
     onCommitTextSize: (FavoriteListSize) -> Unit,
@@ -51,33 +50,27 @@ internal fun HomeModuleStylePanel(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(max = maximumHeight)
             .styleSettingsPanelSurface()
             .animateContentSize(
                 animationSpec = tween(durationMillis = animationDuration),
             )
-            .verticalScroll(rememberScrollState())
             .testTag("home_style_panel"),
     ) {
-        if (selectedModule == null) {
-            HomeStylePanelRow(
-                label = stringResource(R.string.home_select_favorite_list_prompt),
-            )
-        } else if (selectedModule.type == OrderedFavoriteModuleType.Vertical) {
+        if (module.type == OrderedFavoriteModuleType.Vertical) {
             HomeStyleArrangementRow(
-                placement = selectedModule.namePlacement,
-                value = selectedModule.itemsPerRow,
-                maximum = homeItemsPerRowRange(selectedModule.namePlacement).last,
+                placement = module.namePlacement,
+                value = module.itemsPerRow,
+                maximum = homeItemsPerRowRange(module.namePlacement).last,
                 enabled = enabled,
                 onChangePlacement = onChangeNamePlacement,
                 onChangeCount = onChangeItemsPerRow,
             )
             HomeApplicationSizeRow(
-                iconSize = selectedModule.iconSize,
-                textSize = selectedModule.textSize,
+                iconSize = module.iconSize,
+                textSize = module.textSize,
                 iconEnabled = enabled,
                 textEnabled = enabled &&
-                        selectedModule.namePlacement != FavoriteNamePlacement.Hidden,
+                        module.namePlacement != FavoriteNamePlacement.Hidden,
                 onPreview = onPreviewSizes,
                 onCommitIconSize = onCommitIconSize,
                 onCommitTextSize = onCommitTextSize,

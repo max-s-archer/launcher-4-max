@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -48,7 +49,7 @@ internal class HomeFavoriteEditOrchestration(
 
     var editMode by mutableStateOf(false)
     var applicationEditingSaving by mutableStateOf(false)
-    var selectedModuleId by mutableStateOf<String?>(null)
+    var openStyleModuleId by mutableStateOf<String?>(null)
     var favoriteState by mutableStateOf<FavoriteReadState>(FavoriteReadState.Loading)
     var favoriteAvailability by mutableStateOf<Map<LaunchableIdentity, FavoriteAvailability>>(
         emptyMap(),
@@ -57,6 +58,11 @@ internal class HomeFavoriteEditOrchestration(
     var undoUnavailableMessage by mutableStateOf("")
     var moduleStyleSaveFailureMessage by mutableStateOf("")
     var moduleOrderSaveFailureMessage by mutableStateOf("")
+    var moduleNameSaveFailureMessage by mutableStateOf("")
+
+    /** Advances after a failed module-name save so an active name field reloads the saved name. */
+    var moduleNameRestoreCount by mutableIntStateOf(0)
+        private set
     var onCommitFavoriteComposition by mutableStateOf<
         suspend (
             (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
@@ -84,7 +90,7 @@ internal class HomeFavoriteEditOrchestration(
         if (sourceIndex < 0) return false
         moduleDragSession = ModuleDragSession(
             sourceModule = module,
-            sourceSelected = module.id == selectedModuleId,
+            sourceSelected = module.id == openStyleModuleId,
             sourceAvailability = module.identities.associateWith { identity ->
                 favoriteAvailability[identity] ?: FavoriteAvailability.Unknown(null)
             },
@@ -238,6 +244,43 @@ internal class HomeFavoriteEditOrchestration(
                 Toast.makeText(
                     context,
                     moduleStyleSaveFailureMessage,
+                    Toast.LENGTH_SHORT,
+                ).show()
+            },
+        )
+    }
+
+    /**
+     * Saves one text change of a module name. Every change is serialized behind the previous
+     * save, so the last change wins; a failure restores the last saved name.
+     */
+    fun commitModuleName(moduleId: String, name: String) {
+        if (applicationEditingSaving) return
+        commitModuleNameState(moduleId) { it.copy(name = name) }
+    }
+
+    fun commitModuleNameVisibility(moduleId: String, visible: Boolean) {
+        if (editMutationJob?.isActive == true || applicationEditingSaving) return
+        commitModuleNameState(moduleId) { it.copy(nameVisible = visible) }
+    }
+
+    private fun commitModuleNameState(
+        moduleId: String,
+        transform: (OrderedFavoriteModule) -> OrderedFavoriteModule,
+    ) {
+        commitEditAggregate(
+            transform = { aggregate ->
+                aggregate.copy(
+                    modules = aggregate.modules.map { module ->
+                        if (module.id == moduleId) transform(module) else module
+                    },
+                )
+            },
+            onFailed = {
+                moduleNameRestoreCount += 1
+                Toast.makeText(
+                    context,
+                    moduleNameSaveFailureMessage,
                     Toast.LENGTH_SHORT,
                 ).show()
             },

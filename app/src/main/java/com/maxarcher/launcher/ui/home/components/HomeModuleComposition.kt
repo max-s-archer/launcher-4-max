@@ -1,9 +1,11 @@
 package com.maxarcher.launcher.ui.home.components
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -34,16 +36,15 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -56,6 +57,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
@@ -63,11 +65,8 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
@@ -84,7 +83,6 @@ import com.maxarcher.launcher.OrderedFavoriteModule
 import com.maxarcher.launcher.OrderedFavoriteModuleType
 import com.maxarcher.launcher.R
 import com.maxarcher.launcher.rowHeightResource
-import com.maxarcher.launcher.drawCornerMark
 import com.maxarcher.launcher.ui.home.components.HomeApplicationAutoScroll
 import com.maxarcher.launcher.ui.home.components.HomeFavoriteEnterBatch
 import com.maxarcher.launcher.ui.home.components.HomeFavoriteEnterKey
@@ -93,69 +91,6 @@ import com.maxarcher.launcher.ui.home.components.detectHomeApplicationMovement
 import com.maxarcher.launcher.ui.home.components.homeFavoriteEnter
 import com.maxarcher.launcher.ui.drawer.drawerForegroundShadow
 import kotlin.math.roundToInt
-
-@Composable
-internal fun HomeEditDock(
-    hasFavorites: Boolean,
-    expanded: Boolean,
-    onToggleExpanded: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(dimensionResource(R.dimen.home_edit_dock_height))
-            .testTag("home_edit_dock"),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(
-                when {
-                    !hasFavorites -> R.string.home_edit_add_favorites
-                    expanded -> R.string.home_edit_select_and_move_modules
-                    else -> R.string.home_edit_move_applications
-                },
-            ),
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = dimensionResource(R.dimen.home_edit_dock_text_padding)),
-            maxLines = 1,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Medium,
-            fontSize = dimensionResource(R.dimen.style_settings_secondary_text_size).value.sp,
-            lineHeight = dimensionResource(
-                R.dimen.style_settings_secondary_line_height,
-            ).value.sp,
-            style = LocalTextStyle.current.copy(
-                shadow = drawerForegroundShadow(),
-            ),
-        )
-        Box(
-            modifier = Modifier
-                .size(
-                    width = dimensionResource(R.dimen.home_edit_dock_affordance_width),
-                    height = dimensionResource(R.dimen.home_edit_dock_height),
-                )
-                .clickable(role = Role.Button, onClick = onToggleExpanded)
-                .testTag(if (expanded) "home_style_panel_collapse" else "home_style_panel_expand"),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_chevron_right),
-                contentDescription = stringResource(
-                    if (expanded) {
-                        R.string.home_collapse_style_panel
-                    } else {
-                        R.string.home_expand_style_panel
-                    },
-                ),
-                modifier = Modifier
-                    .size(dimensionResource(R.dimen.home_edit_dock_icon_size))
-                    .rotate(if (expanded) 90f else -90f),
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-        }
-    }
-}
 
 @Composable
 internal fun OrderedFavoriteModule.displayName(): String = name.ifEmpty {
@@ -200,11 +135,6 @@ internal fun HomeOrderedModuleComposition(
     listState: LazyListState,
     nestedScrollConnection: NestedScrollConnection?,
     editMode: Boolean,
-    selectionEnabled: Boolean,
-    selectionInteractionEnabled: Boolean,
-    selectionVisualEnabled: Boolean = selectionInteractionEnabled,
-    selectedModuleId: String?,
-    onSelectModule: (String) -> Unit,
     addEntriesEnabled: Boolean,
     onAddToModule: (OrderedFavoriteModule) -> Unit,
     onCreateVerticalModule: () -> Unit,
@@ -227,6 +157,16 @@ internal fun HomeOrderedModuleComposition(
     onModuleDragEnd: () -> Unit = {},
     onModuleDragCancel: () -> Unit = {},
     enterBatch: HomeFavoriteEnterBatch? = null,
+    openStyleModuleId: String? = null,
+    headerActionsEnabled: Boolean = true,
+    editSaving: Boolean = false,
+    moduleNameEditable: Boolean = true,
+    moduleNameRestoreKey: Int = 0,
+    onToggleModuleStyle: (String) -> Unit = {},
+    onRenameModule: (String, String) -> Unit = { _, _ -> },
+    onToggleModuleNameVisible: (OrderedFavoriteModule) -> Unit = {},
+    onRemoveModule: ((OrderedFavoriteModule) -> Unit)? = null,
+    stylePanel: @Composable (OrderedFavoriteModule) -> Unit = {},
 ) {
     val animationDuration = integerResource(id = R.integer.short_property_animation_duration_ms)
     val ribbonListStates = remember {
@@ -240,7 +180,9 @@ internal fun HomeOrderedModuleComposition(
             ribbonStates = ribbonListStates,
         )
     }
-    val localModuleBounds = remember { mutableMapOf<String, Rect>() }
+    val handleBounds = remember { mutableMapOf<String, Rect>() }
+    // Window bounds of the module name field that is being edited, if any.
+    val focusedNameBounds = remember { mutableMapOf<String, Rect>() }
     var listOriginInWindow by remember { mutableStateOf(Offset.Zero) }
     val currentModules by rememberUpdatedState(modules)
     val currentAvailability by rememberUpdatedState(newValue = availabilityByIdentity)
@@ -250,6 +192,8 @@ internal fun HomeOrderedModuleComposition(
     val currentOnModuleDrag by rememberUpdatedState(onModuleDrag)
     val currentOnModuleDragEnd by rememberUpdatedState(onModuleDragEnd)
     val currentOnModuleDragCancel by rememberUpdatedState(onModuleDragCancel)
+    val currentOpenStyleModuleId by rememberUpdatedState(openStyleModuleId)
+    val focusManager = LocalFocusManager.current
     val moduleHapticFeedback = LocalHapticFeedback.current
     val insertionLineColor = colorResource(R.color.home_favorite_insertion_line)
     val insertionLineThickness = dimensionResource(
@@ -283,31 +227,45 @@ internal fun HomeOrderedModuleComposition(
                 )
             }
             .then(
-                // Keep the pointer-input node stable for the complete expanded-panel
-                // lifetime. Removing and recreating it when a drag disables other editing
-                // actions would cancel the gesture that owns the active module movement.
-                if (selectionEnabled) {
+                // The handle gesture lives on the list rather than the handle: the source
+                // module leaves list layout when movement starts, which would cancel a
+                // gesture owned by the handle itself.
+                if (editMode) {
                     Modifier.pointerInput(Unit) {
-                        detectModuleReorderDrag(
-                            onLongPress = {
-                                moduleHapticFeedback.performHapticFeedback(
-                                    HapticFeedbackType.LongPress,
-                                )
-                            },
-                            onDragStart = { localTouch ->
+                        detectModuleHandleDrag(
+                            handleAt = { localTouch ->
                                 val touchInWindow = listOriginInWindow + localTouch
-                                val module = currentModules.firstOrNull { candidate ->
-                                    localModuleBounds[candidate.id]
-                                        ?.contains(touchInWindow) == true
-                                } ?: return@detectModuleReorderDrag false
-                                currentOnModuleDragStart(module, touchInWindow)
+                                // Touching another module target first ends name editing.
+                                if (focusedNameBounds.isNotEmpty() &&
+                                    focusedNameBounds.values.none { it.contains(touchInWindow) }
+                                ) {
+                                    focusManager.clearFocus()
+                                }
+                                currentModules.firstOrNull { candidate ->
+                                    handleBounds[candidate.id]?.contains(touchInWindow) == true
+                                }?.let { module -> module to touchInWindow }
+                            },
+                            onDragStart = { module, touchInWindow ->
+                                focusManager.clearFocus()
+                                currentOnModuleDragStart(module, touchInWindow).also { started ->
+                                    if (started) {
+                                        moduleHapticFeedback.performHapticFeedback(
+                                            HapticFeedbackType.LongPress,
+                                        )
+                                    }
+                                }
                             },
                             onDrag = { currentOnModuleDrag(it) },
                             onDragEnd = { currentOnModuleDragEnd() },
                             onDragCancel = { currentOnModuleDragCancel() },
                         )
                     }
-                } else if (editMode && applicationMovement != null) {
+                } else {
+                    Modifier
+                },
+            )
+            .then(
+                if (editMode && applicationMovement != null) {
                     Modifier.pointerInput(key1 = applicationMovement) {
                         detectHomeApplicationMovement(
                             movement = applicationMovement,
@@ -315,13 +273,20 @@ internal fun HomeOrderedModuleComposition(
                                 val module =
                                     currentModules.firstOrNull(predicate = { identity in it.identities })
                                 val availability = currentAvailability[identity]
-                                currentApplicationMovementEnabled && module != null && availability != null &&
-                                        applicationMovement.start(
-                                            identity = identity,
-                                            module = module,
-                                            availability = availability,
-                                            pointer = pointer,
-                                        )
+                                // An open style panel blocks application targets only inside
+                                // its owning module.
+                                val started = currentApplicationMovementEnabled &&
+                                    module != null &&
+                                    module.id != currentOpenStyleModuleId &&
+                                    availability != null &&
+                                    applicationMovement.start(
+                                        identity = identity,
+                                        module = module,
+                                        availability = availability,
+                                        pointer = pointer,
+                                    )
+                                if (started) focusManager.clearFocus()
+                                started
                             },
                             onRecognized = {
                                 moduleHapticFeedback.performHapticFeedback(hapticFeedbackType = HapticFeedbackType.LongPress)
@@ -378,7 +343,8 @@ internal fun HomeOrderedModuleComposition(
         ) { index, module ->
             DisposableEffect(module.id) {
                 onDispose {
-                    localModuleBounds.remove(module.id)
+                    handleBounds.remove(module.id)
+                    focusedNameBounds.remove(module.id)
                     onModuleDisposed(module.id)
                     applicationMovement?.updateModule(id = module.id, bounds = null)
                 }
@@ -401,7 +367,6 @@ internal fun HomeOrderedModuleComposition(
                     .onGloballyPositioned { coordinates ->
                         val origin = coordinates.positionInWindow()
                         val bounds = Rect(origin, coordinates.size.toSize())
-                        localModuleBounds[module.id] = bounds
                         onModuleBoundsInWindow(module.id, bounds)
                         applicationMovement?.updateModule(id = module.id, bounds = bounds)
                     }
@@ -431,9 +396,51 @@ internal fun HomeOrderedModuleComposition(
                 } else {
                     null
                 }
+                val styleOpen = editMode && module.id == openStyleModuleId
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    if (!editMode && module.nameVisible) {
+                    if (editMode) {
+                        HomeModuleOperationHeader(
+                            module = module,
+                            actionsEnabled = headerActionsEnabled,
+                            nameEditable = moduleNameEditable,
+                            styleOpen = styleOpen,
+                            nameRestoreKey = moduleNameRestoreKey,
+                            onRename = { name -> onRenameModule(module.id, name) },
+                            onNameFieldBoundsChange = { bounds ->
+                                if (bounds == null) {
+                                    focusedNameBounds.remove(module.id)
+                                } else {
+                                    focusedNameBounds[module.id] = bounds
+                                }
+                            },
+                            onToggleNameVisible = { onToggleModuleNameVisible(module) },
+                            onToggleStyle = { onToggleModuleStyle(module.id) },
+                            onRemoveModule = onRemoveModule?.let { remove -> { remove(module) } },
+                            reorderHandleModifier = Modifier.onGloballyPositioned {
+                                handleBounds[module.id] = Rect(
+                                    offset = it.positionInWindow(),
+                                    size = it.size.toSize(),
+                                )
+                            },
+                        )
+                    } else if (module.nameVisible) {
                         HomeModuleTitleRow(module = module)
+                    }
+                    AnimatedVisibility(
+                        visible = styleOpen,
+                        enter = expandVertically(
+                            animationSpec = tween(durationMillis = animationDuration),
+                            expandFrom = Alignment.Top,
+                        ),
+                        exit = shrinkVertically(
+                            animationSpec = tween(durationMillis = animationDuration),
+                            shrinkTowards = Alignment.Top,
+                        ),
+                    ) {
+                        Column {
+                            stylePanel(module)
+                            Spacer(Modifier.height(dimensionResource(R.dimen.home_module_spacing)))
+                        }
                     }
                     HomeOrderedModuleContent(
                         enterBatch = enterBatch,
@@ -442,23 +449,22 @@ internal fun HomeOrderedModuleComposition(
                         ribbonListState = ribbonListState,
                         editMode = editMode,
                         showAddEntry = showModuleAddEntries,
-                        addEntryEnabled = addEntriesEnabled,
+                        // The open panel blocks its owning module's application targets,
+                        // including the trailing add-favorite entry.
+                        addEntryEnabled = addEntriesEnabled && !styleOpen,
                         onAddToModule = { onAddToModule(module) },
                         onLaunchFavorite = onLaunchFavorite,
                         onLongPressFavorite = onLongPressFavorite,
-                        applicationEditing = editMode && !selectionEnabled,
+                        applicationEditing = editMode && !styleOpen,
                         applicationMutationEnabled = addEntriesEnabled,
                         onRemoveFavorite = onRemoveFavorite,
                         applicationMovement = applicationMovement,
                     )
                 }
-                if (selectionEnabled) {
-                    HomeModuleSelectionLayer(
+                if (styleOpen) {
+                    HomeModuleSelectionOutline(
                         modifier = Modifier.matchParentSize(),
-                        selected = module.id == selectedModuleId,
-                        enabled = selectionInteractionEnabled,
-                        visualEnabled = selectionVisualEnabled,
-                        onSelect = { onSelectModule(module.id) },
+                        saving = editSaving,
                     )
                 }
             }
@@ -543,6 +549,7 @@ internal fun HomeOrderedModuleComposition(
 internal fun HomeModuleDragPreview(
     session: ModuleDragSession,
     rootOriginInWindow: Offset,
+    stylePanel: @Composable (OrderedFavoriteModule) -> Unit = {},
 ) {
     val density = LocalDensity.current
     val width = with(density) { session.size.width.toDp() }
@@ -557,11 +564,10 @@ internal fun HomeModuleDragPreview(
         listState = rememberLazyListState(),
         nestedScrollConnection = null,
         editMode = true,
-        selectionEnabled = true,
-        selectionInteractionEnabled = false,
-        selectionVisualEnabled = true,
-        selectedModuleId = session.sourceModule.id.takeIf { session.sourceSelected },
-        onSelectModule = {},
+        openStyleModuleId = session.sourceModule.id.takeIf { session.sourceSelected },
+        headerActionsEnabled = false,
+        moduleNameEditable = false,
+        stylePanel = stylePanel,
         addEntriesEnabled = true,
         onAddToModule = {},
         onCreateVerticalModule = {},
@@ -582,89 +588,23 @@ internal fun HomeModuleDragPreview(
     )
 }
 
+/** The selection outline of the module whose style settings panel is open. */
 @Composable
-
-internal fun HomeModuleSelectionLayer(
-    modifier: Modifier,
-    selected: Boolean,
-    enabled: Boolean,
-    visualEnabled: Boolean,
-    onSelect: () -> Unit,
-) {
-    val selectedShape = RoundedCornerShape(
-        dimensionResource(R.dimen.home_module_selection_radius),
-    )
-    val selectedBorder = dimensionResource(R.dimen.home_module_selection_stroke)
-    val markColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-        alpha = if (visualEnabled) 1f else 0.38f,
-    )
-    val markInset = dimensionResource(R.dimen.home_module_mark_inset)
-    val markArm = dimensionResource(R.dimen.home_module_mark_arm)
-    val markStroke = dimensionResource(R.dimen.home_module_mark_stroke)
-    val markRadius = dimensionResource(R.dimen.home_module_mark_radius)
+internal fun HomeModuleSelectionOutline(modifier: Modifier, saving: Boolean) {
+    // An unresolved exclusive edit save dims the outline to the shared disabled opacity.
+    val alpha = if (saving) {
+        integerResource(R.integer.disabled_content_alpha_percent) / 100f
+    } else {
+        1f
+    }
     Box(
         modifier = modifier
-            .then(
-                if (selected) {
-                    Modifier.border(
-                        width = selectedBorder,
-                        color = MaterialTheme.colorScheme.onBackground.copy(
-                            alpha = if (visualEnabled) 1f else 0.38f,
-                        ),
-                        shape = selectedShape,
-                    )
-                } else {
-                    Modifier.drawWithContent {
-                        drawContent()
-                        val inset = markInset.toPx()
-                        val arm = markArm.toPx()
-                        val stroke = markStroke.toPx()
-                        val radius = markRadius.toPx()
-                        val left = inset
-                        val top = inset
-                        val right = size.width - inset
-                        val bottom = size.height - inset
-                        drawCornerMark(
-                            color = markColor,
-                            corner = Offset(left, top),
-                            horizontalEnd = Offset(left + arm, top),
-                            verticalEnd = Offset(left, top + arm),
-                            radius = radius,
-                            stroke = stroke,
-                            startAngle = 180f,
-                        )
-                        drawCornerMark(
-                            color = markColor,
-                            corner = Offset(right, top),
-                            horizontalEnd = Offset(right - arm, top),
-                            verticalEnd = Offset(right, top + arm),
-                            radius = radius,
-                            stroke = stroke,
-                            startAngle = 270f,
-                        )
-                        drawCornerMark(
-                            color = markColor,
-                            corner = Offset(left, bottom),
-                            horizontalEnd = Offset(left + arm, bottom),
-                            verticalEnd = Offset(left, bottom - arm),
-                            radius = radius,
-                            stroke = stroke,
-                            startAngle = 90f,
-                        )
-                        drawCornerMark(
-                            color = markColor,
-                            corner = Offset(right, bottom),
-                            horizontalEnd = Offset(right - arm, bottom),
-                            verticalEnd = Offset(right, bottom - arm),
-                            radius = radius,
-                            stroke = stroke,
-                            startAngle = 0f,
-                        )
-                    }
-                },
+            .border(
+                width = dimensionResource(R.dimen.home_module_selection_stroke),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = alpha),
+                shape = RoundedCornerShape(dimensionResource(R.dimen.home_module_selection_radius)),
             )
-            .clickable(enabled = enabled, role = Role.Button, onClick = onSelect)
-            .testTag(if (selected) "home_module_selected" else "home_module_selectable"),
+            .testTag("home_module_selected"),
     )
 }
 

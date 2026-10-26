@@ -145,18 +145,18 @@ class HomeScreenTest {
                         orderedModules = emptyList(),
                     ),
                     editMode = true,
-                    stylePanelExpanded = true,
                 )
             }
         }
 
         composeRule.onNodeWithTag("home_add_favorite_list").assertIsDisplayed()
         composeRule.onNodeWithTag("home_add_favorite_ribbon").assertIsDisplayed()
-        composeRule.onNodeWithText("Select a favorite list to edit its style").assertIsDisplayed()
+        // Empty Home has no module, so it has no style affordance and no style panel.
+        composeRule.onNodeWithTag("home_style_panel").assertDoesNotExist()
     }
 
     @Test
-    fun expandedPanelSelectsACompleteOrderedModuleAndShowsItsStyleControls() {
+    fun styleAffordanceOpensTheModulePanelAndItsSelectionOutline() {
         val identity = LaunchableIdentity(
             profileSerialNumber = 42,
             componentName = ComponentName("com.example.selected", "MainActivity"),
@@ -183,14 +183,16 @@ class HomeScreenTest {
                         orderedModules = listOf(module),
                     ),
                     editMode = true,
-                    stylePanelExpanded = true,
-                    selectedModuleId = selectedModule.value,
-                    onSelectModule = { selectedModule.value = it },
+                    openStyleModuleId = selectedModule.value,
+                    onToggleModuleStylePanel = { id ->
+                        selectedModule.value = id.takeUnless { it == selectedModule.value }
+                    },
                 )
             }
         }
 
-        composeRule.onNodeWithTag("home_module_selectable").performClick()
+        composeRule.onNodeWithTag("home_module_selected").assertDoesNotExist()
+        composeRule.onNodeWithTag("home_module_style_${module.id}").performClick()
         composeRule.onNodeWithTag("home_module_selected").assertIsDisplayed()
         composeRule.onNodeWithText("Application size · Text size").assertIsDisplayed()
         composeRule.onAllNodesWithText("Vertical module").assertCountEquals(0)
@@ -217,8 +219,7 @@ class HomeScreenTest {
                         orderedAggregate = persisted,
                     ),
                     editMode = true,
-                    stylePanelExpanded = true,
-                    selectedModuleId = module.id,
+                    openStyleModuleId = module.id,
                     onCommitFavoriteComposition = { transform ->
                         transform(persisted).also { persisted = it }
                     },
@@ -267,8 +268,6 @@ class HomeScreenTest {
                         orderedModules = listOf(module),
                     ),
                     editMode = true,
-                    stylePanelExpanded = false,
-                    selectedModuleId = module.id,
                     onAddFavoritesToList = { openedModuleId = it },
                 )
             }
@@ -550,8 +549,7 @@ class HomeScreenTest {
                         refreshedEntry.identity to FavoriteAvailability.Available(refreshedEntry),
                     ),
                     editMode = true,
-                    stylePanelExpanded = true,
-                    selectedModuleId = "inventory-interruption-list",
+                    openStyleModuleId = "inventory-interruption-list",
                     onCommitFavoriteComposition = {
                         saveAttempts += 1
                         favoriteState.value = FavoriteReadState.Readable(
@@ -1878,7 +1876,8 @@ class HomeScreenTest {
         }
 
         composeRule.onNodeWithTag("home_default_launcher_prompt").assertDoesNotExist()
-        composeRule.onNodeWithTag("home_edit_dock").assertIsDisplayed()
+        // Edit mode keeps the basic-information region and adds no edit dock.
+        composeRule.onNodeWithTag("home_time").assertIsDisplayed()
     }
 
     @Test

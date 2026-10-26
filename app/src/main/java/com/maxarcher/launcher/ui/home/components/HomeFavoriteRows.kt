@@ -435,26 +435,31 @@ internal fun HomeFavoriteRow(
 internal fun List<OrderedFavoriteModule>.withPresentationFrom(
     aggregate: OrderedFavoriteAggregate,
 ): List<OrderedFavoriteModule> {
-    val verticalById = aggregate.modules
-        .filter { it.type == OrderedFavoriteModuleType.Vertical }
-        .associateBy(OrderedFavoriteModule::id)
+    val presentedById = aggregate.modules.associateBy(OrderedFavoriteModule::id)
     return map { module ->
-        val container = verticalById[module.id]
-        if (module.type != OrderedFavoriteModuleType.Vertical || container == null) {
+        val presented = presentedById[module.id]
+        if (presented == null || presented.type != module.type) {
             module
         } else if (
-            module.iconSize == container.iconSize &&
-            module.textSize == container.textSize &&
-            module.namePlacement == container.namePlacement &&
-            module.itemsPerRow == container.itemsPerRow
+            module.name == presented.name &&
+            module.nameVisible == presented.nameVisible &&
+            (module.type != OrderedFavoriteModuleType.Vertical ||
+                module.iconSize == presented.iconSize &&
+                module.textSize == presented.textSize &&
+                module.namePlacement == presented.namePlacement &&
+                module.itemsPerRow == presented.itemsPerRow)
         ) {
             module
+        } else if (module.type != OrderedFavoriteModuleType.Vertical) {
+            module.copy(name = presented.name, nameVisible = presented.nameVisible)
         } else {
             module.copy(
-                iconSize = container.iconSize,
-                textSize = container.textSize,
-                namePlacement = container.namePlacement,
-                itemsPerRow = container.itemsPerRow,
+                iconSize = presented.iconSize,
+                textSize = presented.textSize,
+                namePlacement = presented.namePlacement,
+                itemsPerRow = presented.itemsPerRow,
+                name = presented.name,
+                nameVisible = presented.nameVisible,
             )
         }
     }

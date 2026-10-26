@@ -510,14 +510,14 @@ internal fun Launcher4MaxApp(
         }
     }
 
-    LaunchedEffect(favoriteState, homeCoordinator.selectedModuleId) {
-        val selectedId = homeCoordinator.selectedModuleId
+    LaunchedEffect(favoriteState, homeCoordinator.openStyleModuleId) {
+        val openId = homeCoordinator.openStyleModuleId
         val moduleIds = (favoriteState as? FavoriteReadState.Readable)
             ?.orderedModules
             ?.mapTo(mutableSetOf(), OrderedFavoriteModule::id)
             .orEmpty()
-        if (selectedId != null && selectedId !in moduleIds) {
-            homeCoordinator.selectModule(moduleId = null)
+        if (openId != null && openId !in moduleIds) {
+            homeCoordinator.clearEditSelection()
         }
     }
 
@@ -1020,17 +1020,15 @@ internal fun Launcher4MaxApp(
     BackHandler(enabled = favoriteAddTarget != null && favoriteSelectionSaving) {}
 
     BackHandler(enabled = homeCoordinator.editMode && favoriteAddTarget == null) {
-        if (homeCoordinator.stylePanelExpanded) {
-            homeCoordinator.updateStylePanelExpanded(expanded = false)
+        if (homeCoordinator.openStyleModuleId != null) {
+            homeCoordinator.clearEditSelection()
         } else {
             homeCoordinator.dismissEditMode()
-            homeCoordinator.selectModule(moduleId = null)
         }
     }
 
     BackHandler(enabled = !homeCoordinator.editMode && !settingsOpen &&
         settledSurface == AppSurface.Home && progress == 0f &&
-        homeCoordinator.stylePanelExpanded.not() &&
         selectedEntry == null &&
         homeBottomAppBarExpanded
     ) {
@@ -1311,16 +1309,14 @@ internal fun Launcher4MaxApp(
                 onDrawerDragJourneyFinished = homeCoordinator::finishDrawerDrag,
                 favoriteAvailability = favoriteAvailability,
                 editMode = homeCoordinator.editMode,
-                stylePanelExpanded = homeCoordinator.stylePanelExpanded,
-                selectedModuleId = homeCoordinator.selectedModuleId,
+                openStyleModuleId = homeCoordinator.openStyleModuleId,
                 applicationEditingSaving = favoriteEditor.isSaving,
                 onRemoveApplication = { identity -> removeHomeFavorite(identity = identity) },
                 onCommitApplicationOrder = homeCoordinator::commitApplicationOrder,
                 removalSnackbarHostState = removalSnackbarHostState,
                 onRetryFavorites = { scope.launch { effectiveFavoriteStore.load() } },
                 onRequestEditMode = homeCoordinator::requestEditMode,
-                onStylePanelExpandedChange = homeCoordinator::updateStylePanelExpanded,
-                onSelectModule = homeCoordinator::selectModule,
+                onToggleModuleStylePanel = homeCoordinator::toggleModuleStylePanel,
                 onLongPressFavorite = { entry ->
                     selectedEntryFromHome = true
                     selectedEntry = entry

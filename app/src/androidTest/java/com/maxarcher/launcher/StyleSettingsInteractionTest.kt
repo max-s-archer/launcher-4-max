@@ -170,9 +170,8 @@ class StyleSettingsInteractionTest {
         composeRule.setContent {
             Launcher4MaxTheme {
                 HomeModuleStylePanel(
-                    selectedModule = module,
+                    module = module,
                     enabled = true,
-                    maximumHeight = 300.dp,
                     onPreviewSizes = { _, _ -> },
                     onCommitIconSize = { module = module.copy(iconSize = it) },
                     onCommitTextSize = { module = module.copy(textSize = it) },

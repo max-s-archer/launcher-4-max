@@ -38,9 +38,8 @@ internal class HomeCoordinator(
         private set
     var editMode by mutableStateOf(false)
         private set
-    var stylePanelExpanded by mutableStateOf(false)
-        private set
-    var selectedModuleId by mutableStateOf<String?>(null)
+    /** The module whose inline style settings panel is open, or null when none is open. */
+    var openStyleModuleId by mutableStateOf<String?>(null)
         private set
     var editMembership by mutableStateOf<Set<LaunchableIdentity>>(emptySet())
         private set
@@ -78,19 +77,19 @@ internal class HomeCoordinator(
 
     fun dismissEditMode() {
         editMode = false
+        openStyleModuleId = null
     }
 
-    fun updateStylePanelExpanded(expanded: Boolean) {
-        stylePanelExpanded = expanded
-    }
-
-    fun selectModule(moduleId: String?) {
-        selectedModuleId = moduleId
+    /**
+     * Opens [moduleId]'s style settings panel, or closes it when it is already open. Opening
+     * another module's panel closes the current one in the same state change.
+     */
+    fun toggleModuleStylePanel(moduleId: String) {
+        openStyleModuleId = if (openStyleModuleId == moduleId) null else moduleId
     }
 
     fun clearEditSelection() {
-        stylePanelExpanded = false
-        selectedModuleId = null
+        openStyleModuleId = null
     }
 
     fun clearDrawerDrag() {
@@ -115,7 +114,7 @@ internal class HomeCoordinator(
     fun endDrawerDrag(cancelled: Boolean) {
         if (cancelled) {
             editMode = false
-            selectedModuleId = null
+            openStyleModuleId = null
         } else {
             drawerDragDropping = true
         }
@@ -162,7 +161,7 @@ internal class HomeCoordinator(
             ).show()
         }
         editMode = false
-        selectedModuleId = null
+        openStyleModuleId = null
     }
 
     fun commitApplicationOrder(change: ApplicationOrderChange, complete: () -> Unit) {

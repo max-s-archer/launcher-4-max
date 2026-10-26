@@ -2,11 +2,6 @@ package com.maxarcher.launcher
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.IntSize
 
 internal data class ModuleDragSession(
@@ -51,34 +46,4 @@ internal data class ModuleDragSession(
             it.map(OrderedFavoriteModule::id) == initialModules.map(OrderedFavoriteModule::id)
         }
     }
-}
-
-internal fun DrawScope.drawCornerMark(
-    color: Color,
-    corner: Offset,
-    horizontalEnd: Offset,
-    verticalEnd: Offset,
-    radius: Float,
-    stroke: Float,
-    startAngle: Float,
-) {
-    val horizontalDirection = if (horizontalEnd.x >= corner.x) 1f else -1f
-    val verticalDirection = if (verticalEnd.y >= corner.y) 1f else -1f
-    val horizontalStart = Offset(corner.x + horizontalDirection * radius, corner.y)
-    val verticalStart = Offset(corner.x, corner.y + verticalDirection * radius)
-    val arcTopLeft = Offset(
-        x = if (horizontalDirection > 0f) corner.x else corner.x - radius * 2f,
-        y = if (verticalDirection > 0f) corner.y else corner.y - radius * 2f,
-    )
-    drawLine(color, horizontalStart, horizontalEnd, stroke, StrokeCap.Round)
-    drawLine(color, verticalStart, verticalEnd, stroke, StrokeCap.Round)
-    drawArc(
-        color = color,
-        startAngle = startAngle,
-        sweepAngle = 90f,
-        useCenter = false,
-        topLeft = arcTopLeft,
-        size = Size(radius * 2f, radius * 2f),
-        style = Stroke(width = stroke, cap = StrokeCap.Round),
-    )
 }

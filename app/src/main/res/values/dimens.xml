@@ -98,18 +98,10 @@
     <dimen name="home_add_favorite_entry_gap">8dp</dimen>
     <dimen name="home_add_favorite_icon_size">24dp</dimen>
 
-    <!-- Home screen / Edit mode / Module surface and bottom dock -->
+    <!-- Home screen / Edit mode / Module surface -->
     <dimen name="home_edit_surface_radius">8dp</dimen>
-    <dimen name="home_edit_dock_height">48dp</dimen>
-    <dimen name="home_edit_dock_affordance_width">48dp</dimen>
-    <dimen name="home_edit_dock_icon_size">24dp</dimen>
-    <dimen name="home_edit_dock_text_padding">8dp</dimen>
 
     <!-- Home screen / Edit mode / Module selection and drag decoration -->
-    <dimen name="home_module_mark_arm">16dp</dimen>
-    <dimen name="home_module_mark_stroke">2dp</dimen>
-    <dimen name="home_module_mark_inset">4dp</dimen>
-    <dimen name="home_module_mark_radius">8dp</dimen>
     <dimen name="home_module_drag_shadow_elevation">12dp</dimen>
     <dimen name="home_module_selection_stroke">2dp</dimen>
     <dimen name="home_module_selection_radius">12dp</dimen>
@@ -129,7 +121,6 @@
     <dimen name="home_favorite_insertion_boundary_band">12dp</dimen>
 
     <!-- Home screen / Module style editor / Panel container and block lines -->
-    <dimen name="home_style_panel_minimum_list_viewport">112dp</dimen>
     <dimen name="style_settings_title_line_height">32dp</dimen>
     <dimen name="style_settings_content_line_height">48dp</dimen>
     <dimen name="style_settings_application_size_line_height">56dp</dimen>

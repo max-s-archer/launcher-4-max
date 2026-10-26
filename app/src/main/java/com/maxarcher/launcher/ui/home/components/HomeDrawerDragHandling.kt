@@ -20,7 +20,7 @@ internal fun HomeDrawerDragHandling(
     touchInWindow: Offset,
     dropping: Boolean,
     editMode: Boolean,
-    stylePanelExpanded: Boolean,
+    openStyleModuleId: String?,
     favoriteState: FavoriteReadState,
     favoriteAvailability: Map<LaunchableIdentity, FavoriteAvailability>,
     onCommit: suspend (LaunchableIdentity, DrawerDragDrop) -> Boolean,
@@ -56,7 +56,7 @@ internal fun HomeDrawerDragHandling(
             movement.cancel()
         }
     })
-    LaunchedEffect(editMode, stylePanelExpanded, favoriteState, favoriteAvailability) {
+    LaunchedEffect(editMode, openStyleModuleId, favoriteState, favoriteAvailability) {
         val session = movement.session ?: return@LaunchedEffect
         val module = (favoriteState as? FavoriteReadState.Readable)?.orderedModules
             ?.firstOrNull(predicate = { it.id == session.module.id })
@@ -66,7 +66,8 @@ internal fun HomeDrawerDragHandling(
             (module != session.module ||
                 (availability !is FavoriteAvailability.Available &&
                     availability !is FavoriteAvailability.Disabled))
-        if (!editMode || stylePanelExpanded || invalidSource ||
+        // An open style panel blocks application targets only inside its owning module.
+        if (!editMode || session.module.id == openStyleModuleId || invalidSource ||
             availability == FavoriteAvailability.ConfirmedRemoved
         ) {
             movement.cancel()
