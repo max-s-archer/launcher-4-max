@@ -56,6 +56,7 @@ internal class HomeFavoriteEditOrchestration(
     )
     var undoLabel by mutableStateOf("")
     var undoUnavailableMessage by mutableStateOf("")
+    var wholeModuleRemovalMessage by mutableStateOf("")
     var moduleStyleSaveFailureMessage by mutableStateOf("")
     var moduleOrderSaveFailureMessage by mutableStateOf("")
     var moduleNameSaveFailureMessage by mutableStateOf("")
@@ -158,6 +159,8 @@ internal class HomeFavoriteEditOrchestration(
         transform: (OrderedFavoriteAggregate) -> OrderedFavoriteAggregate,
         message: String = "",
         recordUndo: Boolean = false,
+        undoSurvivesEditSession: Boolean = false,
+        allowOutsideEditMode: Boolean = false,
         onCommitted: () -> Unit = {},
         onFailed: () -> Unit = {
             Toast.makeText(
@@ -178,11 +181,21 @@ internal class HomeFavoriteEditOrchestration(
             if (!isValidOrderedFavoriteAggregate(updated)) return@mutation
             editTransaction.beginMutation(updated)
             val persisted = onCommitFavoriteComposition(transform)
-            if (session != editTransaction.sessionId || !editMode) return@mutation
+            if (
+                session != editTransaction.sessionId ||
+                (!editMode && !allowOutsideEditMode)
+            ) {
+                return@mutation
+            }
             if (persisted == null) {
                 editTransaction.discardPending(updated)
                 withFrameNanos { }
-                if (session != editTransaction.sessionId || !editMode) return@mutation
+                if (
+                    session != editTransaction.sessionId ||
+                    (!editMode && !allowOutsideEditMode)
+                ) {
+                    return@mutation
+                }
                 editTransaction.restoreCommitted(
                     (favoriteState as? FavoriteReadState.Readable)?.orderedAggregate,
                 )
@@ -197,16 +210,23 @@ internal class HomeFavoriteEditOrchestration(
                 snackbarHostState.currentSnackbarData?.dismiss()
                 return@mutation
             }
-            val sequence = editTransaction.recordUndo(base)
+            val sequence = editTransaction.recordUndo(
+                aggregate = base,
+                survivesEditSession = undoSurvivesEditSession,
+            )
             snackbarHostState.currentSnackbarData?.dismiss()
             editScope.launch {
                 val result = snackbarHostState.showSnackbar(
                     message = message,
                     actionLabel = undoLabel,
-                    duration = SnackbarDuration.Long,
+                    duration = if (undoSurvivesEditSession) {
+                        SnackbarDuration.Indefinite
+                    } else {
+                        SnackbarDuration.Long
+                    },
                 )
                 if (result == SnackbarResult.ActionPerformed &&
-                    session == editTransaction.sessionId
+                    (session == editTransaction.sessionId || undoSurvivesEditSession)
                 ) {
                     val snapshot = editTransaction.consumeUndo(sequence) ?: return@launch
                     commitEditAggregate(
@@ -219,10 +239,40 @@ internal class HomeFavoriteEditOrchestration(
                                 )
                             }
                         },
+                        allowOutsideEditMode = true,
                     )
+                } else {
+                    editTransaction.clearUndo()
                 }
             }
         }
+    }
+
+    fun removeModule(moduleId: String) {
+        if (
+            editMutationJob?.isActive == true ||
+            applicationEditingSaving ||
+            moduleDragSession != null
+        ) {
+            return
+        }
+        commitEditAggregate(
+            transform = { aggregate ->
+                aggregate.copy(
+                    modules = aggregate.modules.filterNot { it.id == moduleId },
+                )
+            },
+            message = wholeModuleRemovalMessage,
+            recordUndo = true,
+            undoSurvivesEditSession = true,
+            onFailed = {
+                Toast.makeText(
+                    context,
+                    R.string.favorite_remove_failed,
+                    Toast.LENGTH_SHORT,
+                ).show()
+            },
+        )
     }
 
     fun commitVerticalModuleStyle(

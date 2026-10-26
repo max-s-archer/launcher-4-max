@@ -78,6 +78,31 @@ class HomeEditTransactionTest {
         assertNull(transaction.pendingModuleOrder)
     }
 
+    @Test
+    fun leavingPreservesUndoThatSurvivesTheEditSession() {
+        val transaction = HomeEditTransaction()
+        val snapshot = aggregate("undo")
+        transaction.enter(aggregate("initial"))
+        val sequence = transaction.recordUndo(aggregate = snapshot, survivesEditSession = true)
+
+        transaction.leave()
+
+        assertEquals(snapshot, transaction.consumeUndo(sequence))
+    }
+
+    @Test
+    fun externalChangeInvalidatesUndoThatSurvivedTheEditSession() {
+        val transaction = HomeEditTransaction()
+        val initial = aggregate("initial")
+        val external = aggregate("external")
+        transaction.enter(initial)
+        transaction.recordUndo(aggregate = initial, survivesEditSession = true)
+        transaction.leave()
+
+        assertTrue(transaction.reconcileExternal(external))
+        assertNull(transaction.undoAggregate)
+    }
+
     private fun aggregate(id: String) = OrderedFavoriteAggregate(
         modules = listOf(
             OrderedFavoriteModule(

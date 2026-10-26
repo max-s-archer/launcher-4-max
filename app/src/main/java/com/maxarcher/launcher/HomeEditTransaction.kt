@@ -23,19 +23,27 @@ internal class HomeEditTransaction {
     var undoSequence by mutableIntStateOf(0)
         private set
 
+    var undoSurvivesEditSession by mutableStateOf(false)
+        private set
+
     var pendingModuleOrder by mutableStateOf<List<OrderedFavoriteModule>?>(null)
         private set
 
     fun enter(initialAggregate: OrderedFavoriteAggregate?) {
         sessionId += 1
-        committedAggregate = initialAggregate
+        if (!undoSurvivesEditSession) committedAggregate = initialAggregate
     }
 
     fun leave() {
+        val preserveUndo = undoSurvivesEditSession
         sessionId += 1
-        undoAggregate = null
+        if (!preserveUndo) {
+            undoSequence += 1
+            undoAggregate = null
+            undoSurvivesEditSession = false
+        }
         pendingAggregate = null
-        committedAggregate = null
+        if (!preserveUndo) committedAggregate = null
         pendingModuleOrder = null
     }
 
@@ -73,11 +81,16 @@ internal class HomeEditTransaction {
     fun clearUndo() {
         undoSequence += 1
         undoAggregate = null
+        undoSurvivesEditSession = false
     }
 
-    fun recordUndo(aggregate: OrderedFavoriteAggregate): Int {
+    fun recordUndo(
+        aggregate: OrderedFavoriteAggregate,
+        survivesEditSession: Boolean = false,
+    ): Int {
         undoSequence += 1
         undoAggregate = aggregate
+        undoSurvivesEditSession = survivesEditSession
         return undoSequence
     }
 
@@ -85,6 +98,7 @@ internal class HomeEditTransaction {
         if (expectedSequence != undoSequence) return null
         val snapshot = undoAggregate ?: return null
         undoAggregate = null
+        undoSurvivesEditSession = false
         undoSequence += 1
         return snapshot
     }

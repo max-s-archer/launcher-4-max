@@ -94,6 +94,7 @@
     <string name="home_module_default_name_ribbon">收藏织带</string>
     <string name="unable_to_save_module_name">无法保存模块名称</string>
     <string name="home_module_remove_group">移除整组收藏</string>
+    <string name="home_module_removed">已移除整组收藏</string>
     <string name="home_module_show_name">显示模块名称</string>
     <string name="home_module_hide_name">隐藏模块名称</string>
     <string name="home_module_reorder_handle">调整模块顺序</string>

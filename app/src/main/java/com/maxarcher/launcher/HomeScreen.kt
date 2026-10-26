@@ -146,6 +146,7 @@ internal fun HomeScreen(
         integerResource(R.integer.home_favorite_edge_scroll_start_delay_ms).toLong()
     val undoLabel = stringResource(R.string.undo)
     val undoUnavailableMessage = stringResource(R.string.favorite_undo_unavailable)
+    val wholeModuleRemovalMessage = stringResource(R.string.home_module_removed)
     val moduleStyleSaveFailureMessage = stringResource(
         R.string.unable_to_save_module_style,
     )
@@ -169,6 +170,7 @@ internal fun HomeScreen(
     orchestration.favoriteAvailability = favoriteAvailability
     orchestration.undoLabel = undoLabel
     orchestration.undoUnavailableMessage = undoUnavailableMessage
+    orchestration.wholeModuleRemovalMessage = wholeModuleRemovalMessage
     orchestration.moduleStyleSaveFailureMessage = moduleStyleSaveFailureMessage
     orchestration.moduleOrderSaveFailureMessage = moduleOrderSaveFailureMessage
     orchestration.moduleNameSaveFailureMessage = moduleNameSaveFailureMessage
@@ -177,10 +179,11 @@ internal fun HomeScreen(
 
     LaunchedEffect(editMode) {
         if (!editMode) {
+            val preserveUndo = orchestration.editTransaction.undoSurvivesEditSession
             orchestration.editTransaction.leave()
             orchestration.cancelActiveDragSessions()
             orchestration.editMutationJob?.cancel()
-            snackbarHostState.currentSnackbarData?.dismiss()
+            if (!preserveUndo) snackbarHostState.currentSnackbarData?.dismiss()
         } else {
             orchestration.editTransaction.enter(
                 (currentFavoriteState as? FavoriteReadState.Readable)?.orderedAggregate,
@@ -236,7 +239,7 @@ internal fun HomeScreen(
             ?: return@LaunchedEffect
         val currentAggregate = readable.orderedAggregate ?: return@LaunchedEffect
         val committed = orchestration.editTransaction.committedAggregate ?: return@LaunchedEffect
-        if (editMode &&
+        if ((editMode || orchestration.editTransaction.undoAggregate != null) &&
             currentAggregate != committed &&
             orchestration.editMutationJob?.isActive != true &&
             // The saved application order is the pending handoff, not an external edit.
@@ -417,6 +420,9 @@ internal fun HomeScreen(
                                         moduleId = module.id,
                                         visible = !module.nameVisible,
                                     )
+                                },
+                                onRemoveModule = { module ->
+                                    orchestration.removeModule(module.id)
                                 },
                                 stylePanel = { module ->
                                     HomeModuleStylePanelSlot(

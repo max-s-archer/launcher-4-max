@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.dp
@@ -113,13 +114,78 @@ class HomeModuleHeaderUiTest {
     fun headerActionsAreUnavailableWhileAnExclusiveSaveIsUnresolved() {
         show(aggregate(first), applicationEditingSaving = true)
 
+        composeRule.onNodeWithTag("home_module_remove_first").assertIsNotEnabled()
         composeRule.onNodeWithTag("home_module_style_first").assertIsNotEnabled()
         composeRule.onNodeWithTag("home_module_name_visibility_first").assertIsNotEnabled()
+    }
+
+    @Test
+    fun removingAWholeModuleOffersUndoAndRestoresTheCompleteModule() {
+        val original = first.copy(name = "Work", nameVisible = true)
+        var persisted = aggregate(original, second)
+        show(
+            aggregate = persisted,
+            onCommit = { transform ->
+                transform(persisted).also { persisted = it }
+            },
+        )
+
+        composeRule.onNodeWithTag("home_module_remove_first").performClick()
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertEquals(listOf("second"), persisted.modules.map { it.id })
+        }
+        composeRule.onNodeWithText("Undo").performClick()
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertEquals(listOf(original, second), persisted.modules)
+        }
+    }
+
+    @Test
+    fun wholeModuleUndoRemainsAvailableAfterLeavingEditMode() {
+        var editing by mutableStateOf(true)
+        var persisted = aggregate(first, second)
+        show(
+            aggregate = persisted,
+            editMode = { editing },
+            onCommit = { transform ->
+                transform(persisted).also { persisted = it }
+            },
+        )
+
+        composeRule.onNodeWithTag("home_module_remove_first").performClick()
+        composeRule.runOnIdle { editing = false }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Undo").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(listOf("first", "second"), persisted.modules.map { it.id })
+        }
+    }
+
+    @Test
+    fun failedWholeModuleRemovalKeepsTheSavedModulesWithoutUndo() {
+        val persisted = aggregate(first, second)
+        show(
+            aggregate = persisted,
+            onCommit = { null },
+        )
+
+        composeRule.onNodeWithTag("home_module_remove_first").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(listOf("first", "second"), persisted.modules.map { it.id })
+        }
+        composeRule.onNodeWithText("Undo").assertDoesNotExist()
     }
 
     private fun show(
         aggregate: OrderedFavoriteAggregate,
         listState: LazyListState = LazyListState(),
+        editMode: () -> Boolean = { true },
         openModuleId: () -> String? = { null },
         onToggle: (String) -> Unit = {},
         applicationEditingSaving: Boolean = false,
@@ -136,7 +202,7 @@ class HomeModuleHeaderUiTest {
                         orderedAggregate = aggregate,
                     ),
                     favoriteListState = listState,
-                    editMode = true,
+                    editMode = editMode(),
                     openStyleModuleId = openModuleId(),
                     onToggleModuleStylePanel = onToggle,
                     applicationEditingSaving = applicationEditingSaving,
