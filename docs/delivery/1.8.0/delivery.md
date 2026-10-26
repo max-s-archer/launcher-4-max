@@ -55,7 +55,7 @@ Primary risks are interaction overlap between the bottom app bar and edit mode, 
 | --- | --- | --- | --- |
 | [Iteration 35: Icon Shape Customization](iteration-35-icon-shape-customization.md) | `Completed` | 2026-10-16 | All changes accepted by the author and merged into `main`. |
 | [Iteration 36: Home Bottom App Bar](iteration-36-home-bottom-app-bar.md) | `Completed` | 2026-10-20 | The author accepted the bar implementation. |
-| [Iteration 37: Home Edit Mode Interaction](iteration-37-home-edit-mode-interaction.md) | `In Progress` | 2026-10-23 | The author authorized production implementation. |
+| [Iteration 37: Home Edit Mode Interaction](iteration-37-home-edit-mode-interaction.md) | `Completed` | 2026-10-26 | The author accepted primary-device use at the daily-use baseline and accepted the legacy issue as non-blocking. |
 | [Iteration 38: Home Favorite Placement and Layout](iteration-38-home-favorite-placement-layout.md) | `Planned` | 2026-10-14 | The accepted Home placement and layout updates form an independently reviewable placement journey. |
 | [Iteration 39: Home Loading and Closure](iteration-39-home-loading-closure.md) | `Planned` | 2026-10-14 | The author requested a final iteration for Home loading and small defined-scope issues. |
 
@@ -96,7 +96,7 @@ Author-reported acceptance of all iteration 35 changes: `Passed` on 2026-10-16.
 
 ### Iteration 37: Home Edit Mode Interaction
 
-[Contract](iteration-37-home-edit-mode-interaction.md). Status: `In Progress`. The author authorized
+[Contract](iteration-37-home-edit-mode-interaction.md). Status: `Completed`. The author authorized
 production implementation on 2026-10-23 within the accepted contract, in three slices. The
 module-name slice adds a persisted name and name visibility to every module. Ordered-favorite store
 schema v5 and backup schema v7 carry both fields. Earlier data and backups restore unnamed modules
@@ -113,9 +113,14 @@ evidence does not validate the lifecycle corrections. The correction committed a
 unifies the latest removal snapshot, restores only the deleted complete module, preserves unrelated
 edits, and covers addition, navigation, inventory, dismissal, and failure boundaries. On 2026-10-26,
 the author reported that device testing and unit tests for this correction basically passed; exact
-commands and test coverage were not specified. This observation is not full iteration acceptance.
-Agent-run Gradle build and tests: `Not run`. Final device acceptance: `Unknown`.
-Final author closure decision: not yet reported. Follow-up owner: project author.
+commands and test coverage were not specified. This initial observation alone was not full
+iteration acceptance. The author subsequently confirmed final primary-device acceptance:
+`Passed` on 2026-10-26, meeting the author daily-use baseline, and confirmed that the legacy issue
+listed under [Known limitations and legacy issues](#known-limitations-and-legacy-issues) does not
+block this iteration's completion. Agent-run Gradle build and tests: `Not run`.
+The correction and preceding evidence are committed as `17a5f33` and `105c1b7` respectively.
+Final author decision: close iteration 37 on 2026-10-26. Legacy-issue follow-up owner: project
+author; its future handling is not assigned to another iteration by this closure.
 
 ### Iteration 38: Home Favorite Placement and Layout
 
@@ -142,6 +147,10 @@ This version uses the `Author daily-use baseline` gates. The accepted APK must r
 - Broader OEM, API, locale, and device coverage remains unknown until performed.
 - The parked Drawer slider test cluster remains a known limitation of regression signal.
 - Module collapse and expansion remain intentionally outside this version.
+- Home bottom app bar multi-selection addition can exit edit mode because its successful write
+  does not refresh the edit-membership baseline. This pre-existing issue remains unresolved; the
+  author accepted it as non-blocking for iteration 37 completion on 2026-10-26. Follow-up owner:
+  project author. A repair destination has not been assigned.
 
 ## Completion criteria
 
@@ -153,4 +162,5 @@ This version uses the `Author daily-use baseline` gates. The accepted APK must r
 
 ## Completion result
 
-Version 1.8.0 is not yet complete. As of 2026-10-23, Iterations 35 and 36 are `Completed` and accepted by the author. Iteration 37 is `In Progress`. Iterations 38 and 39 remain `Planned`.
+Version 1.8.0 is not yet complete. As of 2026-10-26, Iterations 35, 36, and 37 are `Completed`
+and accepted by the author. Iterations 38 and 39 remain `Planned`.
