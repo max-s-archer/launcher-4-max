@@ -72,7 +72,7 @@ private const val BACKUP_TIMESTAMP_PATTERN = "yyyyMMddHHmm"
  * present section restores that field's default value.
  */
 internal object SettingsBackupJson {
-    const val BACKUP_SCHEMA_VERSION = 7
+    const val BACKUP_SCHEMA_VERSION = 8
 
     fun serialize(
         aggregate: OrderedFavoriteAggregate,
@@ -88,6 +88,7 @@ internal object SettingsBackupJson {
                         JSONObject()
                             .put("id", module.id)
                             .put("type", module.type.storageValue)
+                            .put("displayMode", module.displayMode.storageValue)
                             .put("iconSize", module.iconSize.storageValue)
                             .put("textSize", module.textSize.storageValue)
                             .put("namePlacement", module.namePlacement.storageValue)
@@ -197,6 +198,10 @@ internal object SettingsBackupJson {
                 name = "type",
                 default = OrderedFavoriteModuleType.Vertical,
             ) { value -> orderedFavoriteModuleTypeFromStorageValue(value) } ?: return null,
+            displayMode = module.enumField(
+                name = "displayMode",
+                default = OrderedFavoriteDisplayMode.Ribbon,
+            ) { value -> orderedFavoriteDisplayModeFromStorageValue(value) } ?: return null,
             iconSize = module.enumField(
                 name = "iconSize",
                 default = module.enumField(
@@ -397,6 +402,14 @@ internal object SettingsBackupJson {
         else -> null
     }
 
+    private fun orderedFavoriteDisplayModeFromStorageValue(
+        value: String,
+    ): OrderedFavoriteDisplayMode? = when (value) {
+        "ribbon" -> OrderedFavoriteDisplayMode.Ribbon
+        "flow" -> OrderedFavoriteDisplayMode.Flow
+        else -> null
+    }
+
     private fun favoriteListSizeFromStorageValue(value: String): FavoriteListSize? =
         when (value) {
             "large" -> FavoriteListSize.Large
@@ -438,6 +451,12 @@ internal object SettingsBackupJson {
         get() = when (this) {
             OrderedFavoriteModuleType.Vertical -> "vertical"
             OrderedFavoriteModuleType.Ribbon -> "ribbon"
+        }
+
+    private val OrderedFavoriteDisplayMode.storageValue: String
+        get() = when (this) {
+            OrderedFavoriteDisplayMode.Ribbon -> "ribbon"
+            OrderedFavoriteDisplayMode.Flow -> "flow"
         }
 
     private val DrawerNamePlacement.storageValue: String

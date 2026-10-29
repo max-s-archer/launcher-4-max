@@ -606,5 +606,8 @@ private fun HomeModuleStylePanelSlot(
         onChangeItemsPerRow = { count ->
             orchestration.commitVerticalModuleStyle(module.id) { it.copy(itemsPerRow = count) }
         },
+        onChangeDisplayMode = { displayMode ->
+            orchestration.commitHorizontalModuleDisplayMode(module.id, displayMode)
+        },
     )
 }

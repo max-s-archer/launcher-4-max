@@ -124,7 +124,6 @@
     <dimen name="style_settings_title_line_height">32dp</dimen>
     <dimen name="style_settings_content_line_height">48dp</dimen>
     <dimen name="style_settings_application_size_line_height">56dp</dimen>
-    <dimen name="style_settings_informational_row_height">48dp</dimen>
     <dimen name="style_settings_panel_row_inset">12dp</dimen>
     <dimen name="style_settings_panel_corner_radius">12dp</dimen>
     <dimen name="style_settings_panel_border_width">1dp</dimen>

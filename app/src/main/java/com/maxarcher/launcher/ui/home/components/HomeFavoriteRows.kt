@@ -443,6 +443,8 @@ internal fun List<OrderedFavoriteModule>.withPresentationFrom(
         } else if (
             module.name == presented.name &&
             module.nameVisible == presented.nameVisible &&
+            (module.type != OrderedFavoriteModuleType.Ribbon ||
+                module.displayMode == presented.displayMode) &&
             (module.type != OrderedFavoriteModuleType.Vertical ||
                 module.iconSize == presented.iconSize &&
                 module.textSize == presented.textSize &&
@@ -451,7 +453,11 @@ internal fun List<OrderedFavoriteModule>.withPresentationFrom(
         ) {
             module
         } else if (module.type != OrderedFavoriteModuleType.Vertical) {
-            module.copy(name = presented.name, nameVisible = presented.nameVisible)
+            module.copy(
+                name = presented.name,
+                nameVisible = presented.nameVisible,
+                displayMode = presented.displayMode,
+            )
         } else {
             module.copy(
                 iconSize = presented.iconSize,

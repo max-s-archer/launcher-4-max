@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -22,10 +20,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import com.maxarcher.launcher.FavoriteListSize
 import com.maxarcher.launcher.FavoriteNamePlacement
+import com.maxarcher.launcher.OrderedFavoriteDisplayMode
 import com.maxarcher.launcher.OrderedFavoriteModule
 import com.maxarcher.launcher.OrderedFavoriteModuleType
 import com.maxarcher.launcher.R
@@ -43,6 +40,7 @@ internal fun HomeModuleStylePanel(
     onCommitTextSize: (FavoriteListSize) -> Unit,
     onChangeNamePlacement: (FavoriteNamePlacement) -> Unit,
     onChangeItemsPerRow: (Int) -> Unit,
+    onChangeDisplayMode: (OrderedFavoriteDisplayMode) -> Unit,
 ) {
     val animationDuration = integerResource(
         R.integer.short_property_animation_duration_ms,
@@ -76,32 +74,37 @@ internal fun HomeModuleStylePanel(
                 onCommitTextSize = onCommitTextSize,
             )
         } else {
-            HomeStylePanelRow(
-                label = stringResource(R.string.home_ribbon_fixed_style),
+            HomeDisplayModeRow(
+                displayMode = module.displayMode,
+                enabled = enabled,
+                onChange = onChangeDisplayMode,
             )
         }
     }
 }
 
 @Composable
-private fun HomeStylePanelRow(label: String, value: String? = null) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(dimensionResource(R.dimen.style_settings_informational_row_height))
-            .padding(horizontal = dimensionResource(R.dimen.style_settings_panel_row_inset)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Medium,
-            fontSize = dimensionResource(R.dimen.style_settings_secondary_text_size).value.sp,
-            lineHeight = dimensionResource(R.dimen.style_settings_secondary_line_height).value.sp,
-        )
-        value?.let { Text(text = it, color = MaterialTheme.colorScheme.onSurface) }
-    }
+private fun HomeDisplayModeRow(
+    displayMode: OrderedFavoriteDisplayMode,
+    enabled: Boolean,
+    onChange: (OrderedFavoriteDisplayMode) -> Unit,
+) {
+    val options = OrderedFavoriteDisplayMode.entries
+    StyleSelectorBlock(
+        title = stringResource(R.string.home_ribbon_display_mode),
+        optionLabels = options.map { mode ->
+            stringResource(
+                when (mode) {
+                    OrderedFavoriteDisplayMode.Ribbon -> R.string.home_ribbon_display_mode_ribbon
+                    OrderedFavoriteDisplayMode.Flow -> R.string.home_ribbon_display_mode_flow
+                },
+            )
+        },
+        selectedIndex = options.indexOf(displayMode),
+        enabled = enabled,
+        onSelectIndex = { index -> onChange(options[index]) },
+        testTagPrefix = "home_ribbon_display_mode",
+    )
 }
 
 @Composable
@@ -114,7 +117,7 @@ private fun HomeApplicationSizeRow(
     onCommitIconSize: (FavoriteListSize) -> Unit,
     onCommitTextSize: (FavoriteListSize) -> Unit,
 ) {
-    val options = FavoriteListSize.values()
+    val options = FavoriteListSize.entries
     val labels = options.map { option ->
         stringResource(
             id = when (option) {
@@ -195,7 +198,7 @@ private fun HomeStyleArrangementRow(
     onChangePlacement: (FavoriteNamePlacement) -> Unit,
     onChangeCount: (Int) -> Unit,
 ) {
-    val options = FavoriteNamePlacement.values()
+    val options = FavoriteNamePlacement.entries
     StyleArrangementBlock(
         title = stringResource(id = R.string.home_application_arrangement),
         optionLabels = options.map { option ->
