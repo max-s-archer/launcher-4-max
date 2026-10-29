@@ -113,7 +113,18 @@ Agent 执行的 Gradle 构建与测试：`Not run`。修正与此前证据分别
 
 ### 迭代 38：Home 收藏放置与布局
 
-[契约](iteration-38-home-favorite-placement-layout.zh-CN.md)。状态：`Planned`。尚无实现证据。后续责任人：项目作者。最终作者决定：尚不适用。
+[契约](iteration-38-home-favorite-placement-layout.zh-CN.md)。状态：`In Progress`。
+作者于 2026-10-27 在已接受的契约范围内授权实现。展示模式源码改动加入每模块 Ribbon/Flow 持久化、
+有序收藏 store schema v6、backup schema v8，以及横向模块样式面板中的共享二选一选择器。
+新模块与旧数据默认使用 Ribbon；存在但非法的模式使文档读取失败，不覆盖已存数据。
+模式切换保留成员及应用/模块顺序，保存期间预览选择结果、锁定冲突编辑，并在保存失败后恢复已提交
+样式，允许显式重试。测试源码覆盖 store 重载及 schema v1-v5、备份往返和缺失/非法字段、
+选择器控件与保存锁、失败重试，以及保存未完成时关闭面板。
+Agent 静态验证：`Passed`，包括 `git diff --check`、新增 Kotlin 行不超过 100 字符、
+资源 XML 解析、双语字符串键一致性及新增字符串引用。
+Agent 执行的 Gradle 构建、lint 与仪器测试：`Not run`。主设备验收：`Unknown`。
+Flow 换行渲染与一次性放置尚未实现；目前选择 Flow 会持久化模式并更新选择器，布局仍使用现有织带。
+后续责任人：项目作者。最终作者决定：尚不适用。
 
 ### 迭代 39：Home 加载与收尾
 

@@ -124,7 +124,21 @@ author; its future handling is not assigned to another iteration by this closure
 
 ### Iteration 38: Home Favorite Placement and Layout
 
-[Contract](iteration-38-home-favorite-placement-layout.md). Status: `Planned`. No implementation evidence exists yet. Follow-up owner: project author. Final author decision: not applicable yet.
+[Contract](iteration-38-home-favorite-placement-layout.md). Status: `In Progress`. The author
+authorized implementation within the accepted contract on 2026-10-27. The display-mode source
+changes add per-module Ribbon/Flow persistence, ordered-favorite store schema v6, backup schema
+v8, and the shared two-option selector in horizontal-module style panels. New modules and older
+data default to Ribbon; present invalid modes reject the document without replacing stored data.
+Mode changes retain membership and application/module order, preview the selection during a save,
+lock conflicting edits, and restore the committed style after a failed save with explicit retry.
+Test sources cover store reload and schemas v1-v5, backup round trips and missing/invalid fields,
+selector controls and save locking, failure/retry, and closing the panel during a pending save.
+Agent static validation: `Passed` for `git diff --check`, added Kotlin lines within 100 characters,
+resource XML parsing, bilingual string-key consistency, and added string references.
+Agent-run Gradle build, lint, and instrumented tests: `Not run`. Primary-device acceptance:
+`Unknown`. Flow wrapping/rendering and one-shot placement remain unimplemented; selecting Flow
+currently persists the mode and updates the selector while retaining the existing ribbon layout.
+Follow-up owner: project author. Final author decision: not applicable yet.
 
 ### Iteration 39: Home Loading and Closure
 
