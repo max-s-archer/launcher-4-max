@@ -70,6 +70,7 @@
     <dimen name="home_favorite_bar_icon_label_gap">8dp</dimen>
     <dimen name="home_favorite_bar_spacing">8dp</dimen>
     <dimen name="home_favorite_bar_item_spacing">8dp</dimen>
+    <dimen name="home_favorite_bar_row_spacing">8dp</dimen>
     <dimen name="home_favorite_bar_corner_radius">12dp</dimen>
     <dimen name="home_favorite_bar_border_width">1dp</dimen>
     <dimen name="home_favorite_bar_overflow_fade_width">24dp</dimen>

@@ -53,6 +53,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
@@ -184,6 +185,7 @@ internal fun HomeFavoriteRow(
     showName: Boolean = true,
     centerIcon: Boolean = false,
     hiddenNamePlacement: Boolean = false,
+    verticalInset: Dp = 0.dp,
 ) {
     val entry = availability.presentationEntry
     val iconDimension = dimensionResource(
@@ -321,6 +323,8 @@ internal fun HomeFavoriteRow(
                         compact -> dimensionResource(R.dimen.home_favorite_bar_item_inset)
                         else -> 0.dp
                     },
+                    top = verticalInset,
+                    bottom = verticalInset,
             ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = if (centerIcon) Arrangement.Center else Arrangement.Start,
