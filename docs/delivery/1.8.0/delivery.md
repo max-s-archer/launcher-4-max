@@ -135,9 +135,11 @@ Test sources cover store reload and schemas v1-v5, backup round trips and missin
 selector controls and save locking, failure/retry, and closing the panel during a pending save.
 Agent static validation: `Passed` for `git diff --check`, added Kotlin lines within 100 characters,
 resource XML parsing, bilingual string-key consistency, and added string references.
-Agent-run Gradle build, lint, and instrumented tests: `Not run`. Primary-device acceptance:
-`Unknown`. Flow wrapping/rendering and one-shot placement remain unimplemented; selecting Flow
-currently persists the mode and updates the selector while retaining the existing ribbon layout.
+The flow layout slice adds the wrapped multi-row rendering, mode-routed insertion geometry,
+item insets, row spacing, and flow geometry regression tests. The author reported the flow
+spacing acceptance as `Passed` on 2026-10-30.
+Agent-run Gradle build, lint, and instrumented tests: `Not run`. One-shot placement remains
+unimplemented; selecting Flow now renders the wrapped layout.
 Follow-up owner: project author. Final author decision: not applicable yet.
 
 ### Iteration 39: Home Loading and Closure
