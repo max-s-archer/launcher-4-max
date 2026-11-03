@@ -5,11 +5,11 @@
 ## Presentation
 
 The application action sheet is a modal bottom sheet opened by long-pressing a fully presented
-favorite in normal Home mode and releasing without moving beyond the platform touch slop, or by
-long-pressing an application in ordinary Drawer mode and then releasing without beginning
-[drag-to-favorite](drawer.md#drag-to-favorite). Movement beyond the touch slop after the long-press
-haptic begins [one-shot operation](home.md#one-shot-operation) on Home, or drag-to-favorite in
-Drawer as defined by the [Drawer interaction specification](drawer.md).
+favorite in normal Home mode, or by long-pressing an application in ordinary Drawer mode and then
+releasing without beginning [drag-to-favorite](drawer.md#drag-to-favorite). Movement after the Home
+long-press haptic does not enter [one-shot operation](home.md#one-shot-operation). Movement beyond
+the touch slop after the Drawer long-press haptic begins drag-to-favorite as defined by the
+[Drawer interaction specification](drawer.md).
 Home has normal, edit, and one-shot operation states. In edit mode, application long press is
 reserved for movement wherever application-level editing is available. An open style settings
 panel blocks application-level targets only inside its owning module; other modules retain

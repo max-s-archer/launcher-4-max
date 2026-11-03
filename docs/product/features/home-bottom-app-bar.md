@@ -23,11 +23,11 @@ The accepted Settings entry and page title are `Home bottom app bar` in English 
   it does not reset either setting. Fixed means the bar stays at full height. Not fixed means
   semi-hidden. Icon size uses the existing Large, Medium, and Small icon tiers. There is no separate
   maximum-count setting and no membership editor. Home edit mode supports adding and removing.
-  Adding and moving also follow the one-shot and Drawer drag entries defined below.
+  Adding and moving also follow the Drawer drag entry defined below.
   Normal Home supports removal through the
   [application action sheet](../surfaces/app-action-sheet.md#launcher-actions).
-  Reordering can also begin from a fully presented favorite in normal Home, as defined by
-  [one-shot operation](../surfaces/home.md#one-shot-operation).
+  A long press on a fully presented favorite in normal Home opens that sheet and does not
+  begin reordering.
 - The preview window is non-interactive and shows the current selected presentation: the complete bar when fixed, or the ordinary collapsed bar when semi-hidden. It does not expand, launch, or accept changes. While the master switch is off, the preview still shows that selected presentation, and the settings below it remain disabled. The preview does not decide capacity. Home's available width does. Exact preview geometry belongs to the [Settings presentation specification](../presentation/settings.md#home-bottom-app-bar-settings-page).
 - Every settings change applies immediately and starts one exclusive save of the complete bar
   settings state. While that save is unresolved, other bar-setting changes are unavailable, but

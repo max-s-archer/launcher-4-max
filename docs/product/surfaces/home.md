@@ -51,7 +51,10 @@ Remaining space is transparent Home background, not another module.
   order.
 - There is no artificial total or per-type module limit. Available unique launchable identities form the natural capacity boundary. When all are favorited, no add flow may claim another module can be completed.
 - Names, icons, badges, and launchability resolve from the latest reliable Android inventory; they are not per-favorite visual overrides.
-- In normal Home mode, selecting an application in either module type launches it. Long-pressing a fully presented favorite produces the platform-standard long-press haptic. Releasing without moving beyond the platform touch slop opens the application action sheet. Moving beyond that slop after the haptic begins one-shot operation, defined below, instead of opening the sheet.
+- In normal Home mode, selecting an application in either module type launches it.
+  Long-pressing a fully presented favorite produces the platform-standard long-press haptic
+  and opens the application action sheet. Movement after that haptic does not reorder the
+  favorite or enter one-shot operation.
 - Home uses one surface-wide `600ms` rapid-activation window for ordinary application launch targets. The first accepted activation suppresses every later Home application activation until that window expires, regardless of identity.
 - If an application launch handoff fails, Home keeps its current main-list position and
   any Ribbon-layout ribbon positions, shows the localized short Toast
@@ -96,13 +99,13 @@ Normal Home, edit mode, and one-shot operation present the same Home content. Th
 
 | Comparison | Normal Home | Edit mode | One-shot operation |
 | --- | --- | --- | --- |
-| How it is entered | It is ordinary Home | The Edit Launcher action, or a quick-action slot bound to `Edit mode` | Reordering one fully presented favorite, or a recognized Drawer drag-to-favorite |
+| How it is entered | It is ordinary Home | The Edit Launcher action, or a quick-action slot bound to `Edit mode` | A recognized Drawer drag-to-favorite |
 | How it ends | It remains until another state is entered | Back, after an open style panel closes, or an existing interruption. One completed movement does not end it | As soon as that one operation ends, including release, cancellation, Back, save failure, and interruption |
 | Editing affordances | A module name title only when that module shows its name | Every editing affordance | Only the moving preview, one insertion candidate, and the two main-list add-favorite entries used as drop destinations |
 | Add entries | Absent | Both main-list and trailing entries are present. A main-list entry can be selected and opens favorite multi-selection | The two main-list entries are drop destinations only and cannot be selected. Trailing entries and the bar add control stay absent |
 | Bottom bar | A collapsed bar stays collapsed. An empty bar stays absent | While the feature is on, the bar is shown expanded, including when it is empty | A collapsed bar, and an empty bar while the feature is on, are temporary drop destinations and then return to their previous presentation |
 | Selecting a favorite | Launches it | Does not launch it | Does not launch it |
-| Long-pressing a favorite | Release opens the action sheet. Movement beyond the touch slop enters one-shot operation | Starts movement and remains in edit mode | The operation has already begun |
+| Long-pressing a favorite | Opens the action sheet. Later movement does not reorder it | Starts movement and remains in edit mode | The operation has already begun |
 
 ## Home edit mode
 
@@ -306,9 +309,13 @@ Edit mode may be entered from the existing favorite action or through a basic-in
 
 The comparison of normal Home, edit mode, and one-shot operation is defined by [Home states](#home-states). One-shot operation is not edit mode. The Edit action on the application action sheet and a quick-action slot bound to `Edit mode` still enter edit mode. Movement that has already begun inside edit mode stays in edit mode.
 
-One-shot operation has two entries. Reordering begins on a fully presented favorite in normal Home. Adding begins when Drawer recognizes [drag-to-favorite](drawer.md#drag-to-favorite). Both use the same visible destinations and the same immediate return.
+One-shot operation has one entry. It begins when Drawer recognizes
+[drag-to-favorite](drawer.md#drag-to-favorite). A long press on a fully presented favorite in
+normal Home opens the application action sheet and cannot begin this operation.
 
-- Reordering can begin on a favorite in a module, a favorite on an expanded semi-hidden Home bottom app bar, or a favorite on a fixed bar. A collapsed bar cannot begin it. Movement before the long-press haptic still follows the existing list and Ribbon scrolling rules. After that haptic, movement beyond the platform touch slop begins the operation instead of opening the application action sheet.
+- A favorite in normal Home, including one in a module or on the Home bottom app bar, cannot
+  begin reordering. Movement before or after its long-press haptic follows the existing list
+  and Ribbon scrolling rules. It never lifts the favorite or opens one-shot operation.
 - The moving item lifts into a preview that keeps its source presentation. A Home favorite leaves its source layout, and the remaining favorites close the gap through the existing arrangement rules. A Drawer item keeps its source presentation until handoff. The operation shows only that preview and one insertion candidate. It does not show the edit-region background, a module header, a remove control, a trailing add-favorite entry, the bar's add control, a style affordance, or a module-reorder handle.
 - While the operation is active, the two main-list add-favorite entries appear after the last module as drop destinations. They disappear when the operation ends. They are not selectable and do not open Drawer favorite multi-selection. A release on one creates that entry's module type with the moving item as its first favorite, in one atomic save. If reordering empties the source module, removing that module belongs to the same save.
 - While the operation is active, a collapsed semi-hidden bar expands temporarily, and an empty
@@ -332,7 +339,7 @@ One-shot operation has two entries. Reordering begins on a fully presented favor
 - In normal mode, an upward gesture may begin on any Launcher4Max-managed Home element.
   Vertical movement gives the favorite main list first opportunity to scroll and suppresses
   the originating click or long press. After the long-press haptic on a fully presented
-  favorite, movement beyond the touch slop owns one-shot operation instead.
+  favorite does not own one-shot operation or reorder that favorite.
 - At the main-list end, remaining displacement from the same continuous upward gesture
   transfers to the Home-to-Drawer transition without a second gesture or discontinuity.
 - Ribbon-layout horizontal scrolling wins only after horizontal intent is established.
@@ -360,7 +367,7 @@ One-shot operation has two entries. Reordering begins on a fully presented favor
 - An open panel remains bound to its module identity and changes only through that module's style affordance or another module's style affordance. Module-style persistence is serialized as one complete state; unresolved saves temporarily block mutation without blocking scrolling, and failure restores the last durable style.
 - Application editing outside an open panel makes item selection inert, uses one separate remove target, and starts insertion movement by long-pressing the remainder of the complete item without a reorder handle. The open panel blocks those actions only inside its owning module. The same stable insertion-order model applies across single-column, multi-column, ribbon, and cross-module movement: the source leaves layout without a placeholder, candidates use the compacted arrangement, and only one candidate boundary appears. A temporarily application-empty source module retains only its existing add entry without becoming an insertion destination. Only a changed valid release commits; no-change, cancellation, interruption, and failure restore the applicable saved arrangement while preserving atomicity and identity uniqueness.
 - In normal Home, one-shot operation uses that same insertion model without entering edit mode.
-  It covers both reordering a presented favorite and receiving a Drawer drag-to-favorite. During
+  It receives only a Drawer drag-to-favorite and cannot begin from a Home long press. During
   the operation it exposes only the two main-list add-favorite entries, a temporarily expanded
   collapsed bar, and a temporarily shown empty bar while the feature is on. It hides every other
   editing affordance, hides module headers and trailing module add entries, and resolves a
