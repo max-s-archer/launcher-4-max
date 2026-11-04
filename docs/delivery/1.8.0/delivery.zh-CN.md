@@ -12,7 +12,7 @@
 
 `Author daily-use baseline`，定义见[发布治理](../../release.zh-CN.md)。本版本目标是在作者主设备上安装并验收。后续正式产物、tag 或 GitHub Release 不属于本版本，除非另行授权。
 
-版本标识在版本收尾时分配。本规划不授权任何 `versionName` 或 `versionCode`。
+配置的版本标识为 `versionName 1.8.0`、`versionCode 11`，于 2026-11-04 按下一个未使用的版本码分配。本次分配不记录已验收 APK、签名证据、tag 或发布。
 
 ## 产品引用
 
@@ -180,5 +180,6 @@ Agent 执行的 Gradle 构建、lint 与仪器测试：`Not run`。
 
 ## 完成结果
 
-1.8.0 版本尚未完成。截至 2026-11-04，迭代 35、36、37、38 和 39 均为 `Completed`，并已获作者验收。
-迭代 39 合入 `main` 与同步仍需单独授权。
+1.8.0 已于 2026-11-04 完成作者日用基线的源码边界。迭代 35、36、37、38 和 39 均为 `Completed`，
+并已获作者验收。配置标识为 `versionName 1.8.0`、`versionCode 11`。未记录已验收 APK、签名类别、
+tag 或发布。同步到指定共享 Git 历史仍需单独授权。

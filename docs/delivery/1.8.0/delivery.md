@@ -12,7 +12,7 @@
 
 `Author daily-use baseline`, as defined by [release governance](../../release.md). This version is intended to be installed and accepted by the author on the primary device. A future public artifact, tag, or GitHub Release is outside this version unless separately authorized.
 
-The version identity will be allocated at version closure. No `versionName` or `versionCode` is authorized by this planning record.
+The configured version identity is `versionName 1.8.0` and `versionCode 11`, allocated as the next unused code on 2026-11-04. No accepted APK, signing evidence, tag, or publication is recorded by this allocation.
 
 ## Product references
 
@@ -202,6 +202,8 @@ This version uses the `Author daily-use baseline` gates. The accepted APK must r
 
 ## Completion result
 
-Version 1.8.0 is not yet complete. As of 2026-11-04, Iterations 35, 36, 37, 38, and 39 are
-`Completed` and accepted by the author. Integration of iteration 39 into `main` and
-synchronization remain separately authorized.
+Version 1.8.0 is complete as an author daily-use source boundary on 2026-11-04. Iterations
+35, 36, 37, 38, and 39 are `Completed` and accepted by the author. The configured identity is
+`versionName 1.8.0` and `versionCode 11`. No accepted APK, signing category, tag, or
+publication is recorded. Synchronization to the designated shared Git history remains
+separately authorized.

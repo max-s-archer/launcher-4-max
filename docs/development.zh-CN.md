@@ -20,7 +20,7 @@
 - main 与仪器测试的 Kotlin 包使用 `com.maxarcher.launcher`。
 - 默认测试 namespace 与测试 APK 标识为 `com.maxarcher.launcher.test`。
 - 替换旧应用标识的安装前，请阅读[发布迁移说明](release.zh-CN.md#应用标识迁移)。
-- 当前配置版本标识：`versionName 1.7.2`、配置的 `versionCode 10`；`1.7.0` 已在[交付记录](delivery/1.7.0/delivery.zh-CN.md)中关闭。
+- 当前配置版本标识：`versionName 1.8.0`、配置的 `versionCode 11`；`1.8.0` 已在[交付记录](delivery/1.8.0/delivery.zh-CN.md)中关闭。
 - 依赖仓库当前使用阿里云镜像。`settings.gradle.kts` 保留了被注释的官方上游替代配置，供有意识地手动切换。
 
 这些值是当前仓库配置，不表示每台主机都已具备匹配的 JDK、Android SDK、模拟器、设备连接、凭据或依赖缓存。

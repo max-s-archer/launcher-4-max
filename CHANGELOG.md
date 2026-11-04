@@ -6,6 +6,17 @@ Launcher4Max was named Avenor Launcher before `1.7.0`. Versions `1.0.0` through 
 
 ## Unreleased
 
+## 1.8.0 — 2026-11-04
+
+[Delivery record](docs/delivery/1.8.0/delivery.md)
+
+- Configure the application icon shape and apply it consistently in Home and Drawer.
+- Add the Home bottom app bar, with fixed and semi-hidden presentation.
+- Revise Home edit mode, including module controls, movement, and favorite editing.
+- Place favorites through the accepted ribbon and Flow layouts.
+- Show one list-level Home favorite loading state, and end it when the first inventory read fails.
+- Clip a collapsed semi-hidden bottom bar to its upper `16dp`, resize the favorite list with it, and use an `8dp` bottom margin.
+
 ### 1.7.2
 
 - Restore click, long-press, and drag actions on Drawer search results when the alphabet
