@@ -57,7 +57,7 @@
 | [迭代 36：Home 底部应用栏](iteration-36-home-bottom-app-bar.zh-CN.md) | `Completed` | 2026-10-20 | 作者已验收应用栏实现。 |
 | [迭代 37：Home 编辑模式交互](iteration-37-home-edit-mode-interaction.zh-CN.md) | `Completed` | 2026-10-26 | 作者确认主设备验收通过，达到日常使用标准，并接受历史问题不阻塞完成。 |
 | [迭代 38：Home 收藏放置与布局](iteration-38-home-favorite-placement-layout.zh-CN.md) | `Completed` | 2026-11-03 | 作者已在主设备验收通过本迭代当前范围。 |
-| [迭代 39：Home 加载与收尾](iteration-39-home-loading-closure.zh-CN.md) | `In Progress` | 2026-11-04 | 作者已授权 Home 加载修正。 |
+| [迭代 39：Home 加载与收尾](iteration-39-home-loading-closure.zh-CN.md) | `Completed` | 2026-11-04 | 作者已在主设备验收通过本迭代当前范围。 |
 
 ## 迭代证据与结果
 
@@ -136,7 +136,19 @@ Agent 执行的 Gradle 构建、lint 与仪器测试仍为 `Not run`。
 
 ### 迭代 39：Home 加载与收尾
 
-[契约](iteration-39-home-loading-closure.zh-CN.md)。状态：`In Progress`。作者于 2026-11-04 授权 Home 加载修正。实现证据尚未记录。后续责任人：项目作者。最终作者决定：尚不适用。
+[契约](iteration-39-home-loading-closure.zh-CN.md)。状态：`Completed`。
+作者于 2026-11-04 授权 Home 加载修正。
+`85ff856` 显示一个列表级收藏加载状态，并在首次库存读取失败时结束该状态。
+`b8c0826` 把收起的半隐藏底部应用栏裁切到上方 `16dp`，收藏列表随该高度加长和缩短，
+并把应用栏底部外边距改为 `8dp`。
+作者报告这两项改动的真机验收：2026-11-04 `Passed`。
+作者随后于 2026-11-04 验收当前其余行为：收藏不可读时显示错误和 Retry，并与有效空状态区分；
+刷新失败或不确定读取不删除收藏；从普通应用返回不出现错误的 Home Loading；刷新、Back、
+进程重建和状态恢复保持已验收状态。作者报告的真机验收：`Passed`。
+Agent 执行的 `git diff --check` 与新增 Kotlin 行长检查：`Passed`。
+Agent 执行的 Gradle 构建、lint 与仪器测试：`Not run`。
+作者最终决定：于 2026-11-04 关闭迭代 39。后续责任人：不适用。
+合入 `main` 与同步仍需单独授权。
 
 ## 依赖与顺序
 
@@ -168,5 +180,5 @@ Agent 执行的 Gradle 构建、lint 与仪器测试仍为 `Not run`。
 
 ## 完成结果
 
-1.8.0 版本尚未完成。截至 2026-11-04，迭代 35、36、37 和 38 均为 `Completed`，并已获作者验收。
-迭代 39 为 `In Progress`。
+1.8.0 版本尚未完成。截至 2026-11-04，迭代 35、36、37、38 和 39 均为 `Completed`，并已获作者验收。
+迭代 39 合入 `main` 与同步仍需单独授权。
