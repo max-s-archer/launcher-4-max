@@ -180,6 +180,4 @@ Agent 执行的 Gradle 构建、lint 与仪器测试：`Not run`。
 
 ## 完成结果
 
-1.8.0 已于 2026-11-04 完成作者日用基线的源码边界。迭代 35、36、37、38 和 39 均为 `Completed`，
-并已获作者验收。配置标识为 `versionName 1.8.0`、`versionCode 11`。未记录已验收 APK、签名类别、
-tag 或发布。同步到指定共享 Git 历史仍需单独授权。
+1.8.0 已于 2026-11-04 完成作者日常使用基线。迭代 35、36、37、38 和 39 均为 `Completed`，并已获作者验收。已验收的 release APK 于 2026-11-04 19:55:37 +0800 在本地生成，对应源提交 `b8eea5557786cce5fb2bc9874e887f76f64354b9`。其身份为 `com.maxarcher.launcher`、`versionName 1.8.0`、`versionCode 11`。签名类别为 release，证书 SHA-256 为 `68577525f59cb5482e1cbbf9951faeb37cafe3512a782d5a8bcb9a65179552af`。APK SHA-256 为 `7e74110e33f2b8bb887f0276db85f0ff07346d4d925b72b671a9473c07e56eac`。作者报告该 release APK 的本地安装与验证为 `Passed`。APK 保留在 Git 之外。tag、GitHub Release、上传和发布仍需单独授权。
