@@ -57,7 +57,7 @@ Primary risks are interaction overlap between the bottom app bar and edit mode, 
 | [Iteration 36: Home Bottom App Bar](iteration-36-home-bottom-app-bar.md) | `Completed` | 2026-10-20 | The author accepted the bar implementation. |
 | [Iteration 37: Home Edit Mode Interaction](iteration-37-home-edit-mode-interaction.md) | `Completed` | 2026-10-26 | The author accepted primary-device use at the daily-use baseline and accepted the legacy issue as non-blocking. |
 | [Iteration 38: Home Favorite Placement and Layout](iteration-38-home-favorite-placement-layout.md) | `Completed` | 2026-11-03 | The author accepted the current iteration scope on the primary device. |
-| [Iteration 39: Home Loading and Closure](iteration-39-home-loading-closure.md) | `Planned` | 2026-10-14 | The author requested a final iteration for Home loading and small defined-scope issues. |
+| [Iteration 39: Home Loading and Closure](iteration-39-home-loading-closure.md) | `In Progress` | 2026-11-04 | The author authorized the Home loading correction. |
 
 ## Iteration evidence and results
 
@@ -153,7 +153,7 @@ Final author decision: close iteration 38 on 2026-11-03. Follow-up owner: not ap
 
 ### Iteration 39: Home Loading and Closure
 
-[Contract](iteration-39-home-loading-closure.md). Status: `Planned`. No implementation evidence exists yet. Follow-up owner: project author. Final author decision: not applicable yet.
+[Contract](iteration-39-home-loading-closure.md). Status: `In Progress`. The author authorized the Home loading correction on 2026-11-04. Implementation evidence is not yet recorded. Follow-up owner: project author. Final author decision: not applicable yet.
 
 ## Dependencies and sequence
 
@@ -187,5 +187,5 @@ This version uses the `Author daily-use baseline` gates. The accepted APK must r
 
 ## Completion result
 
-Version 1.8.0 is not yet complete. As of 2026-11-03, Iterations 35, 36, 37, and 38 are
-`Completed` and accepted by the author. Iteration 39 remains `Planned`.
+Version 1.8.0 is not yet complete. As of 2026-11-04, Iterations 35, 36, 37, and 38 are
+`Completed` and accepted by the author. Iteration 39 is `In Progress`.

@@ -1305,6 +1305,8 @@ internal fun Launcher4MaxApp(
                 onDrawerDragCommit = homeCoordinator::commitDrawerDrop,
                 onDrawerDragJourneyFinished = homeCoordinator::finishDrawerDrag,
                 oneShotActive = homeCoordinator.oneShotActive,
+                inventoryLoading = inventoryState !is LaunchableInventoryState.Error &&
+                    favoriteAvailability.keys.containsAll(favoriteMembership.orEmpty()).not(),
                 favoriteAvailability = favoriteAvailability,
                 editMode = homeCoordinator.editMode,
                 openStyleModuleId = homeCoordinator.openStyleModuleId,

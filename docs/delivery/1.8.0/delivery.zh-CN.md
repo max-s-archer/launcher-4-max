@@ -57,7 +57,7 @@
 | [迭代 36：Home 底部应用栏](iteration-36-home-bottom-app-bar.zh-CN.md) | `Completed` | 2026-10-20 | 作者已验收应用栏实现。 |
 | [迭代 37：Home 编辑模式交互](iteration-37-home-edit-mode-interaction.zh-CN.md) | `Completed` | 2026-10-26 | 作者确认主设备验收通过，达到日常使用标准，并接受历史问题不阻塞完成。 |
 | [迭代 38：Home 收藏放置与布局](iteration-38-home-favorite-placement-layout.zh-CN.md) | `Completed` | 2026-11-03 | 作者已在主设备验收通过本迭代当前范围。 |
-| [迭代 39：Home 加载与收尾](iteration-39-home-loading-closure.zh-CN.md) | `Planned` | 2026-10-14 | 作者要求最后一个迭代处理 Home 加载与小范围已定义问题。 |
+| [迭代 39：Home 加载与收尾](iteration-39-home-loading-closure.zh-CN.md) | `In Progress` | 2026-11-04 | 作者已授权 Home 加载修正。 |
 
 ## 迭代证据与结果
 
@@ -136,7 +136,7 @@ Agent 执行的 Gradle 构建、lint 与仪器测试仍为 `Not run`。
 
 ### 迭代 39：Home 加载与收尾
 
-[契约](iteration-39-home-loading-closure.zh-CN.md)。状态：`Planned`。尚无实现证据。后续责任人：项目作者。最终作者决定：尚不适用。
+[契约](iteration-39-home-loading-closure.zh-CN.md)。状态：`In Progress`。作者于 2026-11-04 授权 Home 加载修正。实现证据尚未记录。后续责任人：项目作者。最终作者决定：尚不适用。
 
 ## 依赖与顺序
 
@@ -168,5 +168,5 @@ Agent 执行的 Gradle 构建、lint 与仪器测试仍为 `Not run`。
 
 ## 完成结果
 
-1.8.0 版本尚未完成。截至 2026-11-03，迭代 35、36、37 和 38 均为 `Completed`，并已获作者验收。
-迭代 39 仍为 `Planned`。
+1.8.0 版本尚未完成。截至 2026-11-04，迭代 35、36、37 和 38 均为 `Completed`，并已获作者验收。
+迭代 39 为 `In Progress`。

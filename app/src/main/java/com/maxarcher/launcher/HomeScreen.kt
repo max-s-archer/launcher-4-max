@@ -73,6 +73,7 @@ import kotlinx.coroutines.delay
 internal fun HomeScreen(
     favoriteState: FavoriteReadState = FavoriteReadState.Readable(emptyList()),
     favoriteAvailability: Map<LaunchableIdentity, FavoriteAvailability> = emptyMap(),
+    inventoryLoading: Boolean = false,
     favoriteListState: LazyListState = rememberLazyListState(),
     favoriteNestedScrollConnection: NestedScrollConnection? = null,
     editMode: Boolean = false,
@@ -265,10 +266,13 @@ internal fun HomeScreen(
         val persistedBar = (favoriteState as? FavoriteReadState.Readable)
             ?.orderedAggregate
             ?.homeBottomAppBar
-        val barVisible = persistedBar?.enabled == true &&
+        val homeFavoritesLoading = favoriteState is FavoriteReadState.Loading ||
+            (favoriteState is FavoriteReadState.Readable && inventoryLoading)
+        val barVisible = !homeFavoritesLoading &&
+            persistedBar?.enabled == true &&
             (editMode || oneShotActive || persistedBar.identities.isNotEmpty())
         Column(modifier = Modifier.fillMaxSize()) {
-            // The basic-information region stays visible in edit mode; edit mode adds no dock.
+            // The basic-information region stays visible while favorites load.
             HomeBasicInformation(
                 editMode = editMode,
                 accessibilityLockController = accessibilityLockController,
@@ -322,20 +326,25 @@ internal fun HomeScreen(
                         )
                     }),
             ) {
-                when (favoriteState) {
-                    FavoriteReadState.Loading -> HomeFavoriteMessage(
-                        message = stringResource(R.string.loading_favorites),
-                        showProgress = true,
-                        onRetry = null,
-                    )
+                when {
+                    homeFavoritesLoading -> Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        HomeFavoriteMessage(
+                            message = stringResource(R.string.loading_favorites),
+                            showProgress = true,
+                            onRetry = null,
+                        )
+                    }
 
-                    FavoriteReadState.ReadFailure -> HomeFavoriteMessage(
+                    favoriteState is FavoriteReadState.ReadFailure -> HomeFavoriteMessage(
                         message = stringResource(R.string.unable_to_load_favorites),
                         showProgress = false,
                         onRetry = onRetryFavorites,
                     )
 
-                    is FavoriteReadState.Readable -> {
+                    favoriteState is FavoriteReadState.Readable -> {
                         val orderedModules = favoriteState.orderedModules
                         val hasFavorites = orderedModules?.isNotEmpty()
                             ?: favoriteState.aggregate.identities.isNotEmpty()
