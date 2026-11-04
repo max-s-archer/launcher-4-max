@@ -138,8 +138,14 @@ resource XML parsing, bilingual string-key consistency, and added string referen
 The flow layout slice adds the wrapped multi-row rendering, mode-routed insertion geometry,
 item insets, row spacing, and flow geometry regression tests. The author reported the flow
 spacing acceptance as `Passed` on 2026-10-30.
-Agent-run Gradle build, lint, and instrumented tests: `Not run`. One-shot placement remains
-unimplemented; selecting Flow now renders the wrapped layout.
+On 2026-11-03 the author removed normal-Home long-press reordering from this iteration in
+`1af7bef`; one-shot placement remains only the Drawer drag-to-favorite entry.
+Agent-run Gradle build, lint, and instrumented tests: `Not run`. Selecting Flow now renders
+the wrapped layout. Drawer drag-to-favorite is the only one-shot entry: it shows temporary
+drop destinations without entering edit mode, and cancellation, Back, or an external
+interruption restores normal Home without persisting an unpublished drop. The author
+reported device acceptance of this slice as `Passed` on 2026-11-03. The interruption and
+Back corrections that followed that observation are not yet covered by a new device check.
 Follow-up owner: project author. Final author decision: not applicable yet.
 
 ### Iteration 39: Home Loading and Closure
