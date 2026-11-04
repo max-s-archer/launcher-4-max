@@ -10,6 +10,11 @@ internal data class ApplicationInsertion(
     val clipBounds: Rect,
 )
 
+/** Ribbon mode stays one horizontal row; Flow mode uses the wrapped multi-row geometry. */
+internal fun OrderedFavoriteModule.usesRibbonLayout(): Boolean =
+    type == OrderedFavoriteModuleType.Ribbon &&
+        displayMode == OrderedFavoriteDisplayMode.Ribbon
+
 /** Real-cell hit regions resolve to item edges for vertical layouts and shared gap axes for ribbons. */
 internal fun resolveApplicationInsertion(
     module: OrderedFavoriteModule,
@@ -29,10 +34,13 @@ internal fun resolveApplicationInsertion(
         transform = { index, identity -> itemBounds[identity]?.let(block = { index to it }) },
     )
     if (cells.isEmpty()) return null
-    val horizontal = module.type == OrderedFavoriteModuleType.Ribbon || module.itemsPerRow > 1
+    val ribbonLayout = module.usesRibbonLayout()
+    val flowLayout = module.type == OrderedFavoriteModuleType.Ribbon &&
+        module.displayMode == OrderedFavoriteDisplayMode.Flow
+    val horizontal = ribbonLayout || flowLayout || module.itemsPerRow > 1
 
     fun edge(cell: Pair<Int, Rect>, after: Boolean): ApplicationInsertion? =
-        if (module.type == OrderedFavoriteModuleType.Ribbon) {
+        if (ribbonLayout) {
             ribbonApplicationInsertion(
                 identities = identities, boundary = cell.first + if (after) 1 else 0,
                 itemBounds = itemBounds, addBounds = addBounds, clip = clip,
@@ -49,10 +57,11 @@ internal fun resolveApplicationInsertion(
         )
     }
 
-    val rows = if (module.type == OrderedFavoriteModuleType.Ribbon) {
-        listOf(element = cells)
-    } else {
-        cells.groupBy(keySelector = { it.first / module.itemsPerRow }).values.toList()
+    val rows = when {
+        ribbonLayout -> listOf(element = cells)
+        // A flow ribbon wraps by its current visible geometry, not a fixed column count.
+        flowLayout -> cells.groupBy(keySelector = { it.second.top }).values.toList()
+        else -> cells.groupBy(keySelector = { it.first / module.itemsPerRow }).values.toList()
     }
     val sameRow = rows.firstOrNull(
         predicate = { row -> pointer.y >= row.first().second.top && pointer.y <= row.first().second.bottom },
@@ -155,13 +164,18 @@ internal fun resolveApplicationDestination(
     val bounds = itemBounds[identities[index]] ?: return null
     val clip = viewport.intersect(other = moduleBounds.getValue(key = module.id))
     if (clip.isEmpty) return null
-    val insertion = if (module.type == OrderedFavoriteModuleType.Ribbon) {
+    val insertion = if (module.usesRibbonLayout()) {
         ribbonApplicationInsertion(
             identities = identities, boundary = if (beforeNext) 0 else identities.size,
             itemBounds = itemBounds, addBounds = addBounds[module.id], clip = clip,
         )
     } else {
-        applicationInsertionEdge(cell = index to bounds, after = !beforeNext, horizontal = module.itemsPerRow > 1, clip = clip)
+        applicationInsertionEdge(
+            cell = index to bounds,
+            after = !beforeNext,
+            horizontal = module.type == OrderedFavoriteModuleType.Ribbon || module.itemsPerRow > 1,
+            clip = clip,
+        )
     } ?: return null
     return module to insertion
 }

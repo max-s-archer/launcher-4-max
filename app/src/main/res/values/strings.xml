@@ -88,7 +88,9 @@
     <string name="drawer_selection_create_favorite_bar">Create ribbon</string>
     <string name="home_expand_style_panel">Expand module style panel</string>
     <string name="home_collapse_style_panel">Collapse module style panel</string>
-    <string name="home_ribbon_fixed_style">Favorite ribbons use a fixed style</string>
+    <string name="home_ribbon_display_mode">Display mode</string>
+    <string name="home_ribbon_display_mode_ribbon">Ribbon</string>
+    <string name="home_ribbon_display_mode_flow">Flow</string>
     <string name="home_add_favorite_list">Add favorite list</string>
     <string name="home_add_favorite_ribbon">Add favorite ribbon</string>
     <string name="home_module_default_name_list">Favorite list</string>

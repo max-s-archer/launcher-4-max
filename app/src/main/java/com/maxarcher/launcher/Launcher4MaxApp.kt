@@ -629,6 +629,8 @@ internal fun Launcher4MaxApp(
         settingsOpen = false
         settingsPage = SettingsPage.Root
         homeCoordinator.dismissEditMode()
+        // System Home cancels an unpublished one-shot drop before it can persist.
+        homeCoordinator.endOneShot()
         homeCoordinator.clearEditSelection()
         if (!favoriteSelectionSaving) {
             favoriteAddTarget = null
@@ -931,6 +933,8 @@ internal fun Launcher4MaxApp(
                     wasPaused = true
                     favoriteEditor.invalidateUndo()
                     homeCoordinator.dismissEditMode()
+                    // An external interruption cancels the unpublished one-shot operation.
+                    homeCoordinator.endOneShot()
                 }
                 Lifecycle.Event.ON_RESUME -> {
                     val isDefaultHome = currentSettingsPlatform.isDefaultHome()
@@ -985,6 +989,8 @@ internal fun Launcher4MaxApp(
             if (!windowInfo.isWindowFocused && selectedEntry == null) {
                 favoriteEditor.invalidateUndo()
                 homeCoordinator.dismissEditMode()
+                // A system overlay is not part of the one-shot journey.
+                homeCoordinator.endOneShot()
             }
         },
     )
@@ -994,6 +1000,10 @@ internal fun Launcher4MaxApp(
             (settledSurface != AppSurface.Home && !favoriteSelectionJourneyActive)
         ) {
             favoriteEditor.invalidateUndo()
+        }
+        if (settledSurface == AppSurface.Drawer) {
+            // Opening the Drawer abandons the one-shot journey and its root preview.
+            homeCoordinator.endOneShot()
         }
         if (settledSurface == AppSurface.Home && favoriteAddTarget == null) {
             favoriteSelectionJourneyActive = false
@@ -1294,6 +1304,7 @@ internal fun Launcher4MaxApp(
                 drawerDragDropping = homeCoordinator.drawerDragDropping,
                 onDrawerDragCommit = homeCoordinator::commitDrawerDrop,
                 onDrawerDragJourneyFinished = homeCoordinator::finishDrawerDrag,
+                oneShotActive = homeCoordinator.oneShotActive,
                 favoriteAvailability = favoriteAvailability,
                 editMode = homeCoordinator.editMode,
                 openStyleModuleId = homeCoordinator.openStyleModuleId,

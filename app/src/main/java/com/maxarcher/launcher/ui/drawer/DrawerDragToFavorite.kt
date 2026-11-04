@@ -71,7 +71,7 @@ internal sealed interface DrawerDragDrop {
 
     data class Creation(val moduleType: OrderedFavoriteModuleType) : DrawerDragDrop
 
-    data class HomeBottomAppBar(val boundary: Int) : DrawerDragDrop
+    data class HomeBottomAppBar(val boundary: Int, val capacity: Int) : DrawerDragDrop
 }
 
 /**

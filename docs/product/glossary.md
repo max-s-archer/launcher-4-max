@@ -21,7 +21,7 @@
 | Add-favorite entry | 新增收藏入口 | A non-persisted favorite-main-list or in-module entry whose position alone determines whether it creates a module or adds to an existing one; edit mode shows both kinds, while one-shot operation temporarily shows only the two main-list entries |
 | Module header | 模块表头 | The row above a favorite module that shows its name when name visibility is on; in edit mode it holds the editable name, visibility affordance, style affordance, whole-module unfavorite action, and module-reorder handle |
 | Edit mode | 编辑模式 | The Home state entered from a favorite action or a basic-information quick-action slot bound to edit mode, exposing every editing affordance and leaving only through Back or interruption |
-| One-shot operation | 一次操作模式 | The temporary Home state for one favorite placement, entered by reordering a presented favorite or by receiving a Drawer drag-to-favorite; it shows only the destinations needed for that placement and returns to normal Home when the operation ends |
+| One-shot operation | 一次操作模式 | The temporary Home state for one favorite placement, entered only by receiving a Drawer drag-to-favorite; it shows only the destinations needed for that placement and returns to normal Home when the operation ends |
 | Style settings panel | 样式设置面板 | The shared rounded settings-panel presentation used by Drawer display settings and the Home module-style editor; each host separately defines its content, modality, placement, and behavior |
 | Application shortcut | 应用快捷操作 | An action exposed by the application through the platform |
 | Launcher action | 启动器操作 | An action supplied by Launcher4Max, such as favorite, edit, or uninstall |

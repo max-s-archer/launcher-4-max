@@ -90,6 +90,7 @@ import com.maxarcher.launcher.ui.home.components.HomeMainListAddFavoriteEntry
 import com.maxarcher.launcher.ui.home.components.detectHomeApplicationMovement
 import com.maxarcher.launcher.ui.home.components.homeFavoriteEnter
 import com.maxarcher.launcher.ui.drawer.drawerForegroundShadow
+import com.maxarcher.launcher.usesRibbonLayout
 import kotlin.math.roundToInt
 
 @Composable
@@ -391,7 +392,8 @@ internal fun HomeOrderedModuleComposition(
                         }
                     },
             ) {
-                val ribbonListState = if (module.type == OrderedFavoriteModuleType.Ribbon) {
+                // Only the horizontal ribbon layout owns a per-ribbon scroll position.
+                val ribbonListState = if (module.usesRibbonLayout()) {
                     ribbonListStates.getOrPut(module.id) { LazyListState() }
                 } else {
                     null

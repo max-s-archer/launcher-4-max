@@ -15,6 +15,46 @@ import com.maxarcher.launcher.ui.drawer.DrawerSectionAnchorPresentation
 
 class SettingsBackupJsonTest {
     @Test
+    fun displayModesRoundTripWithoutChangingOtherFavoriteFields() {
+        OrderedFavoriteDisplayMode.entries.forEach { mode ->
+            val aggregate = testAggregate().let { initial ->
+                initial.copy(
+                    modules = initial.modules.map {
+                        if (it.type == OrderedFavoriteModuleType.Ribbon) {
+                            it.copy(displayMode = mode)
+                        } else {
+                            it
+                        }
+                    },
+                )
+            }
+            val document = SettingsBackupJson.serialize(aggregate, testSettings())
+            assertEquals(8, JSONObject(document).getInt("schemaVersion"))
+            assertEquals(aggregate, SettingsBackupJson.parse(document)?.aggregate)
+        }
+    }
+
+    @Test
+    fun missingDisplayModeDefaultsToRibbonForEverySupportedBackupSchema() {
+        for (schema in 1..SettingsBackupJson.BACKUP_SCHEMA_VERSION) {
+            val document = validBackupDocument().put("schemaVersion", schema)
+            val modules = document.getJSONObject("favorites").getJSONArray("modules")
+            repeat(modules.length()) { modules.getJSONObject(it).remove("displayMode") }
+            assertEquals(testAggregate(), SettingsBackupJson.parse(document.toString())?.aggregate)
+        }
+    }
+
+    @Test
+    fun invalidPresentDisplayModeRejectsTheBackup() {
+        listOf(JSONObject.NULL, "", "grid", 1, true, JSONObject()).forEach { invalid ->
+            val document = validBackupDocument()
+            document.getJSONObject("favorites").getJSONArray("modules")
+                .getJSONObject(0).put("displayMode", invalid)
+            assertNull(SettingsBackupJson.parse(document.toString()))
+        }
+    }
+
+    @Test
     fun roundTripPreservesSavedShapeInBothModes() {
         IconShapeClipMode.entries.forEach { mode ->
             listOf(0, 37, 100).forEach { clip ->

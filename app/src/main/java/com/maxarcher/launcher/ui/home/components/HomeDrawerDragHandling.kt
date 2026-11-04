@@ -20,6 +20,7 @@ internal fun HomeDrawerDragHandling(
     touchInWindow: Offset,
     dropping: Boolean,
     editMode: Boolean,
+    oneShotActive: Boolean,
     openStyleModuleId: String?,
     favoriteState: FavoriteReadState,
     favoriteAvailability: Map<LaunchableIdentity, FavoriteAvailability>,
@@ -40,29 +41,51 @@ internal fun HomeDrawerDragHandling(
     LaunchedEffect(dropping) {
         if (!dropping) return@LaunchedEffect
         val activeJourney = journey ?: return@LaunchedEffect
+        if (!oneShotActive) {
+            movement.cancel()
+            onFinished(false, true)
+            return@LaunchedEffect
+        }
         val drop = movement.finishExternalJourney()
         // An invalid release (no drop target) resolves as a cancellation, not as a
         // save failure; only a resolved drop that fails to persist reports failure.
         val saved = drop != null && onCommit(activeJourney.entry.identity, drop)
         onFinished(saved, drop == null)
     }
-    BackHandler(enabled = editMode && movement.isDragging, onBack = {
-        if (movement.session?.module?.id == EXTERNAL_JOURNEY_MODULE_ID) {
-            // Back during the Drawer journey is a cancellation: end the whole journey
-            // without a mutation and without the save-failure feedback path.
+    BackHandler(
+        enabled = (editMode || oneShotActive) && movement.isDragging,
+        onBack = {
+            val externalJourney = movement.session?.module?.id == EXTERNAL_JOURNEY_MODULE_ID
             movement.cancel()
-            onFinished(false, true)
-        } else {
-            movement.cancel()
-        }
-    })
-    LaunchedEffect(editMode, openStyleModuleId, favoriteState, favoriteAvailability) {
+            if (externalJourney) {
+                // Back during the Drawer journey is a cancellation: end the whole journey
+                // without a mutation and without the save-failure feedback path.
+                onFinished(false, true)
+            }
+        },
+    )
+    LaunchedEffect(
+        editMode,
+        oneShotActive,
+        openStyleModuleId,
+        favoriteState,
+        favoriteAvailability,
+    ) {
         val session = movement.session ?: return@LaunchedEffect
+        val externalJourney = session.module.id == EXTERNAL_JOURNEY_MODULE_ID
+        if (externalJourney) {
+            // A finished save clears one-shot through recomposition. Only a journey
+            // that was removed before its drop may be cancelled here.
+            if (journey == null) {
+                movement.cancel()
+                onFinished(false, true)
+            }
+            return@LaunchedEffect
+        }
         val module = (favoriteState as? FavoriteReadState.Readable)?.orderedModules
             ?.firstOrNull(predicate = { it.id == session.module.id })
         val availability = favoriteAvailability[session.identity]
         val invalidSource = movement.isDragging &&
-            session.module.id != EXTERNAL_JOURNEY_MODULE_ID &&
             (module != session.module ||
                 (availability !is FavoriteAvailability.Available &&
                     availability !is FavoriteAvailability.Disabled))

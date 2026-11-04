@@ -216,7 +216,7 @@ internal class HomeApplicationMovement {
     fun visibleRibbonAt(pointer: Offset): Pair<String, Rect>? {
         return modules.firstNotNullOfOrNull(
             transform = { module ->
-                if (module.type != OrderedFavoriteModuleType.Ribbon) return@firstNotNullOfOrNull null
+                if (!module.usesRibbonLayout()) return@firstNotNullOfOrNull null
                 val bounds = moduleBounds[module.id]?.intersect(other = viewport) ?: return@firstNotNullOfOrNull null
                 (module.id to bounds).takeIf(predicate = {
                     !bounds.isEmpty && pointer.x in bounds.left..bounds.right && pointer.y in bounds.top..bounds.bottom
@@ -432,6 +432,7 @@ internal class HomeApplicationMovement {
             )
             resolved.barInsertion != null -> DrawerDragDrop.HomeBottomAppBar(
                 boundary = resolved.barInsertion.boundary,
+                capacity = barCapacity,
             )
             else -> null
         }

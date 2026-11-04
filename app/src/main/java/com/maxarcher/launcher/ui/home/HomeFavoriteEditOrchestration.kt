@@ -18,6 +18,7 @@ import com.maxarcher.launcher.HomeEditTransaction
 import com.maxarcher.launcher.LaunchableIdentity
 import com.maxarcher.launcher.ModuleDragSession
 import com.maxarcher.launcher.OrderedFavoriteAggregate
+import com.maxarcher.launcher.OrderedFavoriteDisplayMode
 import com.maxarcher.launcher.OrderedFavoriteModule
 import com.maxarcher.launcher.OrderedFavoriteModuleType
 import com.maxarcher.launcher.R
@@ -191,13 +192,30 @@ internal class HomeFavoriteEditOrchestration(
         moduleId: String,
         transform: (OrderedFavoriteModule) -> OrderedFavoriteModule,
     ) {
+        commitModuleStyle(moduleId, OrderedFavoriteModuleType.Vertical, transform)
+    }
+
+    fun commitHorizontalModuleDisplayMode(
+        moduleId: String,
+        displayMode: OrderedFavoriteDisplayMode,
+    ) {
+        commitModuleStyle(moduleId, OrderedFavoriteModuleType.Ribbon) {
+            it.copy(displayMode = displayMode)
+        }
+    }
+
+    private fun commitModuleStyle(
+        moduleId: String,
+        moduleType: OrderedFavoriteModuleType,
+        transform: (OrderedFavoriteModule) -> OrderedFavoriteModule,
+    ) {
         if (editMutationJob?.isActive == true || applicationEditingSaving) return
         commitEditAggregate(
             transform = { aggregate ->
                 aggregate.copy(
                     modules = aggregate.modules.map { module ->
                         if (module.id == moduleId &&
-                            module.type == OrderedFavoriteModuleType.Vertical
+                            module.type == moduleType
                         ) transform(module) else module
                     },
                 )

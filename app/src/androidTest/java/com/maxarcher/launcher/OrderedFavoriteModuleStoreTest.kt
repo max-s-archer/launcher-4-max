@@ -176,6 +176,7 @@ class OrderedFavoriteModuleStoreTest {
                     type = OrderedFavoriteModuleType.Ribbon,
                     identities = listOf(second),
                     name = "Hidden name",
+                    displayMode = OrderedFavoriteDisplayMode.Flow,
                 ),
             ),
             homeBottomAppBar = HomeBottomAppBarState(
@@ -542,6 +543,99 @@ class OrderedFavoriteModuleStoreTest {
         val readable = adapter.state.value as FavoriteReadState.Readable
         assertEquals(identities.toSet(), readable.identities.toSet())
         assertEquals(identities.size, readable.identities.size)
+        file.delete()
+    }
+
+    @Test
+    fun earlierSchemasKeepRibbonModeAndPreserveTheStoredModule(): Unit = runBlocking {
+        for (schema in 1..5) {
+            val file = temporaryFile()
+            val identity = LaunchableIdentity(9, ComponentName("com.ribbon", "Main"))
+            DataOutputStream(file.outputStream()).use { output ->
+                output.writeInt(0x41464D31)
+                output.writeInt(schema)
+                output.writeInt(1)
+                output.writeUTF("ribbon")
+                output.writeInt(OrderedFavoriteModuleType.Ribbon.ordinal)
+                if (schema >= 2) {
+                    output.writeInt(FavoriteListSize.Medium.ordinal)
+                    if (schema >= 3) output.writeInt(FavoriteListSize.Medium.ordinal)
+                    output.writeInt(FavoriteNamePlacement.Right.ordinal)
+                    output.writeInt(1)
+                }
+                if (schema >= 5) {
+                    output.writeUTF("Saved name")
+                    output.writeBoolean(true)
+                }
+                output.writeInt(1)
+                output.writeLong(identity.profileSerialNumber)
+                output.writeUTF(identity.componentName.flattenToString())
+                if (schema >= 4) {
+                    output.writeBoolean(false)
+                    output.writeInt(HomeBottomAppBarPresentation.SemiHidden.ordinal)
+                    output.writeInt(FavoriteListSize.Medium.ordinal)
+                    output.writeInt(0)
+                }
+            }
+            val bytes = file.readBytes()
+            val store = OrderedFavoriteModuleStore(file)
+            store.load()
+            val expected = OrderedFavoriteAggregate(
+                modules = listOf(
+                    OrderedFavoriteModule(
+                        id = "ribbon",
+                        type = OrderedFavoriteModuleType.Ribbon,
+                        identities = listOf(identity),
+                        name = if (schema >= 5) "Saved name" else "",
+                        nameVisible = schema >= 5,
+                    ),
+                ),
+            )
+            assertEquals(OrderedFavoriteReadState.Readable(expected), store.state.value)
+            assertEquals(bytes.toList(), file.readBytes().toList())
+            val updated = expected.copy(
+                modules = expected.modules.map {
+                    it.copy(displayMode = OrderedFavoriteDisplayMode.Flow)
+                },
+            )
+            assertTrue(store.replaceAggregate(updated))
+            val reloaded = OrderedFavoriteModuleStore(file)
+            reloaded.load()
+            assertEquals(OrderedFavoriteReadState.Readable(updated), reloaded.state.value)
+            file.delete()
+        }
+    }
+
+    @Test
+    fun invalidStoredDisplayModePreservesTheUnreadableDocument(): Unit = runBlocking {
+        val file = temporaryFile()
+        DataOutputStream(file.outputStream()).use { output ->
+            output.writeInt(0x41464D31)
+            output.writeInt(6)
+            output.writeInt(1)
+            output.writeUTF("ribbon")
+            output.writeInt(OrderedFavoriteModuleType.Ribbon.ordinal)
+            output.writeInt(99)
+            output.writeInt(FavoriteListSize.Medium.ordinal)
+            output.writeInt(FavoriteListSize.Medium.ordinal)
+            output.writeInt(FavoriteNamePlacement.Right.ordinal)
+            output.writeInt(1)
+            output.writeUTF("")
+            output.writeBoolean(false)
+            output.writeInt(1)
+            output.writeLong(9)
+            output.writeUTF(ComponentName("com.ribbon", "Main").flattenToString())
+            output.writeBoolean(false)
+            output.writeInt(HomeBottomAppBarPresentation.SemiHidden.ordinal)
+            output.writeInt(FavoriteListSize.Medium.ordinal)
+            output.writeInt(0)
+        }
+        val bytes = file.readBytes()
+        val store = OrderedFavoriteModuleStore(file)
+        store.load()
+        assertEquals(OrderedFavoriteReadState.ReadFailure, store.state.value)
+        assertFalse(store.replaceAggregate(OrderedFavoriteAggregate()))
+        assertEquals(bytes.toList(), file.readBytes().toList())
         file.delete()
     }
 

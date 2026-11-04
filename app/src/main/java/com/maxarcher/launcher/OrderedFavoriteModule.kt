@@ -23,6 +23,11 @@ internal enum class OrderedFavoriteModuleType {
     Ribbon,
 }
 
+internal enum class OrderedFavoriteDisplayMode {
+    Ribbon,
+    Flow,
+}
+
 internal data class OrderedFavoriteModule(
     val id: String,
     val type: OrderedFavoriteModuleType,
@@ -34,6 +39,7 @@ internal data class OrderedFavoriteModule(
     /** The persisted module name. An empty name keeps the module unnamed. */
     val name: String = "",
     val nameVisible: Boolean = false,
+    val displayMode: OrderedFavoriteDisplayMode = OrderedFavoriteDisplayMode.Ribbon,
 ) {
     init {
         require(id.isNotBlank())
@@ -219,6 +225,14 @@ internal class OrderedFavoriteModuleStore private constructor(
                     val id = input.readUTF()
                     val type = OrderedFavoriteModuleType.values().getOrNull(input.readInt())
                         ?: throw IllegalArgumentException("Invalid ordered favorite module type")
+                    val displayMode = if (schemaVersion >= DISPLAY_MODE_SCHEMA_VERSION) {
+                        OrderedFavoriteDisplayMode.values().getOrNull(input.readInt())
+                            ?: throw IllegalArgumentException(
+                                "Invalid ordered favorite display mode",
+                            )
+                    } else {
+                        OrderedFavoriteDisplayMode.Ribbon
+                    }
                     val legacyApplicationSize = if (
                         schemaVersion in STYLE_SCHEMA_VERSION until INDEPENDENT_SIZE_SCHEMA_VERSION
                     ) {
@@ -267,6 +281,7 @@ internal class OrderedFavoriteModuleStore private constructor(
                         OrderedFavoriteModule(
                             id = id,
                             type = type,
+                            displayMode = displayMode,
                             iconSize = iconSize,
                             textSize = textSize,
                             namePlacement = namePlacement,
@@ -341,6 +356,7 @@ internal class OrderedFavoriteModuleStore private constructor(
             aggregate.modules.forEach { module ->
                 data.writeUTF(module.id)
                 data.writeInt(module.type.ordinal)
+                data.writeInt(module.displayMode.ordinal)
                 data.writeInt(module.iconSize.ordinal)
                 data.writeInt(module.textSize.ordinal)
                 data.writeInt(module.namePlacement.ordinal)
@@ -379,7 +395,8 @@ internal class OrderedFavoriteModuleStore private constructor(
         const val INDEPENDENT_SIZE_SCHEMA_VERSION = 3
         const val HOME_BOTTOM_APP_BAR_SCHEMA_VERSION = 4
         const val MODULE_NAME_SCHEMA_VERSION = 5
-        const val SCHEMA_VERSION = MODULE_NAME_SCHEMA_VERSION
+        const val DISPLAY_MODE_SCHEMA_VERSION = 6
+        const val SCHEMA_VERSION = DISPLAY_MODE_SCHEMA_VERSION
         const val LEGACY_MAGIC = 0x4156454E
         const val LEGACY_SCHEMA_VERSION = 1
         const val LEGACY_COMPOSITION_SCHEMA_VERSION = 2

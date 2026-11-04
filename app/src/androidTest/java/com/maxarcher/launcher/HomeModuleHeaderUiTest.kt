@@ -12,7 +12,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -23,6 +25,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
@@ -229,6 +232,97 @@ class HomeModuleHeaderUiTest {
 
         composeRule.onNodeWithText(undoLabel).assertDoesNotExist()
         composeRule.onNodeWithTag("home_module_header_first").assertDoesNotExist()
+    }
+
+    @Test
+    fun displayModePreviewsDuringSaveAndPersistsOnlyItsOwningModuleStyle() {
+        val original = second.copy(name = "Saved ribbon", nameVisible = true)
+        val initial = aggregate(first, original)
+        var persisted = initial
+        var attempts = 0
+        val gate = CompletableDeferred<Unit>()
+        show(
+            initial,
+            openModuleId = { second.id },
+            onCommit = { transform ->
+                attempts++
+                gate.await()
+                transform(persisted).also { persisted = it }
+            },
+        )
+        composeRule.onNodeWithTag("home_ribbon_display_mode_1").performClick()
+        composeRule.onNodeWithTag("home_ribbon_display_mode_1").assertIsSelected()
+        composeRule.onNodeWithTag("home_ribbon_display_mode_0").assertIsNotEnabled().performClick()
+        composeRule.onNodeWithTag("home_module_remove_first").assertIsNotEnabled()
+        composeRule.runOnIdle {
+            assertEquals(initial, persisted)
+            assertEquals(1, attempts)
+            gate.complete(Unit)
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("home_ribbon_display_mode_1").assertIsSelected().assertIsEnabled()
+        composeRule.runOnIdle {
+            assertEquals(
+                aggregate(first, original.copy(displayMode = OrderedFavoriteDisplayMode.Flow)),
+                persisted,
+            )
+            assertEquals(1, attempts)
+        }
+    }
+
+    @Test
+    fun failedDisplayModeSaveRestoresTheSelectorAndAllowsExplicitRetry() {
+        val initial = aggregate(first, second)
+        var persisted = initial
+        var attempts = 0
+        show(
+            initial,
+            openModuleId = { second.id },
+            onCommit = { transform ->
+                attempts++
+                if (attempts == 1) null else transform(persisted).also { persisted = it }
+            },
+        )
+        composeRule.onNodeWithTag("home_ribbon_display_mode_1").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("home_ribbon_display_mode_0").assertIsSelected()
+        composeRule.onNodeWithTag("home_style_panel").assertIsDisplayed()
+        composeRule.runOnIdle {
+            assertEquals(initial, persisted)
+            assertEquals(1, attempts)
+        }
+        composeRule.onNodeWithTag("home_ribbon_display_mode_1").assertIsEnabled().performClick()
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertEquals(OrderedFavoriteDisplayMode.Flow, persisted.modules.last().displayMode)
+            assertEquals(2, attempts)
+        }
+    }
+
+    @Test
+    fun closingThePanelDuringDisplayModeSaveDoesNotReopenItOrCancelTheSave() {
+        val initial = aggregate(second)
+        var persisted = initial
+        var open by mutableStateOf<String?>(second.id)
+        val gate = CompletableDeferred<Unit>()
+        show(
+            initial,
+            openModuleId = { open },
+            onCommit = { transform ->
+                gate.await()
+                transform(persisted).also { persisted = it }
+            },
+        )
+        composeRule.onNodeWithTag("home_ribbon_display_mode_1").performClick()
+        composeRule.runOnIdle { open = null }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("home_style_panel").assertDoesNotExist()
+        composeRule.runOnIdle { gate.complete(Unit) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("home_style_panel").assertDoesNotExist()
+        composeRule.runOnIdle {
+            assertEquals(OrderedFavoriteDisplayMode.Flow, persisted.modules.single().displayMode)
+        }
     }
 
     private fun show(

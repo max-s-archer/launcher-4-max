@@ -4,7 +4,7 @@
 
 ## Objective
 
-Deliver the accepted Home favorite-placement journey and its existing Flow or ribbon layout rules without adding collapsed-list behavior.
+Deliver Drawer drag-to-favorite placement and the existing Flow or ribbon layout rules. A long press in normal Home opens the application action sheet and does not start one-shot reordering. Collapsed-list behavior remains excluded.
 
 ## Product and version references
 
@@ -15,11 +15,11 @@ Deliver the accepted Home favorite-placement journey and its existing Flow or ri
 
 ## Observable outcome
 
-The author can place an eligible application through the contracted Home placement journey and sees it inserted into the correct existing module position and layout without an implied collapse feature.
+The author can place an eligible Drawer application through drag-to-favorite and sees it inserted into the correct existing module position and layout. A long press on a presented Home favorite opens the application action sheet and does not reorder it. No collapse feature is implied.
 
 ## Included work
 
-- One-shot Home favorite placement and target-position resolution.
+- Drawer drag-to-favorite placement and target-position resolution.
 - Placement rules across the currently defined Home module arrangements.
 - Flow layout, ribbon wrapping or horizontal scrolling, and existing overflow behavior.
 - Integration with the edit-mode interaction from Iteration 37.
@@ -27,6 +27,7 @@ The author can place an eligible application through the contracted Home placeme
 
 ## Excluded work
 
+- One-shot reordering started by a long press and drag on a favorite in normal Home.
 - Module collapse and expansion or any collapsed-list target.
 - New module types, vertical favorites, desktop shortcuts, or new placement gestures.
 - Changes to the Drawer search-result fix already delivered in `a19eba4`.
@@ -53,7 +54,8 @@ Target resolution must remain deterministic across arrangements and must not con
 
 ## Acceptance criteria
 
-- Eligible applications are placed at the contract-defined target.
+- Eligible Drawer drag-to-favorite applications are placed at the contract-defined target.
+- A long press in normal Home opens the application action sheet and does not reorder the favorite.
 - Existing module order, Flow layout, ribbon wrapping, and scrolling rules remain correct.
 - Cancellation and invalid-target paths leave Home in a valid state.
 - Favorite persistence and backup/restore remain compatible.

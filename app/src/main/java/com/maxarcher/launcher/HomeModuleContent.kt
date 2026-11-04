@@ -13,6 +13,7 @@ import com.maxarcher.launcher.ui.home.components.HomeFavoriteGrid
 import com.maxarcher.launcher.ui.home.components.HomeFavoriteEnterBatch
 import com.maxarcher.launcher.ui.home.components.HomeFavoriteEnterKey
 import com.maxarcher.launcher.ui.home.components.homeFavoriteEnter
+import com.maxarcher.launcher.ui.home.components.HomeFavoriteFlowRibbon
 import com.maxarcher.launcher.ui.home.components.HomeFavoriteItemFrame
 import com.maxarcher.launcher.ui.home.components.HomeModuleAddFavoriteEntry
 import com.maxarcher.launcher.ui.home.components.HomeOrderedFavoriteRibbon
@@ -140,23 +141,43 @@ internal fun HomeOrderedModuleContent(
             )
         }
 
-        OrderedFavoriteModuleType.Ribbon -> {
-            HomeOrderedFavoriteRibbon(
-                enterBatch = enterBatch,
-                module = module,
-                availabilityByIdentity = availabilityByIdentity,
-                listState = requireNotNull(value = ribbonListState),
-                editMode = editMode,
-                showAddEntry = showAddEntry,
-                addEntryEnabled = addEntryEnabled,
-                onAddToModule = onAddToModule,
-                onLaunchFavorite = onLaunchFavorite,
-                onLongPressFavorite = onLongPressFavorite,
-                applicationEditing = applicationEditing,
-                applicationMutationEnabled = applicationMutationEnabled,
-                onRemoveFavorite = onRemoveFavorite,
-                applicationMovement = applicationMovement,
-            )
+        OrderedFavoriteModuleType.Ribbon -> when {
+            module.usesRibbonLayout() -> {
+                HomeOrderedFavoriteRibbon(
+                    enterBatch = enterBatch,
+                    module = module,
+                    availabilityByIdentity = availabilityByIdentity,
+                    listState = requireNotNull(value = ribbonListState),
+                    editMode = editMode,
+                    showAddEntry = showAddEntry,
+                    addEntryEnabled = addEntryEnabled,
+                    onAddToModule = onAddToModule,
+                    onLaunchFavorite = onLaunchFavorite,
+                    onLongPressFavorite = onLongPressFavorite,
+                    applicationEditing = applicationEditing,
+                    applicationMutationEnabled = applicationMutationEnabled,
+                    onRemoveFavorite = onRemoveFavorite,
+                    applicationMovement = applicationMovement,
+                )
+            }
+
+            else -> {
+                HomeFavoriteFlowRibbon(
+                    enterBatch = enterBatch,
+                    module = module,
+                    availabilityByIdentity = availabilityByIdentity,
+                    editMode = editMode,
+                    showAddEntry = showAddEntry,
+                    addEntryEnabled = addEntryEnabled,
+                    onAddToModule = onAddToModule,
+                    onLaunchFavorite = onLaunchFavorite,
+                    onLongPressFavorite = onLongPressFavorite,
+                    applicationEditing = applicationEditing,
+                    applicationMutationEnabled = applicationMutationEnabled,
+                    onRemoveFavorite = onRemoveFavorite,
+                    applicationMovement = applicationMovement,
+                )
+            }
         }
     }
 }

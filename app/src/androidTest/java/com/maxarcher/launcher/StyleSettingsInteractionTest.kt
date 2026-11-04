@@ -177,6 +177,7 @@ class StyleSettingsInteractionTest {
                     onCommitTextSize = { module = module.copy(textSize = it) },
                     onChangeNamePlacement = { module = module.copy(namePlacement = it) },
                     onChangeItemsPerRow = { module = module.copy(itemsPerRow = it) },
+                    onChangeDisplayMode = {},
                 )
             }
         }
@@ -190,6 +191,52 @@ class StyleSettingsInteractionTest {
             assertEquals(FavoriteNamePlacement.Below, module.namePlacement)
             assertEquals(3, module.itemsPerRow)
         }
+    }
+
+    @Test
+    fun ribbonPanelOnlyExposesDisplayModeAndHonorsTheSaveLock() {
+        var module by mutableStateOf(
+            OrderedFavoriteModule(
+                id = "ribbon",
+                type = OrderedFavoriteModuleType.Ribbon,
+                identities = listOf(LaunchableIdentity(0L, ComponentName("example", "Main"))),
+            ),
+        )
+        var enabled by mutableStateOf(true)
+        var changes = 0
+        composeRule.setContent {
+            Launcher4MaxTheme {
+                HomeModuleStylePanel(
+                    module = module,
+                    enabled = enabled,
+                    onPreviewSizes = { _, _ -> error("Unexpected vertical control") },
+                    onCommitIconSize = { error("Unexpected vertical control") },
+                    onCommitTextSize = { error("Unexpected vertical control") },
+                    onChangeNamePlacement = { error("Unexpected vertical control") },
+                    onChangeItemsPerRow = { error("Unexpected vertical control") },
+                    onChangeDisplayMode = {
+                        module = module.copy(displayMode = it)
+                        changes++
+                        enabled = false
+                    },
+                )
+            }
+        }
+        composeRule.onNodeWithTag("home_application_arrangement").assertDoesNotExist()
+        composeRule.onNodeWithTag("home_application_size_setting").assertDoesNotExist()
+        composeRule.onNodeWithTag("home_ribbon_display_mode_0").assertIsSelected()
+            .performClick()
+        composeRule.runOnIdle { assertEquals(0, changes) }
+        composeRule.onNodeWithTag("home_ribbon_display_mode_1")
+            .assertHeightIsEqualTo(40.dp).performClick().assertIsSelected()
+        composeRule.onNodeWithTag("home_ribbon_display_mode_0").assertIsNotEnabled().performClick()
+        composeRule.runOnIdle {
+            assertEquals(OrderedFavoriteDisplayMode.Flow, module.displayMode)
+            assertEquals(1, changes)
+            enabled = true
+        }
+        composeRule.onNodeWithTag("home_ribbon_display_mode_0").performClick().assertIsSelected()
+        composeRule.runOnIdle { assertEquals(2, changes) }
     }
 
     private fun finishSelectionAnimation() {

@@ -87,7 +87,9 @@
     <string name="drawer_selection_create_favorite_bar">创建条带</string>
     <string name="home_expand_style_panel">展开模块样式面板</string>
     <string name="home_collapse_style_panel">收起模块样式面板</string>
-    <string name="home_ribbon_fixed_style">收藏织带使用固定样式</string>
+    <string name="home_ribbon_display_mode">展示模式</string>
+    <string name="home_ribbon_display_mode_ribbon">织带</string>
+    <string name="home_ribbon_display_mode_flow">流式布局</string>
     <string name="home_add_favorite_list">新增收藏列表</string>
     <string name="home_add_favorite_ribbon">新增收藏织带</string>
     <string name="home_module_default_name_list">收藏列表</string>
