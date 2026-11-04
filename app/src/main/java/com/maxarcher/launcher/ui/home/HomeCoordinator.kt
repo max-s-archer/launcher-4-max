@@ -133,8 +133,9 @@ internal class HomeCoordinator(
     }
 
     fun endDrawerDrag(cancelled: Boolean) {
-        if (cancelled) {
+        if (cancelled || drawerDragJourney == null) {
             oneShotActive = false
+            drawerDragDropping = false
         } else {
             drawerDragDropping = true
         }

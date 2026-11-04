@@ -1001,6 +1001,10 @@ internal fun Launcher4MaxApp(
         ) {
             favoriteEditor.invalidateUndo()
         }
+        if (settledSurface == AppSurface.Drawer) {
+            // Opening the Drawer abandons the one-shot journey and its root preview.
+            homeCoordinator.endOneShot()
+        }
         if (settledSurface == AppSurface.Home && favoriteAddTarget == null) {
             favoriteSelectionJourneyActive = false
         }
