@@ -432,6 +432,7 @@ internal class HomeApplicationMovement {
             )
             resolved.barInsertion != null -> DrawerDragDrop.HomeBottomAppBar(
                 boundary = resolved.barInsertion.boundary,
+                capacity = barCapacity,
             )
             else -> null
         }

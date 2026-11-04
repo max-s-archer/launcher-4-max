@@ -50,6 +50,27 @@ internal class HomeCoordinator(
     var drawerDragDropping by mutableStateOf(false)
         private set
 
+    /** Bumped when an unpublished Drawer journey is cancelled, including during a save. */
+    private var drawerDragGeneration by mutableStateOf(0)
+
+    /**
+     * Drawer drag-to-favorite runs through this state. It is not edit mode and is never
+     * entered by a normal Home long press.
+     */
+    var oneShotActive by mutableStateOf(false)
+        private set
+
+    /**
+     * Cancels an unpublished one-shot operation. Clearing the journey stops a pending
+     * drop, and the generation makes a save already in flight leave storage unchanged.
+     */
+    fun endOneShot() {
+        oneShotActive = false
+        drawerDragDropping = false
+        drawerDragJourney = null
+        drawerDragGeneration += 1
+    }
+
     fun refreshEditMembership() {
         if (editMode) {
             editMembership = (favoriteStore.state.value as? FavoriteReadState.Readable)
@@ -102,8 +123,8 @@ internal class HomeCoordinator(
         favoriteEditor.invalidateApplicationUndo()
         drawerDragJourney = journey
         drawerDragTouchPosition = journey.touchStartInWindow
-        editMode = true
-        clearEditSelection()
+        // Drag-to-favorite is one-shot placement, never edit mode.
+        oneShotActive = true
         return true
     }
 
@@ -113,8 +134,7 @@ internal class HomeCoordinator(
 
     fun endDrawerDrag(cancelled: Boolean) {
         if (cancelled) {
-            editMode = false
-            openStyleModuleId = null
+            oneShotActive = false
         } else {
             drawerDragDropping = true
         }
@@ -123,14 +143,15 @@ internal class HomeCoordinator(
     suspend fun commitDrawerDrop(
         identity: LaunchableIdentity,
         drop: DrawerDragDrop,
-        barCapacity: Int? = null,
     ): Boolean {
-        return when (drop) {
+        val generation = drawerDragGeneration
+        val saved = when (drop) {
             is DrawerDragDrop.Insertion -> favoriteEditor.insertExternalFavorite(
                 identity = identity,
                 destinationModuleId = drop.moduleId,
                 boundary = drop.boundary,
                 newModuleType = null,
+                stillAuthorized = { generation == drawerDragGeneration },
             )
 
             is DrawerDragDrop.Creation -> favoriteEditor.insertExternalFavorite(
@@ -138,6 +159,7 @@ internal class HomeCoordinator(
                 destinationModuleId = null,
                 boundary = 0,
                 newModuleType = drop.moduleType,
+                stillAuthorized = { generation == drawerDragGeneration },
             )
 
             is DrawerDragDrop.HomeBottomAppBar -> favoriteEditor.insertExternalFavorite(
@@ -145,9 +167,13 @@ internal class HomeCoordinator(
                 destinationModuleId = HOME_BOTTOM_APP_BAR_DESTINATION_ID,
                 boundary = drop.boundary,
                 newModuleType = null,
-                barCapacity = barCapacity,
+                barCapacity = drop.capacity,
+                stillAuthorized = { generation == drawerDragGeneration },
             )
         }
+        // Cancellation bumps the generation. A successful write may clear one-shot
+        // through recomposition, so that flag must not turn a completed save into failure.
+        return saved && generation == drawerDragGeneration
     }
 
     fun finishDrawerDrag(saved: Boolean, cancelled: Boolean) {
@@ -160,6 +186,8 @@ internal class HomeCoordinator(
                 Toast.LENGTH_SHORT,
             ).show()
         }
+        // Every one-shot outcome returns to normal Home without entering edit mode.
+        oneShotActive = false
         editMode = false
         openStyleModuleId = null
     }

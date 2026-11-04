@@ -437,13 +437,15 @@ internal class HomeFavoriteEditor(private val store: FavoriteStore) {
         boundary: Int,
         newModuleType: OrderedFavoriteModuleType?,
         barCapacity: Int? = null,
+        stillAuthorized: () -> Boolean = { true },
     ): Boolean {
-        if (isSaving) return false
+        if (isSaving || !stillAuthorized()) return false
         isSaving = true
         var applied = false
         return try {
             val persisted = store.updateOrderedAggregate(
                 transform = { aggregate ->
+                    if (!stillAuthorized()) return@updateOrderedAggregate aggregate
                     if (identity in aggregate.identities) return@updateOrderedAggregate aggregate
                     val updated = when {
                         newModuleType != null -> aggregate.copy(

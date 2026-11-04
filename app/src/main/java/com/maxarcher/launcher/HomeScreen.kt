@@ -111,6 +111,7 @@ internal fun HomeScreen(
     drawerDragDropping: Boolean = false,
     onDrawerDragCommit: suspend (LaunchableIdentity, DrawerDragDrop) -> Boolean = { _, _ -> false },
     onDrawerDragJourneyFinished: (saved: Boolean, cancelled: Boolean) -> Unit = { _, _ -> },
+    oneShotActive: Boolean = false,
 ) {
     val context = LocalContext.current
     val orderedApplicationMovement = remember(calculation = { HomeApplicationMovement() })
@@ -120,6 +121,7 @@ internal fun HomeScreen(
         touchInWindow = drawerDragTouchInWindow,
         dropping = drawerDragDropping,
         editMode = editMode,
+        oneShotActive = oneShotActive,
         openStyleModuleId = openStyleModuleId,
         favoriteState = favoriteState,
         favoriteAvailability = favoriteAvailability,
@@ -264,7 +266,7 @@ internal fun HomeScreen(
             ?.orderedAggregate
             ?.homeBottomAppBar
         val barVisible = persistedBar?.enabled == true &&
-            (editMode || persistedBar.identities.isNotEmpty())
+            (editMode || oneShotActive || persistedBar.identities.isNotEmpty())
         Column(modifier = Modifier.fillMaxSize()) {
             // The basic-information region stays visible in edit mode; edit mode adds no dock.
             HomeBasicInformation(
@@ -337,7 +339,7 @@ internal fun HomeScreen(
                         val orderedModules = favoriteState.orderedModules
                         val hasFavorites = orderedModules?.isNotEmpty()
                             ?: favoriteState.aggregate.identities.isNotEmpty()
-                        if (!hasFavorites && !editMode) {
+                        if (!hasFavorites && !editMode && !oneShotActive) {
                             Text(
                                 text = stringResource(R.string.home_empty_favorites),
                                 color = MaterialTheme.colorScheme.onBackground,
@@ -371,8 +373,22 @@ internal fun HomeScreen(
                                 onAddToModule = {},
                                 onCreateVerticalModule = {},
                                 onCreateRibbon = {},
-                                onLaunchFavorite = onLaunchFavorite,
-                                onLongPressFavorite = onLongPressFavorite,
+                                onLaunchFavorite = if (oneShotActive) {
+                                    { _ -> }
+                                } else {
+                                    onLaunchFavorite
+                                },
+                                onLongPressFavorite = if (oneShotActive) {
+                                    { _ -> }
+                                } else {
+                                    onLongPressFavorite
+                                },
+                                // Drawer one-shot exposes the two main-list entries as drop
+                                // destinations only. A normal Home long press stays unchanged.
+                                applicationMovement = orderedApplicationMovement
+                                    .takeIf { oneShotActive },
+                                showMainAddEntries = oneShotActive,
+                                showModuleAddEntries = false,
                             )
                         } else if (orderedModules != null) {
                             val previewAggregate = orchestration.editTransaction.previewAggregate(
@@ -481,7 +497,8 @@ internal fun HomeScreen(
                     state = persistedBar,
                     safeWidthDp = homeContentWidthDp,
                     expanded = homeBottomAppBarExpanded,
-                    editMode = editMode,
+                    // One-shot temporarily presents a collapsed semi-hidden bar expanded.
+                    editMode = editMode || oneShotActive,
                     availabilityByIdentity = favoriteAvailability,
                     mutationEnabled = !applicationEditingSaving,
                     onExpandedChange = onHomeBottomAppBarExpandedChange,
