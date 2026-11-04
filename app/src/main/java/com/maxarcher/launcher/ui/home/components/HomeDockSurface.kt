@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -147,6 +148,7 @@ internal fun HomeDockSurface(
     val iconGap = dimensionResource(R.dimen.home_bottom_app_bar_preview_icon_gap)
     val horizontalInset = dimensionResource(R.dimen.home_bottom_app_bar_preview_horizontal_inset)
     val outerMargin = dimensionResource(R.dimen.home_bottom_app_bar_outer_margin)
+    val bottomMargin = dimensionResource(R.dimen.home_bottom_app_bar_bottom_margin)
     val backgroundAlpha = integerResource(
         R.integer.home_bottom_app_bar_background_alpha_percent,
     ) / 100f
@@ -164,11 +166,10 @@ internal fun HomeDockSurface(
         integerResource(R.integer.short_property_animation_duration_ms)
     }
     val collapsedExposure = dimensionResource(R.dimen.home_bottom_app_bar_collapsed_exposure)
-    val visibleHeight = fullHeight
-    val collapsedOffset by animateDpAsState(
-        targetValue = if (presentedExpanded) 0.dp else fullHeight - collapsedExposure,
+    val visibleHeight by animateDpAsState(
+        targetValue = if (presentedExpanded) fullHeight else collapsedExposure,
         animationSpec = tween(durationMillis = duration),
-        label = "home_bottom_app_bar_offset",
+        label = "home_bottom_app_bar_height",
     )
     val collapsedAlpha = integerResource(
         R.integer.home_bottom_app_bar_semi_hidden_alpha_percent,
@@ -206,17 +207,21 @@ internal fun HomeDockSurface(
     )
     Box(
         modifier = modifier
-            .padding(start = outerMargin, end = outerMargin, bottom = outerMargin)
+            .padding(start = outerMargin, end = outerMargin, bottom = bottomMargin)
             .fillMaxWidth()
             .height(visibleHeight)
-            .graphicsLayer {
-                translationY = collapsedOffset.toPx()
-                clip = true
-            }
-            .clip(barShape)
-            .clipToBounds()
-            .alpha(opacity)
-            .background(
+            .wrapContentHeight(align = Alignment.Top, unbounded = true)
+            .clipToBounds(),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .requiredHeight(fullHeight)
+                .align(Alignment.TopCenter)
+                .clip(barShape)
+                .clipToBounds()
+                .alpha(opacity)
+                .background(
                 colorResource(R.color.home_bottom_app_bar_preview_background).copy(
                     alpha = backgroundAlpha,
                 ),
@@ -601,6 +606,7 @@ internal fun HomeDockSurface(
                     )
                 }
             }
+        }
         }
     }
 }

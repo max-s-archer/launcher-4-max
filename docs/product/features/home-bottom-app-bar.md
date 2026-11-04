@@ -52,23 +52,17 @@ The accepted Settings entry and page title are `Home bottom app bar` in English 
 
 ## Semi-hidden and fixed
 
-- A semi-hidden bar keeps its full height while expanded and while collapsed. Neither state
-  increases or decreases that height. Collapsing does not compress the bar to `24dp` and
-  does not recenter its icons inside the exposed area. To be decided: whether a collapsed
-  semi-hidden bar should reserve only its exposure height so the favorite main list can
-  use the released space; a first implementation attempt was reverted and the original
-  full-height reservation is restored until the author re-decides this boundary.
-- While collapsed, the complete bar content moves down along the Y axis until it meets
-  the bottom. It exposes `16dp` of its full height, so the remainder appears cut off by
-  the bottom of the screen. The exposed area therefore shows the upper portion of the
-  icons and background. Large, Medium, and Small all expose the same `16dp`; they do not
-  expose half of `64dp`, `56dp`, or `48dp`. A fixed `24dp` is not the collapsed height.
+- While collapsed, a semi-hidden bar reduces its visible height to `16dp` by clipping its
+  lower portion. Content keeps its full-height positions and is not rescaled or recentered.
+  The favorite main list grows into the released space. Pulling the bar up restores the
+  full height and reveals the clipped portion; the list shrinks. Its logical scroll position
+  stays unchanged. A fixed bar keeps its full height. Collapsing does not use a downward
+  offset or compress the bar to `24dp`. Large, Medium, and Small all expose the same `16dp`.
 - The whole exposed `16dp` is the expand target. A tap or a short upward drag expands the
   bar. It does not launch an application. The bar does not use a separate reveal control.
-- Expanding moves the bar up along the Y axis until it is completely visible. This changes
-  the bar's position, not its height. Because the height occupied by the bar does not
-  change, expanding and collapsing do not change the favorite main list's height or its
-  logical scroll position.
+- Expanding restores the bar's full height and reveals its previously clipped lower portion.
+  The favorite main list shrinks while this happens, and its logical scroll position stays
+  unchanged.
 - Selecting empty Home space, or dragging downward on the bar, collapses an expanded
   semi-hidden bar. In normal Home, when no style settings panel, application or module
   movement, or text editing is active, System Back collapses it before following the
@@ -80,7 +74,10 @@ The accepted Settings entry and page title are `Home bottom app bar` in English 
   That spacing is not part of capacity.
 - Edit mode shows a semi-hidden bar expanded. Leaving edit mode collapses it again. A fixed bar stays full height.
 - Expanding and collapsing use the shared short-duration property animation. When the system requests reduced motion, the bar reaches its target position directly, without that animation. The collapsed bar uses `80%` opacity. Expanded and fixed bars use full opacity.
-- The bar uses one white background at `24%` opacity, a `16dp` corner radius, and `16dp` outer margins on the start, end, and bottom. Its border reuses the favorite-bar border: `1dp` at `12%` opacity. It does not use a dark surface, wallpaper sampling, or blur. Icons on that background do not use the Home glyph shadow.
+- The bar uses one white background at `24%` opacity and a `16dp` corner radius. Its start
+  and end outer margins are `16dp`, and its bottom outer margin is `8dp`. Its border reuses
+  the favorite-bar border: `1dp` at `12%` opacity. It does not use a dark surface, wallpaper
+  sampling, or blur. Icons on that background do not use the Home glyph shadow.
 
 ## Edit mode
 
