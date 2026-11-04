@@ -56,7 +56,7 @@
 | [迭代 35：图标形状配置](iteration-35-icon-shape-customization.zh-CN.md) | `Completed` | 2026-10-16 | 全部改动已获作者验收通过，并已合入 `main`。 |
 | [迭代 36：Home 底部应用栏](iteration-36-home-bottom-app-bar.zh-CN.md) | `Completed` | 2026-10-20 | 作者已验收应用栏实现。 |
 | [迭代 37：Home 编辑模式交互](iteration-37-home-edit-mode-interaction.zh-CN.md) | `Completed` | 2026-10-26 | 作者确认主设备验收通过，达到日常使用标准，并接受历史问题不阻塞完成。 |
-| [迭代 38：Home 收藏放置与布局](iteration-38-home-favorite-placement-layout.zh-CN.md) | `In Progress` | 2026-10-27 | 作者已在已接受的 Home 放置与布局契约范围内授权实现。 |
+| [迭代 38：Home 收藏放置与布局](iteration-38-home-favorite-placement-layout.zh-CN.md) | `Completed` | 2026-11-03 | 作者已在主设备验收通过本迭代当前范围。 |
 | [迭代 39：Home 加载与收尾](iteration-39-home-loading-closure.zh-CN.md) | `Planned` | 2026-10-14 | 作者要求最后一个迭代处理 Home 加载与小范围已定义问题。 |
 
 ## 迭代证据与结果
@@ -113,7 +113,7 @@ Agent 执行的 Gradle 构建与测试：`Not run`。修正与此前证据分别
 
 ### 迭代 38：Home 收藏放置与布局
 
-[契约](iteration-38-home-favorite-placement-layout.zh-CN.md)。状态：`In Progress`。
+[契约](iteration-38-home-favorite-placement-layout.zh-CN.md)。状态：`Completed`。
 作者于 2026-10-27 在已接受的契约范围内授权实现。展示模式源码改动加入每模块 Ribbon/Flow 持久化、
 有序收藏 store schema v6、backup schema v8，以及横向模块样式面板中的共享二选一选择器。
 新模块与旧数据默认使用 Ribbon；存在但非法的模式使文档读取失败，不覆盖已存数据。
@@ -132,7 +132,7 @@ Drawer 拖动收藏是唯一的一次性放置入口：它展示临时放置目�
 作者报告该切片的真机验收：2026-11-03 `Passed`；随后报告中断、返回及打开 Drawer 修正的真机验收：
 2026-11-03 `Passed`。作者确认本迭代当前范围内的问题均已通过真机验收。
 Agent 执行的 Gradle 构建、lint 与仪器测试仍为 `Not run`。
-后续责任人：项目作者。最终作者决定：尚不适用。
+作者最终决定：于 2026-11-03 关闭迭代 38。后续责任人：不适用。
 
 ### 迭代 39：Home 加载与收尾
 
@@ -168,5 +168,5 @@ Agent 执行的 Gradle 构建、lint 与仪器测试仍为 `Not run`。
 
 ## 完成结果
 
-1.8.0 版本尚未完成。截至 2026-10-27，迭代 35、36 和 37 均为 `Completed`，并已获作者验收。
-迭代 38 为 `In Progress`，迭代 39 仍为 `Planned`。
+1.8.0 版本尚未完成。截至 2026-11-03，迭代 35、36、37 和 38 均为 `Completed`，并已获作者验收。
+迭代 39 仍为 `Planned`。

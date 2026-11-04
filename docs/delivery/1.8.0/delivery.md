@@ -56,7 +56,7 @@ Primary risks are interaction overlap between the bottom app bar and edit mode, 
 | [Iteration 35: Icon Shape Customization](iteration-35-icon-shape-customization.md) | `Completed` | 2026-10-16 | All changes accepted by the author and merged into `main`. |
 | [Iteration 36: Home Bottom App Bar](iteration-36-home-bottom-app-bar.md) | `Completed` | 2026-10-20 | The author accepted the bar implementation. |
 | [Iteration 37: Home Edit Mode Interaction](iteration-37-home-edit-mode-interaction.md) | `Completed` | 2026-10-26 | The author accepted primary-device use at the daily-use baseline and accepted the legacy issue as non-blocking. |
-| [Iteration 38: Home Favorite Placement and Layout](iteration-38-home-favorite-placement-layout.md) | `In Progress` | 2026-10-27 | The author authorized implementation within the accepted Home placement and layout contract. |
+| [Iteration 38: Home Favorite Placement and Layout](iteration-38-home-favorite-placement-layout.md) | `Completed` | 2026-11-03 | The author accepted the current iteration scope on the primary device. |
 | [Iteration 39: Home Loading and Closure](iteration-39-home-loading-closure.md) | `Planned` | 2026-10-14 | The author requested a final iteration for Home loading and small defined-scope issues. |
 
 ## Iteration evidence and results
@@ -124,7 +124,7 @@ author; its future handling is not assigned to another iteration by this closure
 
 ### Iteration 38: Home Favorite Placement and Layout
 
-[Contract](iteration-38-home-favorite-placement-layout.md). Status: `In Progress`. The author
+[Contract](iteration-38-home-favorite-placement-layout.md). Status: `Completed`. The author
 authorized implementation within the accepted contract on 2026-10-27. The display-mode source
 changes add per-module Ribbon/Flow persistence, ordered-favorite store schema v6, backup schema
 v8, and the shared two-option selector in horizontal-module style panels. New modules and older
@@ -149,7 +149,7 @@ acceptance of this slice as `Passed` on 2026-11-03, then reported acceptance of 
 Back, and Drawer-opening corrections as `Passed` on 2026-11-03. The author confirmed that every
 issue currently in scope for this iteration has passed device acceptance. Agent-run Gradle build,
 lint, and instrumented tests remain `Not run`.
-Follow-up owner: project author. Final author decision: not applicable yet.
+Final author decision: close iteration 38 on 2026-11-03. Follow-up owner: not applicable.
 
 ### Iteration 39: Home Loading and Closure
 
@@ -187,5 +187,5 @@ This version uses the `Author daily-use baseline` gates. The accepted APK must r
 
 ## Completion result
 
-Version 1.8.0 is not yet complete. As of 2026-10-27, Iterations 35, 36, and 37 are `Completed`
-and accepted by the author. Iteration 38 is `In Progress`, and Iteration 39 remains `Planned`.
+Version 1.8.0 is not yet complete. As of 2026-11-03, Iterations 35, 36, 37, and 38 are
+`Completed` and accepted by the author. Iteration 39 remains `Planned`.
