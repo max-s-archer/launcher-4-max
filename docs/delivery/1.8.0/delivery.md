@@ -143,9 +143,12 @@ On 2026-11-03 the author removed normal-Home long-press reordering from this ite
 Agent-run Gradle build, lint, and instrumented tests: `Not run`. Selecting Flow now renders
 the wrapped layout. Drawer drag-to-favorite is the only one-shot entry: it shows temporary
 drop destinations without entering edit mode, and cancellation, Back, or an external
-interruption restores normal Home without persisting an unpublished drop. The author
-reported device acceptance of this slice as `Passed` on 2026-11-03. The interruption and
-Back corrections that followed that observation are not yet covered by a new device check.
+interruption restores normal Home without persisting an unpublished drop. Opening the Drawer
+also abandons the unpublished journey and removes its drag preview. The author reported device
+acceptance of this slice as `Passed` on 2026-11-03, then reported acceptance of the interruption,
+Back, and Drawer-opening corrections as `Passed` on 2026-11-03. The author confirmed that every
+issue currently in scope for this iteration has passed device acceptance. Agent-run Gradle build,
+lint, and instrumented tests remain `Not run`.
 Follow-up owner: project author. Final author decision: not applicable yet.
 
 ### Iteration 39: Home Loading and Closure
