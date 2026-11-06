@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -24,11 +25,21 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.sp
+import com.maxarcher.launcher.FavoriteAvailability
 import com.maxarcher.launcher.FavoriteNamePlacement
 import com.maxarcher.launcher.HomeApplicationMovement
 import com.maxarcher.launcher.OrderedFavoriteModuleType
 import com.maxarcher.launcher.R
+import com.maxarcher.launcher.iconSizeResource
+import com.maxarcher.launcher.lineHeightResource
+import com.maxarcher.launcher.textSizeResource
+import com.maxarcher.launcher.ui.components.ApplicationItem
+import com.maxarcher.launcher.ui.components.ApplicationItemNamePlacement
+import com.maxarcher.launcher.ui.components.ApplicationItemPadding
+import com.maxarcher.launcher.ui.drawer.drawerForegroundShadow
 import kotlin.math.roundToInt
 
 @Composable
@@ -149,41 +160,87 @@ internal fun HomeApplicationMovementOverlay(
                 .size(width = width, height = height)
                 .testTag(tag = "home_application_movement_preview"),
             content = {
-                if (!ribbon && source.module.namePlacement == FavoriteNamePlacement.Below) {
-                    HomeFavoriteBelowItem(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clearAndSetSemantics(properties = {}),
-                        availability = source.availability,
-                        iconSize = source.module.iconSize,
-                        textSize = source.module.textSize,
-                        onClick = {},
-                        onLongClick = {},
-                        interactionEnabled = false,
-                    )
-                } else {
-                    HomeFavoriteRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clearAndSetSemantics(properties = {}),
-                        availability = source.availability,
-                        iconSize = source.module.iconSize,
-                        textSize = source.module.textSize,
-                        onClick = {},
-                        onLongClick = {},
-                        editMode = false,
-                        compact = ribbon,
-                        exchangeHighlight = false,
-                        onRowBoundsInWindow = { _, _ -> },
-                        onHandleBoundsInWindow = {},
-                        interactionEnabled = false,
-                        showName = ribbon || source.module.namePlacement != FavoriteNamePlacement.Hidden,
-                        centerIcon = !ribbon &&
-                                source.module.namePlacement == FavoriteNamePlacement.Hidden,
-                        hiddenNamePlacement = !ribbon &&
-                                source.module.namePlacement == FavoriteNamePlacement.Hidden,
-                    )
-                }
+                val nameHidden = !ribbon &&
+                    source.module.namePlacement == FavoriteNamePlacement.Hidden
+                val nameBelow = !ribbon &&
+                    source.module.namePlacement == FavoriteNamePlacement.Below
+                val entry = source.availability.presentationEntry
+                val displayText = favoriteAvailabilityDisplayText(source.availability)
+                ApplicationItem(
+                    icon = entry?.icon,
+                    iconBitmap = entry?.iconBitmap,
+                    iconSize = dimensionResource(source.module.iconSize.iconSizeResource()),
+                    name = AnnotatedString(displayText),
+                    namePlacement = when {
+                        ribbon -> ApplicationItemNamePlacement.Right
+                        nameHidden -> ApplicationItemNamePlacement.Hidden
+                        nameBelow -> ApplicationItemNamePlacement.Below
+                        else -> ApplicationItemNamePlacement.Right
+                    },
+                    nameStyle = LocalTextStyle.current.copy(
+                        fontSize = dimensionResource(
+                            source.module.textSize.textSizeResource(),
+                        ).value.sp,
+                        lineHeight = dimensionResource(
+                            source.module.textSize.lineHeightResource(),
+                        ).value.sp,
+                        shadow = drawerForegroundShadow(),
+                    ),
+                    iconLabelGap = dimensionResource(
+                        when {
+                            ribbon -> R.dimen.home_favorite_bar_icon_label_gap
+                            nameBelow -> R.dimen.home_favorite_below_icon_label_gap
+                            else -> R.dimen.home_favorite_icon_label_gap
+                        },
+                    ),
+                    contentPadding = when {
+                        ribbon -> ApplicationItemPadding(
+                            start = dimensionResource(R.dimen.home_favorite_bar_item_inset),
+                            end = dimensionResource(R.dimen.home_favorite_bar_item_inset),
+                        )
+                        nameBelow -> ApplicationItemPadding(
+                            start = dimensionResource(
+                                R.dimen.home_favorite_below_horizontal_inset,
+                            ),
+                            top = dimensionResource(R.dimen.home_favorite_below_top_inset),
+                            end = dimensionResource(
+                                R.dimen.home_favorite_below_horizontal_inset,
+                            ),
+                            bottom = dimensionResource(
+                                R.dimen.home_favorite_below_bottom_inset,
+                            ),
+                        )
+                        nameHidden -> ApplicationItemPadding(
+                            top = dimensionResource(R.dimen.home_favorite_below_top_inset),
+                            bottom = dimensionResource(
+                                R.dimen.home_favorite_below_bottom_inset,
+                            ),
+                        )
+                        else -> ApplicationItemPadding(
+                            start = dimensionResource(
+                                R.dimen.home_favorite_list_icon_start_margin,
+                            ),
+                        )
+                    },
+                    nameMaxWidth = if (ribbon) {
+                        dimensionResource(R.dimen.home_favorite_bar_label_max_width)
+                    } else {
+                        androidx.compose.ui.unit.Dp.Unspecified
+                    },
+                    fillNameWidth = !ribbon,
+                    hiddenNameDescription = displayText.takeIf { nameHidden },
+                    interactionEnabled = false,
+                    contentAlpha = if (
+                        source.availability is FavoriteAvailability.Available
+                    ) {
+                        1f
+                    } else {
+                        integerResource(R.integer.disabled_content_alpha_percent) / 100f
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clearAndSetSemantics {},
+                )
             },
         )
     }

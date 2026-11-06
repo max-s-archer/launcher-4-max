@@ -8,12 +8,10 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -73,7 +71,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
 import com.maxarcher.launcher.ApplicationOrderChange
 import com.maxarcher.launcher.FavoriteAvailability
-import com.maxarcher.launcher.FavoriteContainer
 import com.maxarcher.launcher.HomeApplicationMovement
 import com.maxarcher.launcher.HomeOrderedModuleContent
 import com.maxarcher.launcher.LaunchableEntry
@@ -82,13 +79,6 @@ import com.maxarcher.launcher.ModuleDragSession
 import com.maxarcher.launcher.OrderedFavoriteModule
 import com.maxarcher.launcher.OrderedFavoriteModuleType
 import com.maxarcher.launcher.R
-import com.maxarcher.launcher.rowHeightResource
-import com.maxarcher.launcher.ui.home.components.HomeApplicationAutoScroll
-import com.maxarcher.launcher.ui.home.components.HomeFavoriteEnterBatch
-import com.maxarcher.launcher.ui.home.components.HomeFavoriteEnterKey
-import com.maxarcher.launcher.ui.home.components.HomeMainListAddFavoriteEntry
-import com.maxarcher.launcher.ui.home.components.detectHomeApplicationMovement
-import com.maxarcher.launcher.ui.home.components.homeFavoriteEnter
 import com.maxarcher.launcher.ui.drawer.drawerForegroundShadow
 import com.maxarcher.launcher.usesRibbonLayout
 import kotlin.math.roundToInt
@@ -644,67 +634,6 @@ internal fun HomeFavoriteMessage(
         onRetry?.let { retry ->
             Spacer(modifier = Modifier.height(dimensionResource(R.dimen.status_message_gap)))
             TextButton(onClick = retry) { Text(stringResource(R.string.retry)) }
-        }
-    }
-}
-
-@Composable
-internal fun HomeFavoriteComposition(
-    verticalLists: List<FavoriteContainer>,
-    availabilityByIdentity: Map<LaunchableIdentity, FavoriteAvailability>,
-    favoriteListState: LazyListState,
-    favoriteNestedScrollConnection: NestedScrollConnection?,
-    companionFavoriteListState: LazyListState,
-    companionFavoriteNestedScrollConnection: NestedScrollConnection?,
-    onLaunchFavorite: (FavoriteAvailability) -> Unit,
-    onLongPressFavorite: (LaunchableEntry) -> Unit,
-) {
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val listStates = remember {
-            mutableMapOf<String, LazyListState>()
-        }
-        val contentHeight = verticalLists
-            .maxOf { container ->
-                dimensionResource(container.listSize.rowHeightResource()) *
-                        container.identities.size
-            }
-            .coerceAtMost(maxHeight)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(contentHeight),
-            horizontalArrangement = Arrangement.spacedBy(
-                dimensionResource(R.dimen.home_favorite_group_spacing),
-            ),
-        ) {
-            verticalLists.forEachIndexed { index, container ->
-                val listState = listStates.getOrPut(container.id) {
-                    when (index) {
-                        0 -> favoriteListState
-                        1 -> companionFavoriteListState
-                        else -> LazyListState()
-                    }
-                }
-                val nestedScrollConnection = when (index) {
-                    0 -> favoriteNestedScrollConnection
-                    1 -> companionFavoriteNestedScrollConnection
-                    else -> null
-                }
-                HomeFavoriteList(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    identities = container.identities,
-                    availabilityByIdentity = availabilityByIdentity,
-                    listState = listState,
-                    nestedScrollConnection = nestedScrollConnection,
-                    compact = false,
-                    listSize = container.listSize,
-                    onLaunchFavorite = onLaunchFavorite,
-                    onLongPressFavorite = onLongPressFavorite,
-                    testTag = "home_favorite_list_$index",
-                )
-            }
         }
     }
 }

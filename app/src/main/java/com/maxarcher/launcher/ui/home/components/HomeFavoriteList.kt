@@ -2,77 +2,13 @@ package com.maxarcher.launcher.ui.home.components
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
-import androidx.compose.ui.platform.testTag
-import com.maxarcher.launcher.FavoriteAvailability
-import com.maxarcher.launcher.FavoriteListSize
-import com.maxarcher.launcher.LaunchableEntry
-import com.maxarcher.launcher.LaunchableIdentity
-
-@Composable
-internal fun HomeFavoriteList(
-    modifier: Modifier,
-    identities: List<LaunchableIdentity>,
-    availabilityByIdentity: Map<LaunchableIdentity, FavoriteAvailability>,
-    listState: LazyListState,
-    nestedScrollConnection: NestedScrollConnection?,
-    compact: Boolean,
-    listSize: FavoriteListSize? = null,
-    onLaunchFavorite: (FavoriteAvailability) -> Unit,
-    onLongPressFavorite: (LaunchableEntry) -> Unit,
-    testTag: String? = null,
-) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .then(
-                    nestedScrollConnection?.let { Modifier.nestedScroll(it) } ?: Modifier,
-                )
-                .testTag(testTag ?: if (compact) "home_companion_favorites" else "home_favorites"),
-            state = listState,
-        ) {
-            itemsIndexed(
-                items = identities,
-                key = { _, identity -> identity.stableKey() },
-            ) { _, identity ->
-                val availability = availabilityByIdentity[identity]
-                    ?: FavoriteAvailability.Unknown(null)
-                val entry = availability.presentationEntry
-                HomeFavoriteRow(
-                    modifier = Modifier.animateItem(placementSpec = null),
-                    availability = availability,
-                    onClick = { onLaunchFavorite(availability) },
-                    onLongClick = {
-                        if (entry != null) onLongPressFavorite(entry)
-                    },
-                    compact = compact,
-                    listSize = listSize,
-                    editMode = false,
-                    exchangeHighlight = false,
-                    onRowBoundsInWindow = { _, _ -> },
-                    onHandleBoundsInWindow = {},
-                )
-            }
-        }
-    }
-}
 
 internal suspend fun PointerInputScope.detectModuleReorderDrag(
     onLongPress: () -> Unit,

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
@@ -71,24 +72,30 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.maxarcher.launcher.ApplicationOrderChange
 import com.maxarcher.launcher.FavoriteAvailability
-import com.maxarcher.launcher.HOME_BOTTOM_APP_BAR_DESTINATION_ID
 import com.maxarcher.launcher.HomeApplicationMovement
 import com.maxarcher.launcher.HomeBottomAppBarPresentation
 import com.maxarcher.launcher.HomeBottomAppBarState
 import com.maxarcher.launcher.LaunchableEntry
 import com.maxarcher.launcher.LaunchableIdentity
-import com.maxarcher.launcher.OrderedFavoriteModule
-import com.maxarcher.launcher.OrderedFavoriteModuleType
 import com.maxarcher.launcher.R
 import com.maxarcher.launcher.homeBottomAppBarCapacity
 import com.maxarcher.launcher.iconSizeResource
+import com.maxarcher.launcher.ui.components.ApplicationItem
+import com.maxarcher.launcher.ui.components.ApplicationItemBadge
+import com.maxarcher.launcher.ui.components.ApplicationItemNamePlacement
+import com.maxarcher.launcher.ui.components.ApplicationItemPadding
+import com.maxarcher.launcher.ui.home.components.stableKey
 import androidx.core.graphics.drawable.toBitmap
+import com.maxarcher.launcher.ApplicationOrderChange
+import com.maxarcher.launcher.HOME_BOTTOM_APP_BAR_DESTINATION_ID
+import com.maxarcher.launcher.OrderedFavoriteModule
+import com.maxarcher.launcher.OrderedFavoriteModuleType
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -668,41 +675,28 @@ private fun HomeDockIcon(
     ) {
         if (showInsertionBefore) HomeDockInsertionLine(beforeIcon = true)
         if (showInsertionAfter) HomeDockInsertionLine(beforeIcon = false)
-        HomeDockIconArtwork(
-            availability = availability,
+        val entry = availability?.presentationEntry
+        ApplicationItem(
+            icon = entry?.icon,
+            iconBitmap = entry?.iconBitmap,
             iconSize = iconSize,
-        )
-        if (editMode && interactionEnabled) {
-            val removeSize = dimensionResource(R.dimen.home_favorite_bar_remove_target_size)
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(
-                        x = 0.dp,
-                        y = dimensionResource(R.dimen.home_bottom_app_bar_remove_inset),
-                    )
-                    .size(removeSize)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.error)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        role = Role.Button,
-                        onClick = onRemove,
-                    )
-                    .testTag("home_bottom_app_bar_remove:${identity.stableKey()}"),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_close),
-                    contentDescription = stringResource(R.string.remove_favorite_item),
-                    modifier = Modifier.size(
-                        dimensionResource(R.dimen.home_favorite_bar_remove_icon_size),
-                    ),
-                    tint = colorResource(R.color.home_favorite_remove_icon),
+            name = AnnotatedString(""),
+            namePlacement = ApplicationItemNamePlacement.Hidden,
+            nameStyle = LocalTextStyle.current,
+            iconLabelGap = 0.dp,
+            contentPadding = ApplicationItemPadding(),
+            badge = if (editMode && interactionEnabled) {
+                ApplicationItemBadge.Remove(
+                    onClick = onRemove,
+                    interactionSource = remember { MutableInteractionSource() },
+                    tag = "home_bottom_app_bar_remove:${identity.stableKey()}",
                 )
-            }
-        }
+            } else {
+                ApplicationItemBadge.None
+            },
+            hiddenNameDescription = entry?.label
+                ?: stringResource(R.string.favorite_application_unavailable),
+        )
     }
 }
 
@@ -731,40 +725,16 @@ internal fun HomeDockDragGhost(
             .clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
     ) {
-        HomeDockIconArtwork(
-            availability = preview.availability,
+        val entry = preview.availability?.presentationEntry
+        ApplicationItem(
+            icon = entry?.icon,
+            iconBitmap = entry?.iconBitmap,
             iconSize = preview.iconSize,
-        )
-    }
-}
-
-@Composable
-private fun HomeDockIconArtwork(
-    availability: FavoriteAvailability?,
-    iconSize: Dp,
-) {
-    val entry = availability?.presentationEntry
-    val bitmap = entry?.iconBitmap?.asImageBitmap()
-        ?: entry?.icon?.let { icon ->
-            remember(icon) {
-                icon.toBitmap(
-                    icon.intrinsicWidth.coerceAtLeast(1),
-                    icon.intrinsicHeight.coerceAtLeast(1),
-                ).asImageBitmap()
-            }
-        }
-    if (bitmap != null) {
-        Image(
-            bitmap = bitmap,
-            contentDescription = null,
-            modifier = Modifier.size(iconSize),
-        )
-    } else {
-        Icon(
-            painter = painterResource(R.drawable.ic_inventory_error),
-            contentDescription = null,
-            modifier = Modifier.size(iconSize),
-            tint = MaterialTheme.colorScheme.onBackground,
+            name = AnnotatedString(""),
+            namePlacement = ApplicationItemNamePlacement.Hidden,
+            nameStyle = LocalTextStyle.current,
+            iconLabelGap = 0.dp,
+            contentPadding = ApplicationItemPadding(),
         )
     }
 }

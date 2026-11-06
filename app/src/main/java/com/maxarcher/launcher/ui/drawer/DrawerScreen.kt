@@ -42,6 +42,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -85,6 +86,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -113,6 +115,10 @@ import com.maxarcher.launcher.LaunchableInventoryState
 import com.maxarcher.launcher.R
 import com.maxarcher.launcher.RapidActivationGuard
 import com.maxarcher.launcher.drawerSectionsFor
+import com.maxarcher.launcher.ui.components.ApplicationItem
+import com.maxarcher.launcher.ui.components.ApplicationItemNamePlacement
+import com.maxarcher.launcher.ui.components.ApplicationItemPadding
+import com.maxarcher.launcher.ui.components.ApplicationSelectionOrderBadge
 
 private enum class DrawerLoadTrigger {
     Initial,
@@ -1031,51 +1037,11 @@ internal fun DrawerFavoriteSelectionRow(
             ),
         )
         if (order != null) {
-            DrawerFavoriteSelectionBadge(
+            ApplicationSelectionOrderBadge(
                 order = order,
-                modifier = Modifier.align(alignment = Alignment.TopStart),
+                modifier = Modifier.align(Alignment.TopStart),
             )
         }
-    }
-}
-
-@Composable
-private fun DrawerFavoriteSelectionBadge(
-    order: Int,
-    modifier: Modifier = Modifier,
-) {
-    val badgeShape = RoundedCornerShape(
-        topStart = dimensionResource(R.dimen.drawer_selection_badge_corner_radius),
-        topEnd = 0.dp,
-        bottomStart = 0.dp,
-        bottomEnd = dimensionResource(R.dimen.drawer_selection_badge_corner_radius),
-    )
-    // Overlays the cell without layout space, focus, or a second description; the row's
-    // state description already announces the order.
-    Box(
-        modifier = modifier
-            .defaultMinSize(
-                minWidth = dimensionResource(R.dimen.drawer_selection_badge_min_size),
-                minHeight = dimensionResource(R.dimen.drawer_selection_badge_min_size),
-            )
-            .background(color = MaterialTheme.colorScheme.onBackground, shape = badgeShape)
-            .padding(
-                horizontal = dimensionResource(R.dimen.drawer_selection_badge_content_padding),
-            )
-            .clearAndSetSemantics { }
-            .testTag(tag = "drawer_favorite_selection_number"),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = order.toString(),
-            color = colorResource(R.color.launcher4max_sheet_surface),
-            fontWeight = FontWeight.Medium,
-            fontSize = dimensionResource(R.dimen.style_settings_secondary_text_size).value.sp,
-            lineHeight = dimensionResource(R.dimen.style_settings_secondary_line_height).value.sp,
-            // The badge sits on an opaque primaryTextColor surface; the drawer-wide
-            // foreground shadow applies only to content over the variable background.
-            style = LocalTextStyle.current.copy(shadow = null),
-        )
     }
 }
 
@@ -1478,92 +1444,34 @@ internal fun DrawerApplicationContent(
     searchQuery: String?,
     modifier: Modifier = Modifier,
 ) {
-    val iconSize = dimensionResource(id = displaySettings.iconSize.iconSizeResource())
-    val iconSizePixels = with(LocalDensity.current) { iconSize.roundToPx() }
-    if (displaySettings.namePlacement == DrawerNamePlacement.Right) {
-        Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(
-                    top = dimensionResource(
-                        R.dimen.drawer_application_below_vertical_inset,
-                    ),
-                    bottom = dimensionResource(R.dimen.drawer_application_bottom_inset),
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            DrawerApplicationIcon(
-                preparedBitmap = entry.iconBitmap,
-                icon = entry.icon,
-                iconSize = iconSize,
-                iconSizePixels = iconSizePixels,
-            )
-            Spacer(
-                modifier = Modifier.width(
-                    width = dimensionResource(id = R.dimen.drawer_application_icon_label_gap),
-                ),
-            )
-            DrawerApplicationName(
-                label = entry.label,
-                searchQuery = searchQuery,
-                textSize = displaySettings.textSize,
-                modifier = Modifier.weight(weight = 1f),
-            )
-        }
-    } else if (displaySettings.namePlacement == DrawerNamePlacement.Below) {
-        Column(
-            modifier = modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(
-                modifier = Modifier.height(
-                    height = dimensionResource(
-                        id = R.dimen.drawer_application_below_vertical_inset,
-                    ),
-                ),
-            )
-            DrawerApplicationIcon(
-                preparedBitmap = entry.iconBitmap,
-                icon = entry.icon,
-                iconSize = iconSize,
-                iconSizePixels = iconSizePixels,
-            )
-            Spacer(
-                modifier = Modifier.height(
-                    height = dimensionResource(id = R.dimen.drawer_application_icon_label_gap),
-                ),
-            )
-            DrawerApplicationName(
-                label = entry.label,
-                searchQuery = searchQuery,
-                textSize = displaySettings.textSize,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
-            Spacer(
-                modifier = Modifier.height(
-                    height = dimensionResource(R.dimen.drawer_application_bottom_inset),
-                ),
-            )
-        }
-    } else {
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(
-                    top = dimensionResource(R.dimen.drawer_application_below_vertical_inset),
-                    bottom = dimensionResource(R.dimen.drawer_application_bottom_inset),
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            DrawerApplicationIcon(
-                preparedBitmap = entry.iconBitmap,
-                icon = entry.icon,
-                iconSize = iconSize,
-                iconSizePixels = iconSizePixels,
-            )
-        }
+    val placement = when (displaySettings.namePlacement) {
+        DrawerNamePlacement.Right -> ApplicationItemNamePlacement.Right
+        DrawerNamePlacement.Below -> ApplicationItemNamePlacement.Below
+        DrawerNamePlacement.Hidden -> ApplicationItemNamePlacement.Hidden
     }
+    val nameHidden = placement == ApplicationItemNamePlacement.Hidden
+    ApplicationItem(
+        icon = entry.icon,
+        iconBitmap = entry.iconBitmap,
+        iconSize = dimensionResource(displaySettings.iconSize.iconSizeResource()),
+        name = drawerApplicationNameText(label = entry.label, searchQuery = searchQuery),
+        namePlacement = placement,
+        nameStyle = MaterialTheme.typography.bodyLarge.copy(
+            fontSize = dimensionResource(displaySettings.textSize.textSizeResource()).value.sp,
+            lineHeight = dimensionResource(
+                displaySettings.textSize.lineHeightResource(),
+            ).value.sp,
+            shadow = drawerForegroundShadow(),
+        ),
+        iconLabelGap = dimensionResource(R.dimen.drawer_application_icon_label_gap),
+        contentPadding = ApplicationItemPadding(
+            top = dimensionResource(R.dimen.drawer_application_below_vertical_inset),
+            bottom = dimensionResource(R.dimen.drawer_application_bottom_inset),
+        ),
+        hiddenNameDescription = entry.label.takeIf { nameHidden },
+        fillNameWidth = !nameHidden,
+        modifier = modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
@@ -1582,19 +1490,16 @@ private fun drawerApplicationRowHeight(settings: DrawerDisplaySettings): Dp {
 }
 
 @Composable
-private fun DrawerApplicationName(
+private fun drawerApplicationNameText(
     label: String,
     searchQuery: String?,
-    textSize: DrawerApplicationSize,
-    modifier: Modifier = Modifier,
-    textAlign: androidx.compose.ui.text.style.TextAlign? = null,
-) {
-    val matchRanges = remember(key1 = label, key2 = searchQuery) {
+): AnnotatedString {
+    val matchRanges = remember(label, searchQuery) {
         searchQuery?.let { query ->
             drawerSearchMatchRanges(label = label, query = query)
         }.orEmpty()
     }
-    val emphasizedLabel = remember(key1 = label, key2 = matchRanges) {
+    return remember(label, matchRanges) {
         buildAnnotatedString {
             append(text = label)
             matchRanges.forEach { range ->
@@ -1606,37 +1511,4 @@ private fun DrawerApplicationName(
             }
         }
     }
-    Text(
-        text = emphasizedLabel,
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.onBackground,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        textAlign = textAlign,
-        style = MaterialTheme.typography.bodyLarge.copy(
-            fontSize = dimensionResource(id = textSize.textSizeResource()).value.sp,
-            lineHeight = dimensionResource(id = textSize.lineHeightResource()).value.sp,
-        ),
-    )
-}
-
-@Composable
-private fun DrawerApplicationIcon(
-    preparedBitmap: Bitmap?,
-    icon: Drawable,
-    iconSize: Dp,
-    iconSizePixels: Int,
-) {
-    // Keep the ImageBitmap wrapper across recompositions so scrolling a long
-    // distance does not reallocate one per row it passes.
-    val bitmap = remember(preparedBitmap, icon, iconSizePixels) {
-        preparedBitmap?.asImageBitmap()
-            ?: icon.toBitmap(width = iconSizePixels, height = iconSizePixels).asImageBitmap()
-    }
-
-    Image(
-        bitmap = bitmap,
-        contentDescription = null,
-        modifier = Modifier.size(iconSize),
-    )
 }

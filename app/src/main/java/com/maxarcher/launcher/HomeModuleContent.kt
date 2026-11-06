@@ -1,25 +1,35 @@
 package com.maxarcher.launcher
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.integerResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
-import com.maxarcher.launcher.ui.home.components.HomeFavoriteGrid
+import com.maxarcher.launcher.ui.components.ApplicationItem
+import com.maxarcher.launcher.ui.components.ApplicationItemBadge
+import com.maxarcher.launcher.ui.components.ApplicationItemNamePlacement
+import com.maxarcher.launcher.ui.components.ApplicationItemPadding
+import com.maxarcher.launcher.ui.drawer.drawerForegroundShadow
 import com.maxarcher.launcher.ui.home.components.HomeFavoriteEnterBatch
 import com.maxarcher.launcher.ui.home.components.HomeFavoriteEnterKey
-import com.maxarcher.launcher.ui.home.components.homeFavoriteEnter
 import com.maxarcher.launcher.ui.home.components.HomeFavoriteFlowRibbon
+import com.maxarcher.launcher.ui.home.components.HomeFavoriteGrid
 import com.maxarcher.launcher.ui.home.components.HomeFavoriteItemFrame
 import com.maxarcher.launcher.ui.home.components.HomeModuleAddFavoriteEntry
 import com.maxarcher.launcher.ui.home.components.HomeOrderedFavoriteRibbon
+import com.maxarcher.launcher.ui.home.components.favoriteAvailabilityDisplayText
 import com.maxarcher.launcher.ui.home.components.homeEditSurface
-import com.maxarcher.launcher.ui.home.components.HomeFavoriteBelowItem
-import com.maxarcher.launcher.ui.home.components.HomeFavoriteRow
+import com.maxarcher.launcher.ui.home.components.homeFavoriteEnter
 import com.maxarcher.launcher.ui.home.components.stableKey
 
 @Composable
@@ -56,9 +66,13 @@ internal fun HomeOrderedModuleContent(
                         HomeModuleAddFavoriteEntry(
                             modifier = Modifier.fillMaxWidth().onGloballyPositioned(
                                 onGloballyPositioned = { coordinates ->
+                                    val bounds = Rect(
+                                        offset = coordinates.positionInWindow(),
+                                        size = coordinates.size.toSize(),
+                                    )
                                     applicationMovement?.updateAdd(
                                         id = module.id,
-                                        bounds = Rect(offset = coordinates.positionInWindow(), size = coordinates.size.toSize()),
+                                        bounds = bounds,
                                     )
                                 },
                             ),
@@ -72,68 +86,169 @@ internal fun HomeOrderedModuleContent(
                         HomeFavoriteItemFrame(
                             modifier = Modifier.fillMaxWidth().homeFavoriteEnter(
                                 batch = enterBatch,
-                                key = HomeFavoriteEnterKey(moduleId = module.id, identity = identity),
+                                key = HomeFavoriteEnterKey(
+                                    moduleId = module.id,
+                                    identity = identity,
+                                ),
                             ),
                             identity = identity,
                             movement = applicationMovement,
                             showRemove = applicationEditing,
-                            removeEnabled = applicationMutationEnabled,
                             namePlacement = module.namePlacement,
                             iconSize = dimensionResource(
                                 id = module.iconSize.iconSizeResource(),
                             ),
-                            onRemove = { onRemoveFavorite(identity) },
+                            contentStart = if (
+                                module.namePlacement == FavoriteNamePlacement.Right
+                            ) {
+                                dimensionResource(R.dimen.home_favorite_list_icon_start_margin)
+                            } else {
+                                0.dp
+                            },
+                            contentTop = if (
+                                module.namePlacement == FavoriteNamePlacement.Right
+                            ) {
+                                0.dp
+                            } else {
+                                dimensionResource(R.dimen.home_favorite_below_top_inset)
+                            },
+                            contentBottom = if (
+                                module.namePlacement == FavoriteNamePlacement.Hidden
+                            ) {
+                                dimensionResource(R.dimen.home_favorite_below_bottom_inset)
+                            } else if (
+                                module.namePlacement == FavoriteNamePlacement.Right
+                            ) {
+                                0.dp
+                            } else {
+                                dimensionResource(R.dimen.home_favorite_below_top_inset)
+                            },
                             content = {
-                                if (module.namePlacement == FavoriteNamePlacement.Below) {
-                                    HomeFavoriteBelowItem(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        availability = availability,
-                                        iconSize = module.iconSize,
-                                        textSize = module.textSize,
-                                        interactionEnabled = !editMode,
-                                        onClick = { onLaunchFavorite(availability) },
-                                        onLongClick = {
-                                            availability.presentationEntry?.let(block = onLongPressFavorite)
-                                        },
-                                    )
-                                } else if (module.namePlacement == FavoriteNamePlacement.Right) {
-                                    HomeFavoriteRow(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        availability = availability,
-                                        onClick = { onLaunchFavorite(availability) },
-                                        onLongClick = {
-                                            availability.presentationEntry?.let(block = onLongPressFavorite)
-                                        },
-                                        editMode = false,
-                                        interactionEnabled = !editMode,
-                                        compact = false,
-                                        iconSize = module.iconSize,
-                                        textSize = module.textSize,
-                                        exchangeHighlight = false,
-                                        onRowBoundsInWindow = { _, _ -> },
-                                        onHandleBoundsInWindow = {},
-                                    )
-                                } else {
-                                    HomeFavoriteRow(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        availability = availability,
-                                        onClick = { onLaunchFavorite(availability) },
-                                        onLongClick = {
-                                            availability.presentationEntry?.let(block = onLongPressFavorite)
-                                        },
-                                        editMode = false,
-                                        interactionEnabled = !editMode,
-                                        compact = false,
-                                        iconSize = module.iconSize,
-                                        textSize = null,
-                                        exchangeHighlight = false,
-                                        onRowBoundsInWindow = { _, _ -> },
-                                        onHandleBoundsInWindow = {},
-                                        showName = false,
-                                        centerIcon = true,
-                                        hiddenNamePlacement = true,
-                                    )
+                                val entry = availability.presentationEntry
+                                val displayText =
+                                    favoriteAvailabilityDisplayText(availability)
+                                val placement = when (module.namePlacement) {
+                                    FavoriteNamePlacement.Right ->
+                                        ApplicationItemNamePlacement.Right
+                                    FavoriteNamePlacement.Below ->
+                                        ApplicationItemNamePlacement.Below
+                                    FavoriteNamePlacement.Hidden ->
+                                        ApplicationItemNamePlacement.Hidden
                                 }
+                                val nameHidden =
+                                    placement == ApplicationItemNamePlacement.Hidden
+                                ApplicationItem(
+                                    icon = entry?.icon,
+                                    iconBitmap = entry?.iconBitmap,
+                                    iconSize = dimensionResource(
+                                        module.iconSize.iconSizeResource(),
+                                    ),
+                                    name = AnnotatedString(displayText),
+                                    namePlacement = placement,
+                                    nameStyle = LocalTextStyle.current.copy(
+                                        fontSize = dimensionResource(
+                                            module.textSize.textSizeResource(),
+                                        ).value.sp,
+                                        lineHeight = dimensionResource(
+                                            module.textSize.lineHeightResource(),
+                                        ).value.sp,
+                                        shadow = drawerForegroundShadow(),
+                                    ),
+                                    iconLabelGap = dimensionResource(
+                                        if (placement == ApplicationItemNamePlacement.Below) {
+                                            R.dimen.home_favorite_below_icon_label_gap
+                                        } else {
+                                            R.dimen.home_favorite_icon_label_gap
+                                        },
+                                    ),
+                                    contentPadding = if (nameHidden) {
+                                        ApplicationItemPadding(
+                                            top = dimensionResource(
+                                                R.dimen.home_favorite_below_top_inset,
+                                            ),
+                                            bottom = dimensionResource(
+                                                R.dimen.home_favorite_below_bottom_inset,
+                                            ),
+                                        )
+                                    } else if (
+                                        placement == ApplicationItemNamePlacement.Below
+                                    ) {
+                                        ApplicationItemPadding(
+                                            start = dimensionResource(
+                                                R.dimen.home_favorite_below_horizontal_inset,
+                                            ),
+                                            top = dimensionResource(
+                                                R.dimen.home_favorite_below_top_inset,
+                                            ),
+                                            end = dimensionResource(
+                                                R.dimen.home_favorite_below_horizontal_inset,
+                                            ),
+                                            bottom = dimensionResource(
+                                                R.dimen.home_favorite_below_bottom_inset,
+                                            ),
+                                        )
+                                    } else {
+                                        ApplicationItemPadding(
+                                            start = dimensionResource(
+                                                R.dimen.home_favorite_list_icon_start_margin,
+                                            ),
+                                        )
+                                    },
+                                    hiddenNameDescription = displayText
+                                        .takeIf { nameHidden },
+                                    onClick = { onLaunchFavorite(availability) },
+                                    onLongClick = entry?.let {
+                                        { onLongPressFavorite(it) }
+                                    },
+                                    interactionEnabled = !editMode,
+                                    contentAlpha = if (
+                                        availability is FavoriteAvailability.Available
+                                    ) {
+                                        1f
+                                    } else {
+                                        integerResource(
+                                            R.integer.disabled_content_alpha_percent,
+                                        ) / 100f
+                                    },
+                                    itemTag = if (nameHidden) {
+                                        null
+                                    } else if (
+                                        placement == ApplicationItemNamePlacement.Below
+                                    ) {
+                                        "home_favorite_below_item"
+                                    } else {
+                                        "home_favorite_row"
+                                    },
+                                    fillNameWidth = true,
+                                    badge = if (applicationEditing) {
+                                        ApplicationItemBadge.Remove(
+                                            onClick = { onRemoveFavorite(identity) },
+                                            enabled = applicationMutationEnabled,
+                                            tag = "remove_favorite_item",
+                                        )
+                                    } else {
+                                        ApplicationItemBadge.None
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(
+                                            when (module.namePlacement) {
+                                                FavoriteNamePlacement.Below ->
+                                                    dimensionResource(
+                                                        module.iconSize
+                                                            .belowItemHeightResource(),
+                                                    )
+                                                FavoriteNamePlacement.Hidden ->
+                                                    homeFavoriteHiddenItemHeight(
+                                                        module.iconSize,
+                                                    )
+                                                FavoriteNamePlacement.Right ->
+                                                    dimensionResource(
+                                                        module.iconSize.rowHeightResource(),
+                                                    )
+                                            },
+                                        ),
+                                )
                             },
                         )
                     }

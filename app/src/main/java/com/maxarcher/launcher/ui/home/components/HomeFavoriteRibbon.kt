@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -33,8 +34,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,13 @@ import com.maxarcher.launcher.LaunchableIdentity
 import com.maxarcher.launcher.OrderedFavoriteModule
 import com.maxarcher.launcher.R
 import com.maxarcher.launcher.applicationLayoutIdentities
+import com.maxarcher.launcher.lineHeightResource
+import com.maxarcher.launcher.textSizeResource
+import com.maxarcher.launcher.ui.components.ApplicationItem
+import com.maxarcher.launcher.ui.components.ApplicationItemBadge
+import com.maxarcher.launcher.ui.components.ApplicationItemNamePlacement
+import com.maxarcher.launcher.ui.components.ApplicationItemPadding
+import com.maxarcher.launcher.ui.drawer.drawerForegroundShadow
 
 @Composable
 internal fun HomeOrderedFavoriteRibbon(
@@ -105,31 +113,29 @@ internal fun HomeOrderedFavoriteRibbon(
                                 max = dimensionResource(id = R.dimen.home_favorite_bar_item_width),
                             ),
                         showRemove = applicationEditing,
-                        removeEnabled = applicationMutationEnabled,
                         namePlacement = FavoriteNamePlacement.Right,
                         iconSize = dimensionResource(id = R.dimen.home_favorite_icon_size),
-                        onRemove = { onRemoveFavorite(identity) },
+                        contentStart = dimensionResource(R.dimen.home_favorite_bar_item_inset),
                         content = {
                             FavoriteRibbonItemIntrinsicWidthContent(
-                                displayText = favoriteRibbonDisplayText(
+                                displayText = favoriteAvailabilityDisplayText(
                                     availability = availability,
                                 ),
                                 iconSize = dimensionResource(id = R.dimen.home_favorite_icon_size),
                             )
-                            HomeFavoriteRow(
-                                modifier = Modifier.matchParentSize(),
+                            HomeRibbonApplicationItem(
                                 availability = availability,
+                                modifier = Modifier.matchParentSize(),
                                 onClick = { onLaunchFavorite(availability) },
                                 onLongClick = {
                                     availability.presentationEntry?.let(block = onLongPressFavorite)
                                 },
-                                editMode = false,
                                 interactionEnabled = !editMode,
-                                compact = true,
-                                listSize = FavoriteListSize.Medium,
-                                exchangeHighlight = false,
-                                onRowBoundsInWindow = { _, _ -> },
-                                onHandleBoundsInWindow = {},
+                                remove = if (applicationEditing) {
+                                    { onRemoveFavorite(identity) } to applicationMutationEnabled
+                                } else {
+                                    null
+                                },
                             )
                         },
                     )
@@ -246,15 +252,19 @@ internal fun HomeFavoriteFlowRibbon(
                                             ),
                                         ),
                                     showRemove = applicationEditing,
-                                    removeEnabled = applicationMutationEnabled,
                                     namePlacement = FavoriteNamePlacement.Right,
                                     iconSize = dimensionResource(
                                         id = R.dimen.home_favorite_icon_size,
                                     ),
-                                    onRemove = { onRemoveFavorite(identity) },
+                                    contentStart = dimensionResource(
+                                        R.dimen.home_favorite_bar_item_inset,
+                                    ),
+                                    contentTop = dimensionResource(
+                                        R.dimen.home_favorite_bar_row_spacing,
+                                    ) / 2,
                                     content = {
                                         FavoriteRibbonItemIntrinsicWidthContent(
-                                            displayText = favoriteRibbonDisplayText(
+                                            displayText = favoriteAvailabilityDisplayText(
                                                 availability = availability,
                                             ),
                                             iconSize = dimensionResource(
@@ -264,25 +274,25 @@ internal fun HomeFavoriteFlowRibbon(
                                                 id = R.dimen.home_favorite_bar_row_spacing,
                                             ) / 2,
                                         )
-                                        HomeFavoriteRow(
-                                            modifier = Modifier.matchParentSize(),
+                                        HomeRibbonApplicationItem(
                                             availability = availability,
+                                            modifier = Modifier.matchParentSize(),
                                             onClick = { onLaunchFavorite(availability) },
                                             onLongClick = {
                                                 availability.presentationEntry?.let(
                                                     block = onLongPressFavorite,
                                                 )
                                             },
-                                            editMode = false,
                                             interactionEnabled = !editMode,
-                                            compact = true,
-                                            listSize = FavoriteListSize.Medium,
-                                            exchangeHighlight = false,
-                                            onRowBoundsInWindow = { _, _ -> },
-                                            onHandleBoundsInWindow = {},
                                             verticalInset = dimensionResource(
                                                 id = R.dimen.home_favorite_bar_row_spacing,
                                             ) / 2,
+                                            remove = if (applicationEditing) {
+                                                { onRemoveFavorite(identity) } to
+                                                    applicationMutationEnabled
+                                            } else {
+                                                null
+                                            },
                                         )
                                     },
                                 )
@@ -347,36 +357,59 @@ internal fun HomeFavoriteFlowRibbon(
     )
 }
 
+/** The compact ribbon item: the bar's own insets and gap, name beside the icon. */
 @Composable
-private fun favoriteRibbonDisplayText(
+private fun HomeRibbonApplicationItem(
     availability: FavoriteAvailability,
-): String {
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    interactionEnabled: Boolean,
+    modifier: Modifier = Modifier,
+    verticalInset: Dp = 0.dp,
+    remove: Pair<() -> Unit, Boolean>? = null,
+) {
     val entry = availability.presentationEntry
-    return when (availability) {
-        is FavoriteAvailability.Available -> availability.entry.label
-        is FavoriteAvailability.Disabled -> entry?.let(
-            block = {
-                stringResource(
-                    id = R.string.favorite_disabled_format,
-                    formatArgs = arrayOf(it.label),
-                )
-            },
-        ) ?: stringResource(id = R.string.favorite_application_disabled)
-
-        is FavoriteAvailability.TemporarilyUnavailable,
-        is FavoriteAvailability.Unknown,
-            -> entry?.let(
-            block = {
-                stringResource(
-                    id = R.string.favorite_unavailable_format,
-                    formatArgs = arrayOf(it.label),
-                )
-            },
-        ) ?: stringResource(id = R.string.favorite_application_unavailable)
-
-        FavoriteAvailability.ConfirmedRemoved ->
-            stringResource(id = R.string.favorite_application_unavailable)
-    }
+    ApplicationItem(
+        icon = entry?.icon,
+        iconBitmap = entry?.iconBitmap,
+        iconSize = dimensionResource(R.dimen.home_favorite_icon_size),
+        name = AnnotatedString(favoriteAvailabilityDisplayText(availability)),
+        namePlacement = ApplicationItemNamePlacement.Right,
+        nameStyle = LocalTextStyle.current.copy(
+            fontSize = dimensionResource(
+                FavoriteListSize.Medium.textSizeResource(),
+            ).value.sp,
+            lineHeight = dimensionResource(
+                FavoriteListSize.Medium.lineHeightResource(),
+            ).value.sp,
+            shadow = drawerForegroundShadow(),
+        ),
+        iconLabelGap = dimensionResource(R.dimen.home_favorite_bar_icon_label_gap),
+        contentPadding = ApplicationItemPadding(
+            start = dimensionResource(R.dimen.home_favorite_bar_item_inset),
+            top = verticalInset,
+            end = dimensionResource(R.dimen.home_favorite_bar_item_inset),
+            bottom = verticalInset,
+        ),
+        nameMaxWidth = dimensionResource(R.dimen.home_favorite_bar_label_max_width),
+        onClick = onClick,
+        onLongClick = entry?.let { { onLongClick() } },
+        interactionEnabled = interactionEnabled,
+        contentAlpha = if (availability is FavoriteAvailability.Available) {
+            1f
+        } else {
+            integerResource(R.integer.disabled_content_alpha_percent) / 100f
+        },
+        itemTag = "home_favorite_row",
+        badge = remove?.let { (onRemove, enabled) ->
+            ApplicationItemBadge.Remove(
+                onClick = onRemove,
+                enabled = enabled,
+                tag = "remove_favorite_item",
+            )
+        } ?: ApplicationItemBadge.None,
+        modifier = modifier,
+    )
 }
 
 @Composable

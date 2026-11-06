@@ -197,8 +197,8 @@ class HomeFavoritePlacementUiTest {
                             compositionTokens[identity] = remember(calculation = { Any() })
                             HomeFavoriteItemFrame(
                                 modifier = Modifier.fillMaxWidth(), identity = identity, movement = movement,
-                                showRemove = false, removeEnabled = false,
-                                namePlacement = FavoriteNamePlacement.Right, iconSize = 24.dp, onRemove = {},
+                                showRemove = false,
+                                namePlacement = FavoriteNamePlacement.Right, iconSize = 24.dp,
                                 content = { Box(modifier = Modifier.fillMaxWidth().height(height = 64.dp)) },
                             )
                         },
