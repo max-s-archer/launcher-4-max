@@ -4,6 +4,8 @@ import android.R.attr.animationDuration
 import androidx.compose.animation.animateBounds
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -20,7 +22,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -28,6 +32,7 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -357,6 +362,30 @@ internal fun HomeFavoriteFlowRibbon(
     )
 }
 
+/** The compact ribbon surface: a 6% fill and a 12% border, both using the foreground color. */
+@Composable
+private fun Modifier.favoriteRibbonItemSurface(): Modifier {
+    val shape = RoundedCornerShape(
+        dimensionResource(R.dimen.home_favorite_bar_corner_radius),
+    )
+    val color = MaterialTheme.colorScheme.onBackground
+    return clip(shape)
+        .background(color = color.copy(
+            alpha = integerResource(
+                R.integer.home_favorite_bar_item_background_alpha_percent,
+            ) / 100f,
+        ))
+        .border(
+            width = dimensionResource(R.dimen.home_favorite_bar_border_width),
+            color = color.copy(
+                alpha = integerResource(
+                    R.integer.home_favorite_bar_border_alpha_percent,
+                ) / 100f,
+            ),
+            shape = shape,
+        )
+}
+
 /** The compact ribbon item: the bar's own insets and gap, name beside the icon. */
 @Composable
 private fun HomeRibbonApplicationItem(
@@ -408,7 +437,7 @@ private fun HomeRibbonApplicationItem(
                 tag = "remove_favorite_item",
             )
         } ?: ApplicationItemBadge.None,
-        modifier = modifier,
+        modifier = modifier.favoriteRibbonItemSurface(),
     )
 }
 
