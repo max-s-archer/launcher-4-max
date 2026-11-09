@@ -645,6 +645,16 @@ internal fun Launcher4MaxApp(
         settleTo(AppSurface.Home)
     }
 
+    fun beginFavoriteSelection(target: FavoriteAddTarget) {
+        favoriteEditor.invalidateApplicationUndo()
+        favoriteSelectionJourneyActive = true
+        favoriteAddTarget = target
+        favoriteSelection = emptyList()
+        favoriteSelectionSaving = false
+        drawerActivated = true
+        settleTo(AppSurface.Drawer)
+    }
+
     fun openFavoriteSelection(containerId: String) {
         if (favoriteEditor.isSaving) return
         val readable = favoriteState as? FavoriteReadState.Readable ?: return
@@ -653,36 +663,28 @@ internal fun Launcher4MaxApp(
                 it.id == containerId && it.type == OrderedFavoriteModuleType.Vertical
             }
         ) return
-        favoriteEditor.invalidateApplicationUndo()
-        favoriteSelectionJourneyActive = true
-        favoriteAddTarget = FavoriteAddTarget(
-            containerId = containerId,
-            containerType = FavoriteContainerType.VerticalList,
-            label = addToListLabel,
-            provisional = false,
+        beginFavoriteSelection(
+            target = FavoriteAddTarget(
+                containerId = containerId,
+                containerType = FavoriteContainerType.VerticalList,
+                label = addToListLabel,
+                provisional = false,
+            ),
         )
-        favoriteSelection = emptyList()
-        favoriteSelectionSaving = false
-        drawerActivated = true
-        settleTo(AppSurface.Drawer)
     }
 
     fun openProvisionalFavoriteSelection() {
         if (favoriteEditor.isSaving) return
         val state = favoriteState
         if (state !is FavoriteReadState.Readable) return
-        favoriteEditor.invalidateApplicationUndo()
-        favoriteSelectionJourneyActive = true
-        favoriteAddTarget = FavoriteAddTarget(
-            containerId = null,
-            containerType = FavoriteContainerType.VerticalList,
-            label = createListLabel,
-            provisional = true,
+        beginFavoriteSelection(
+            target = FavoriteAddTarget(
+                containerId = null,
+                containerType = FavoriteContainerType.VerticalList,
+                label = createListLabel,
+                provisional = true,
+            ),
         )
-        favoriteSelection = emptyList()
-        favoriteSelectionSaving = false
-        drawerActivated = true
-        settleTo(AppSurface.Drawer)
     }
 
     fun openHomeBottomAppBarSelection() {
@@ -706,20 +708,16 @@ internal fun Launcher4MaxApp(
         )
         val remainingPlaces = (capacity - bar.identities.size).coerceAtLeast(0)
         if (remainingPlaces == 0) return
-        favoriteEditor.invalidateApplicationUndo()
-        favoriteSelectionJourneyActive = true
-        favoriteAddTarget = FavoriteAddTarget(
-            containerId = null,
-            containerType = FavoriteContainerType.FavoriteBar,
-            label = addToHomeBottomAppBarLabel,
-            provisional = false,
-            homeBottomAppBar = true,
-            remainingPlaces = remainingPlaces,
+        beginFavoriteSelection(
+            target = FavoriteAddTarget(
+                containerId = null,
+                containerType = FavoriteContainerType.FavoriteBar,
+                label = addToHomeBottomAppBarLabel,
+                provisional = false,
+                homeBottomAppBar = true,
+                remainingPlaces = remainingPlaces,
+            ),
         )
-        favoriteSelection = emptyList()
-        favoriteSelectionSaving = false
-        drawerActivated = true
-        settleTo(AppSurface.Drawer)
     }
 
     fun openFavoriteBarSelection(containerId: String) {
@@ -730,35 +728,27 @@ internal fun Launcher4MaxApp(
                 it.id == containerId && it.type == OrderedFavoriteModuleType.Ribbon
             }
         ) return
-        favoriteEditor.invalidateApplicationUndo()
-        favoriteSelectionJourneyActive = true
-        favoriteAddTarget = FavoriteAddTarget(
-            containerId = containerId,
-            containerType = FavoriteContainerType.FavoriteBar,
-            label = addToFavoriteBarLabel,
-            provisional = false,
+        beginFavoriteSelection(
+            target = FavoriteAddTarget(
+                containerId = containerId,
+                containerType = FavoriteContainerType.FavoriteBar,
+                label = addToFavoriteBarLabel,
+                provisional = false,
+            ),
         )
-        favoriteSelection = emptyList()
-        favoriteSelectionSaving = false
-        drawerActivated = true
-        settleTo(AppSurface.Drawer)
     }
 
     fun openProvisionalFavoriteBarSelection() {
         if (favoriteEditor.isSaving) return
         if (favoriteState !is FavoriteReadState.Readable) return
-        favoriteEditor.invalidateApplicationUndo()
-        favoriteSelectionJourneyActive = true
-        favoriteAddTarget = FavoriteAddTarget(
-            containerId = null,
-            containerType = FavoriteContainerType.FavoriteBar,
-            label = createFavoriteBarLabel,
-            provisional = true,
+        beginFavoriteSelection(
+            target = FavoriteAddTarget(
+                containerId = null,
+                containerType = FavoriteContainerType.FavoriteBar,
+                label = createFavoriteBarLabel,
+                provisional = true,
+            ),
         )
-        favoriteSelection = emptyList()
-        favoriteSelectionSaving = false
-        drawerActivated = true
-        settleTo(AppSurface.Drawer)
     }
 
     fun confirmFavoriteSelection() {
