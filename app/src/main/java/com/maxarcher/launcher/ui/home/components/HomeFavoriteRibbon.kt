@@ -56,6 +56,7 @@ import com.maxarcher.launcher.OrderedFavoriteModule
 import com.maxarcher.launcher.R
 import com.maxarcher.launcher.applicationLayoutIdentities
 import com.maxarcher.launcher.lineHeightResource
+import com.maxarcher.launcher.stableKey
 import com.maxarcher.launcher.textSizeResource
 import com.maxarcher.launcher.ui.components.ApplicationItem
 import com.maxarcher.launcher.ui.components.ApplicationItemBadge

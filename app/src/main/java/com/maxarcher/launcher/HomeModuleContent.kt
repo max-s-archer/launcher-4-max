@@ -30,7 +30,6 @@ import com.maxarcher.launcher.ui.home.components.HomeOrderedFavoriteRibbon
 import com.maxarcher.launcher.ui.home.components.favoriteAvailabilityDisplayText
 import com.maxarcher.launcher.ui.home.components.homeEditSurface
 import com.maxarcher.launcher.ui.home.components.homeFavoriteEnter
-import com.maxarcher.launcher.ui.home.components.stableKey
 
 @Composable
 internal fun HomeOrderedModuleContent(

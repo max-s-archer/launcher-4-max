@@ -18,6 +18,7 @@ import com.maxarcher.launcher.FavoriteNamePlacement
 import com.maxarcher.launcher.HomeApplicationMovement
 import com.maxarcher.launcher.LaunchableIdentity
 import com.maxarcher.launcher.R
+import com.maxarcher.launcher.stableKey
 
 /**
  * Reports the item and its removal control to an active movement. The control itself is drawn

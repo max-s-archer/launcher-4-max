@@ -32,7 +32,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import kotlin.math.abs
-import com.maxarcher.launcher.ui.home.components.stableKey
+import com.maxarcher.launcher.stableKey
 
 class HomeFavoritePlacementUiTest {
     private var animationScale = 1f

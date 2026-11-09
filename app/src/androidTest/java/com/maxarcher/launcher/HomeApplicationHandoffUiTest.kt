@@ -47,7 +47,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import com.maxarcher.launcher.ui.home.components.stableKey
+import com.maxarcher.launcher.stableKey
 
 class HomeApplicationHandoffUiTest {
     @get:Rule

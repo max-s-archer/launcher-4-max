@@ -64,7 +64,6 @@ import com.maxarcher.launcher.ui.home.components.HomeFavoriteMessage
 import com.maxarcher.launcher.ui.home.components.HomeModuleDragPreview
 import com.maxarcher.launcher.ui.home.components.HomeOrderedModuleComposition
 import com.maxarcher.launcher.ui.home.components.rememberHomeFavoriteEnterBatch
-import com.maxarcher.launcher.ui.home.components.withPresentationFrom
 import com.maxarcher.launcher.ui.style.HomeModuleStylePanel
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay

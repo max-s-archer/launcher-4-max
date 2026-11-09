@@ -17,7 +17,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
-import com.maxarcher.launcher.ui.home.components.stableKey
+import com.maxarcher.launcher.stableKey
 
 class HomeApplicationMovementUiTest {
     @get:Rule

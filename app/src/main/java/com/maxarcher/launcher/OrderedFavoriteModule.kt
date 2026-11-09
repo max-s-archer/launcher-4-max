@@ -56,6 +56,45 @@ internal data class OrderedFavoriteAggregate(
             homeBottomAppBar.identities
 }
 
+internal fun List<OrderedFavoriteModule>.withPresentationFrom(
+    aggregate: OrderedFavoriteAggregate,
+): List<OrderedFavoriteModule> {
+    val presentedById = aggregate.modules.associateBy(OrderedFavoriteModule::id)
+    return map { module ->
+        val presented = presentedById[module.id]
+        if (presented == null || presented.type != module.type) {
+            module
+        } else if (
+            module.name == presented.name &&
+            module.nameVisible == presented.nameVisible &&
+            (module.type != OrderedFavoriteModuleType.Ribbon ||
+                module.displayMode == presented.displayMode) &&
+            (module.type != OrderedFavoriteModuleType.Vertical ||
+                module.iconSize == presented.iconSize &&
+                module.textSize == presented.textSize &&
+                module.namePlacement == presented.namePlacement &&
+                module.itemsPerRow == presented.itemsPerRow)
+        ) {
+            module
+        } else if (module.type != OrderedFavoriteModuleType.Vertical) {
+            module.copy(
+                name = presented.name,
+                nameVisible = presented.nameVisible,
+                displayMode = presented.displayMode,
+            )
+        } else {
+            module.copy(
+                iconSize = presented.iconSize,
+                textSize = presented.textSize,
+                namePlacement = presented.namePlacement,
+                itemsPerRow = presented.itemsPerRow,
+                name = presented.name,
+                nameVisible = presented.nameVisible,
+            )
+        }
+    }
+}
+
 internal sealed interface OrderedFavoriteReadState {
     data object Loading : OrderedFavoriteReadState
     data class Readable(

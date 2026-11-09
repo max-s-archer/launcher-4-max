@@ -86,11 +86,11 @@ import com.maxarcher.launcher.LaunchableIdentity
 import com.maxarcher.launcher.R
 import com.maxarcher.launcher.homeBottomAppBarCapacity
 import com.maxarcher.launcher.iconSizeResource
+import com.maxarcher.launcher.stableKey
 import com.maxarcher.launcher.ui.components.ApplicationItem
 import com.maxarcher.launcher.ui.components.ApplicationItemBadge
 import com.maxarcher.launcher.ui.components.ApplicationItemNamePlacement
 import com.maxarcher.launcher.ui.components.ApplicationItemPadding
-import com.maxarcher.launcher.ui.home.components.stableKey
 import androidx.core.graphics.drawable.toBitmap
 import com.maxarcher.launcher.ApplicationOrderChange
 import com.maxarcher.launcher.HOME_BOTTOM_APP_BAR_DESTINATION_ID

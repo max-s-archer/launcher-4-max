@@ -40,7 +40,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import com.maxarcher.launcher.ui.home.components.stableKey
+import com.maxarcher.launcher.stableKey
 
 class HomeFavoriteEnterUiTest {
     private var scale = 1f

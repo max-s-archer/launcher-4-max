@@ -39,6 +39,9 @@ data class LaunchableIdentity(
     val componentName: ComponentName,
 )
 
+fun LaunchableIdentity.stableKey(): String =
+    "$profileSerialNumber:${componentName.flattenToString()}"
+
 internal data class LaunchableEntry(
     val identity: LaunchableIdentity,
     val user: UserHandle,
