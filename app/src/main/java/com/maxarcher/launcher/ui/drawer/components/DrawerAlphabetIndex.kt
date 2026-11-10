@@ -10,16 +10,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import com.maxarcher.launcher.ui.drawer.DrawerIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.paint
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -30,6 +32,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.maxarcher.launcher.R
+import com.maxarcher.launcher.ui.drawer.DrawerIcon as Icon
 
 private const val SETTINGS_INDEX_ENTRY = "settings"
 
@@ -227,12 +230,24 @@ internal fun DrawerIndexBubble(
     label: String,
     modifier: Modifier = Modifier,
 ) {
+    val bubbleSize = dimensionResource(id = R.dimen.drawer_index_bubble_size)
+    val tail = dimensionResource(id = R.dimen.drawer_index_bubble_tail)
     Box(
         modifier = modifier
-            .size(size = dimensionResource(id = R.dimen.drawer_index_bubble_size))
+            .size(width = bubbleSize + tail, height = bubbleSize)
+            .paint(
+                painter = painterResource(id = R.drawable.drawer_index_bubble_background),
+                colorFilter = ColorFilter.tint(
+                    color = colorResource(id = R.color.drawer_index_bubble_background),
+                ),
+            )
             .testTag(tag = "drawer_index_bubble"),
-        contentAlignment = Alignment.Center,
-        content = {
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(
+            modifier = Modifier.size(bubbleSize),
+            contentAlignment = Alignment.Center,
+        ) {
             if (label == SETTINGS_INDEX_ENTRY) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_settings),
@@ -254,6 +269,6 @@ internal fun DrawerIndexBubble(
                     fontWeight = FontWeight.Medium,
                 )
             }
-        },
-    )
+        }
+    }
 }

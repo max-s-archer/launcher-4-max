@@ -62,7 +62,7 @@
 - 分组锚点使用粗体的共享 `largeAppNameFontSize`、对应行高和 `primaryTextColor`。内嵌锚点占据全宽 `40dp` 行，文字垂直居中，起始位置距安全起始边缘最终总计 `16dp`，并随列表滚动而不吸顶。左侧锚点占据 `40dp` 宽的起始侧列，与剩余应用网格之间间距为 `0dp`；文字水平居中，在未吸顶时距所属分组顶部 `8dp`，进入分组范围内吸顶后继续保持相同几何并位于顶部应用栏下方。Settings 左侧锚点用 `16dp x 16dp` `primaryTextColor` 齿轮图形替代文字，在该列水平居中并保持相同 `8dp` 顶部距离。两种锚点均不会因为吸顶改变布局，也不建立交互目标。
 - AlphabetIndex 在安全末端边缘占据固定 `32dp` 宽度，并在可用应用区域内垂直居中。标签在固定 `20dp` 槽位中使用 `11sp` 中等字重文字；Settings 齿轮使用 `11dp` 图形并位于一个完整 `20dp` 槽位内。
 - 最大索引模型包含 28 个固定槽位。由 Drawer 行为契约负责最终可用高度阈值和滚动决定。
-- 活动 token 气泡准确为 `64dp x 64dp`，在可用应用区域内保持垂直居中，并位于 AlphabetIndex 起始侧，两者间距为 `16dp`。气泡显示 `32sp` 中等字重文字或 `32dp` Settings 齿轮，不随当前有效槽位进行纵向移动。
+- 活动 token 气泡由 `64dp` 圆形主体和朝向 AlphabetIndex 的 `12dp` 尖端组成，完整尺寸为 `76dp x 64dp`。背景为浅灰色 `#CC8A8A8A`。气泡在可用应用区域内保持垂直居中，尖端位于 AlphabetIndex 起始侧，两者间距为 `16dp`。`32sp` 中等字重文字或 `32dp` Settings 齿轮居中于圆形主体。气泡不随当前有效槽位进行纵向移动。
 - Drawer Loading 使用共享 `48dp x 48dp` 进度指示器尺寸，Error 使用共享 `48dp x 48dp` 非交互状态图标尺寸。状态文字使用正常字重的共享 `primaryTextFontSize`、对应行高和 `primaryTextColor`。指示器或图标与文字间距为 `16dp`；Error 文字与 Retry 间距同样为 `16dp`。
 
 ## Settings 固定条目

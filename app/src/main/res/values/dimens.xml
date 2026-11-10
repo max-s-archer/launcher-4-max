@@ -202,6 +202,7 @@
 
     <!-- Drawer / Application list / Alphabet index active-label bubble -->
     <dimen name="drawer_index_bubble_size">64dp</dimen>
+    <dimen name="drawer_index_bubble_tail">12dp</dimen>
     <dimen name="drawer_index_bubble_text_size">32sp</dimen>
     <dimen name="drawer_index_bubble_index_gap">16dp</dimen>
     <dimen name="drawer_index_bubble_settings_icon_size">32dp</dimen>
