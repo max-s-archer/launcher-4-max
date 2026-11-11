@@ -792,7 +792,7 @@ private fun DrawerFavoriteSelectionList(
         activeIndexLabel = null
     }
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
@@ -811,7 +811,7 @@ private fun DrawerFavoriteSelectionList(
                 .fillMaxWidth(),
         ) {
             LazyColumn(
-                modifier = Modifier
+                modifier = modifier
                     .fillMaxSize()
                     .testTag("drawer_favorite_selection_list"),
                 contentPadding = PaddingValues(
@@ -1111,7 +1111,7 @@ private fun DrawerApplicationList(
         val cellInset = dimensionResource(R.dimen.drawer_application_cell_horizontal_inset)
         val indexWidth = dimensionResource(R.dimen.drawer_index_width)
         Box(
-            modifier = modifier
+            modifier = Modifier
                 .weight(weight = 1f)
                 .fillMaxWidth(),
         ) {
@@ -1130,7 +1130,7 @@ private fun DrawerApplicationList(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier
+                    modifier = modifier
                         .fillMaxSize()
                         .testTag(tag = "drawer_application_list"),
                     contentPadding = PaddingValues(
