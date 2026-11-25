@@ -368,20 +368,10 @@ internal fun Launcher4MaxApp(
             if (!width.isFinite() || width <= 0f) {
                 null
             } else {
-                val resources = androidContext.resources
-                val density = resources.displayMetrics.density
                 homeBottomAppBarCapacity(
+                    resources = androidContext.resources,
                     safeWidthDp = width,
-                    outerMarginDp = resources.getDimension(
-                        R.dimen.home_bottom_app_bar_outer_margin,
-                    ) / density,
-                    iconSizeDp = resources.getDimension(bar.iconSize.iconSizeResource()) / density,
-                    horizontalInsetDp = resources.getDimension(
-                        R.dimen.home_bottom_app_bar_preview_horizontal_inset,
-                    ) / density,
-                    iconGapDp = resources.getDimension(
-                        R.dimen.home_bottom_app_bar_preview_icon_gap,
-                    ) / density,
+                    iconSize = bar.iconSize,
                 )
             }
         },
