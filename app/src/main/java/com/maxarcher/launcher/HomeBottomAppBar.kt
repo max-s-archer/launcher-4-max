@@ -1,5 +1,6 @@
 package com.maxarcher.launcher
 
+import android.content.res.Resources
 import kotlin.math.floor
 
 internal enum class HomeBottomAppBarPresentation {
@@ -25,6 +26,22 @@ internal fun homeBottomAppBarCapacity(
     val availableWidthDp = safeWidthDp - (outerMarginDp + horizontalInsetDp) * 2
     if (availableWidthDp < iconSizeDp) return 0
     return floor((availableWidthDp + iconGapDp) / (iconSizeDp + iconGapDp)).toInt()
+}
+
+internal fun homeBottomAppBarCapacity(
+    resources: Resources,
+    safeWidthDp: Float,
+    iconSize: FavoriteListSize,
+): Int {
+    val density = resources.displayMetrics.density
+    fun dimensionDp(id: Int) = resources.getDimension(id) / density
+    return homeBottomAppBarCapacity(
+        safeWidthDp = safeWidthDp,
+        iconSizeDp = dimensionDp(iconSize.iconSizeResource()),
+        outerMarginDp = dimensionDp(R.dimen.home_bottom_app_bar_outer_margin),
+        horizontalInsetDp = dimensionDp(R.dimen.home_bottom_app_bar_preview_horizontal_inset),
+        iconGapDp = dimensionDp(R.dimen.home_bottom_app_bar_preview_icon_gap),
+    )
 }
 
 internal fun OrderedFavoriteAggregate.restoreHomeBottomAppBarForWidth(

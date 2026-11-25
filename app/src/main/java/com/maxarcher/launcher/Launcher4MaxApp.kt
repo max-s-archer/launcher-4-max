@@ -657,19 +657,22 @@ internal fun Launcher4MaxApp(
         settleTo(AppSurface.Drawer)
     }
 
-    fun openFavoriteSelection(containerId: String) {
+    fun openExistingModuleSelection(moduleId: String, moduleType: OrderedFavoriteModuleType) {
         if (favoriteEditor.isSaving) return
         val readable = favoriteState as? FavoriteReadState.Readable ?: return
         val modules = readable.orderedAggregate?.modules ?: return
-        if (modules.none {
-                it.id == containerId && it.type == OrderedFavoriteModuleType.Vertical
-            }
-        ) return
+        if (modules.none { it.id == moduleId && it.type == moduleType }) return
+        val (containerType, label) = when (moduleType) {
+            OrderedFavoriteModuleType.Vertical ->
+                FavoriteContainerType.VerticalList to addToListLabel
+            OrderedFavoriteModuleType.Ribbon ->
+                FavoriteContainerType.FavoriteBar to addToFavoriteBarLabel
+        }
         beginFavoriteSelection(
             target = FavoriteAddTarget(
-                containerId = containerId,
-                containerType = FavoriteContainerType.VerticalList,
-                label = addToListLabel,
+                containerId = moduleId,
+                containerType = containerType,
+                label = label,
                 provisional = false,
             ),
         )
@@ -694,19 +697,9 @@ internal fun Launcher4MaxApp(
         val readable = favoriteState as? FavoriteReadState.Readable ?: return
         val bar = readable.orderedAggregate?.homeBottomAppBar ?: return
         val capacity = homeBottomAppBarCapacity(
+            resources = androidContext.resources,
             safeWidthDp = homeSafeWidthDp,
-            outerMarginDp = androidContext.resources.getDimension(
-                R.dimen.home_bottom_app_bar_outer_margin,
-            ) / androidContext.resources.displayMetrics.density,
-            iconSizeDp = androidContext.resources.getDimension(
-                bar.iconSize.iconSizeResource(),
-            ) / androidContext.resources.displayMetrics.density,
-            horizontalInsetDp = androidContext.resources.getDimension(
-                R.dimen.home_bottom_app_bar_preview_horizontal_inset,
-            ) / androidContext.resources.displayMetrics.density,
-            iconGapDp = androidContext.resources.getDimension(
-                R.dimen.home_bottom_app_bar_preview_icon_gap,
-            ) / androidContext.resources.displayMetrics.density,
+            iconSize = bar.iconSize,
         )
         val remainingPlaces = (capacity - bar.identities.size).coerceAtLeast(0)
         if (remainingPlaces == 0) return
@@ -718,24 +711,6 @@ internal fun Launcher4MaxApp(
                 provisional = false,
                 homeBottomAppBar = true,
                 remainingPlaces = remainingPlaces,
-            ),
-        )
-    }
-
-    fun openFavoriteBarSelection(containerId: String) {
-        if (favoriteEditor.isSaving) return
-        val readable = favoriteState as? FavoriteReadState.Readable ?: return
-        val modules = readable.orderedAggregate?.modules ?: return
-        if (modules.none {
-                it.id == containerId && it.type == OrderedFavoriteModuleType.Ribbon
-            }
-        ) return
-        beginFavoriteSelection(
-            target = FavoriteAddTarget(
-                containerId = containerId,
-                containerType = FavoriteContainerType.FavoriteBar,
-                label = addToFavoriteBarLabel,
-                provisional = false,
             ),
         )
     }
@@ -764,10 +739,19 @@ internal fun Launcher4MaxApp(
             val currentInventoryIdentities = inventorySnapshot?.entries
                 ?.mapTo(mutableSetOf<LaunchableIdentity>(), LaunchableEntry::identity)
                 .orEmpty()
-            val temporarilyUnavailableIdentities = inventorySnapshot?.profileReadStatus
+            val unavailableProfileSerials = inventorySnapshot?.profileReadStatus
                 ?.filterValues { it == ProfileInventoryReadStatus.Unavailable }
                 ?.keys
                 .orEmpty()
+            fun appendableSelection(aggregate: OrderedFavoriteAggregate): List<LaunchableIdentity> {
+                val existing = aggregate.identities.toHashSet()
+                return selected.filter { identity ->
+                    (identity in currentInventoryIdentities ||
+                        identity.profileSerialNumber in unavailableProfileSerials) &&
+                        identity !in existing
+                }
+            }
+
             var updatedAggregate: OrderedFavoriteAggregate? = null
             var targetInvalid = false
             var addedToModule = false
@@ -775,25 +759,11 @@ internal fun Launcher4MaxApp(
                 var appended = false
                 effectiveFavoriteStore.updateOrderedAggregate { aggregate ->
                     val capacity = homeBottomAppBarCapacity(
+                        resources = androidContext.resources,
                         safeWidthDp = homeSafeWidthDp,
-                        outerMarginDp = androidContext.resources.getDimension(
-                            R.dimen.home_bottom_app_bar_outer_margin,
-                        ) / androidContext.resources.displayMetrics.density,
-                        iconSizeDp = androidContext.resources.getDimension(
-                            aggregate.homeBottomAppBar.iconSize.iconSizeResource(),
-                        ) / androidContext.resources.displayMetrics.density,
-                        horizontalInsetDp = androidContext.resources.getDimension(
-                            R.dimen.home_bottom_app_bar_preview_horizontal_inset,
-                        ) / androidContext.resources.displayMetrics.density,
-                        iconGapDp = androidContext.resources.getDimension(
-                            R.dimen.home_bottom_app_bar_preview_icon_gap,
-                        ) / androidContext.resources.displayMetrics.density,
+                        iconSize = aggregate.homeBottomAppBar.iconSize,
                     )
-                    val appendable = selected.filter { identity ->
-                        (identity in currentInventoryIdentities ||
-                            identity.profileSerialNumber in temporarilyUnavailableIdentities) &&
-                            identity !in aggregate.identities
-                    }
+                    val appendable = appendableSelection(aggregate)
                     val capturedPlaces = target.remainingPlaces
                         ?: (capacity - aggregate.homeBottomAppBar.identities.size)
                             .coerceAtLeast(0)
@@ -827,11 +797,7 @@ internal fun Launcher4MaxApp(
                         targetInvalid = true
                         return@updateComposition aggregate
                     }
-                    val appendable = selected.filter { identity ->
-                        (identity in currentInventoryIdentities ||
-                            identity.profileSerialNumber in temporarilyUnavailableIdentities) &&
-                            identity !in aggregate.identities
-                    }
+                    val appendable = appendableSelection(aggregate)
                     if (appendable.isEmpty()) {
                         updatedAggregate = aggregate
                         return@updateComposition aggregate
@@ -1298,9 +1264,13 @@ internal fun Launcher4MaxApp(
                         source = ApplicationActionSheetSource.Home,
                     )
                 },
-                onAddFavoritesToList = ::openFavoriteSelection,
+                onAddFavoritesToList = { id ->
+                    openExistingModuleSelection(id, OrderedFavoriteModuleType.Vertical)
+                },
                 onAddProvisionalFavorites = ::openProvisionalFavoriteSelection,
-                onAddFavoritesToBar = ::openFavoriteBarSelection,
+                onAddFavoritesToBar = { id ->
+                    openExistingModuleSelection(id, OrderedFavoriteModuleType.Ribbon)
+                },
                 onAddProvisionalFavoriteBar = ::openProvisionalFavoriteBarSelection,
                 onAddToHomeBottomAppBar = ::openHomeBottomAppBarSelection,
                 homeBottomAppBarExpanded = homeBottomAppBarExpanded,
