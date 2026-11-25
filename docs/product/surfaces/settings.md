@@ -29,6 +29,7 @@
 - Settings displays no separate screen-lock item. The page and its selection dialog own their behavior in [quick-actions.md](../features/quick-actions.md).
 - **Icon shape:** Opens the icon-shape settings page defined by [icon-shape.md](../features/icon-shape.md). The entry is a primary settings item titled `Icon shape`, placed directly below `Quick action settings` and above the Data entries. The page, its live-preview window, and its mode and corner-radius controls own their behavior in that contract.
 - **Home bottom app bar:** Opens the page defined by [home-bottom-app-bar.md](../features/home-bottom-app-bar.md). The entry is a primary settings item titled `Home bottom app bar`, placed directly below `Icon shape` and above the Data entries. That page owns the master switch, preview, fixed presentation, and icon size.
+- **Weather:** Configures the current-weather presentation defined by [Home behavior](home.md#current-weather). Its page begins with the master switch, which defaults to off. It also owns the user-supplied API Key, manually selected city, selected weather application, and replaceable provider choice. Amap is the first provider. Turning the switch off retains those settings and stops weather requests; turning it on restores them. The page stores no developer API Key and does not request location permission. Provider terms, free quota, and public-distribution authorization are `To be decided`.
 
 ### Language behavior
 

@@ -5,7 +5,8 @@
 ## Purpose and structure
 
 Home is one fixed, non-pageable, non-collapsible Launcher surface. In normal Home and
-collapsed-panel editing, a fixed basic-information region shows time, date, and weekday;
+collapsed-panel editing, a fixed basic-information region shows time, date, weekday, and the
+current-weather presentation defined below;
 expanding the inline style settings panel preserves that region. One full-width favorite main
 list occupies the remaining content area and scrolls vertically. A dismissible default-Launcher
 prompt, defined below, occupies its own region between the basic-information region and that
@@ -24,6 +25,42 @@ Remaining space is transparent Home background, not another module.
 - Time follows the system 12-hour or 24-hour preference and does not show seconds. Date and weekday follow the active locale.
 - Selecting time opens an exposed system Clock main surface, then falls back to the system alarm destination. Selecting date invokes an implicit Calendar destination. An unavailable destination produces localized non-blocking feedback.
 - The eligible blank space of the full-width information region hosts the two configurable quick-action slots defined in [quick-actions.md](../features/quick-actions.md); a slot bound to `No action` produces no product behavior. Interactive targets remain excluded.
+
+## Current weather
+
+Current weather belongs to V1 fixed presentation. It is not a V2 adaptive capability.
+
+- A master switch on the Weather settings page controls the feature and defaults to off.
+  While off, Home shows no weather presentation and starts no weather request. The saved API
+  Key, city, weather application, and provider remain saved. Turning the switch on again
+  restores those saved settings without asking the user to enter them again.
+
+- The date row shows one weather icon and the current temperature to the right of the date.
+  Exact icon size, spacing, and alignment are `To be decided`.
+- Selecting that weather presentation opens the weather application selected by the user.
+  The target may be a system or third-party application. An unavailable target produces
+  localized non-blocking feedback and does not affect other Launcher behavior.
+- Launcher4Max provides no weather-detail, forecast, alert, or air-quality page.
+- Amap is the first weather-data provider. The product requires the provider to be replaceable.
+  Amap request fields, error codes, and response formats are outside this contract.
+- The user supplies the API Key. While the feature is on without one, Home shows the
+  unconfigured state rather than live weather, and every other Launcher capability remains
+  available. No developer API Key is bundled in public source, a public APK, or Git.
+  Whether the provider terms, free quota, or Key authorization permit public distribution
+  is `To be decided`.
+- The first version uses one manually selected city. It requests no location permission and
+  performs no automatic location.
+- Home distinguishes fresh data, cached data, a failed read, and an unconfigured state.
+  Cached data is never presented as fresh weather. The exact presentation of each state is
+  `To be decided`.
+- Weather data is cached by city. Rebuilding the interface, changing pages, or showing the
+  same weather again does not start a new request.
+- Home uses the cache by default and refreshes it in the background only after the refresh
+  interval. The first-version interval is 60 minutes.
+- A failed request, unavailable network, or expired cached result leaves Launcher4Max usable.
+  Current weather excludes a public weather proxy, a Launcher4Max-operated backend, accounts,
+  forecasts, alerts, air quality, high and low temperatures, automatic location, geofencing,
+  and automatic provider switching.
 
 ## Default-launcher prompt
 

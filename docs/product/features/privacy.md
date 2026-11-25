@@ -40,6 +40,8 @@ If stored favorite data cannot be read reliably, Launcher4Max preserves the orig
 
 Launcher4Max does not provide an account, advertising, analytics, crash-report upload, cloud service, or Launcher4Max-operated server. It does not transmit, sell, or share the locally processed information described above. Core Home, Drawer, application launching, and Settings behavior remains available without a network connection.
 
+Current weather is the network exception. A weather request starts only while the feature is on and the user has supplied an API Key and selected a city. Launcher4Max sends that request to the selected weather provider, initially Amap, to obtain the current weather icon and temperature. It does not send location and does not use a public proxy or Launcher4Max-operated backend. The feature switch, user-supplied Key, selected provider, selected city, and returned weather data are privacy-relevant data. Weather data is cached by city on the device and is not included in the favorite backup. Provider terms, quota, and authorization for public distribution are `To be decided`.
+
 Selecting a GitHub link asks Android to open the fixed URL with a system browser or another compatible application. Launcher4Max sends only that URL to the selected handler. The external application and any network service it uses operate under their own privacy practices.
 
 ### Screen locking and accessibility access
