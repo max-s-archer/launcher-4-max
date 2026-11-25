@@ -89,7 +89,6 @@ internal fun ApplicationActionSheet(
     onAddFavorite: () -> Unit,
     onRemoveFavorite: () -> Unit,
     onEditFavorites: () -> Unit = {},
-    canEditFavorites: Boolean = false,
     favoriteMutationEnabled: Boolean = true,
     informationLauncher: ApplicationInformationLauncher,
     onInformationOpened: () -> Unit = {},
@@ -106,7 +105,7 @@ internal fun ApplicationActionSheet(
     val showsDrawerUninstall = source == ApplicationActionSheetSource.Drawer &&
         uninstallAvailable
     val showsLauncherActions = source == ApplicationActionSheetSource.Home || showsDrawerUninstall
-    val showsEdit = source == ApplicationActionSheetSource.Home && canEditFavorites &&
+    val showsEdit = source == ApplicationActionSheetSource.Home &&
         favoriteState is FavoriteReadState.Readable &&
         entry.identity in favoriteState.identities &&
         favoriteState.identities.isNotEmpty()

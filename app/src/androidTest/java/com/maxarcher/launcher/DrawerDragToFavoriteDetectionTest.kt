@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -15,7 +14,6 @@ import com.maxarcher.launcher.ui.drawer.drawerDragToFavoriteDetection
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -41,7 +39,7 @@ class DrawerDragToFavoriteDetectionTest {
                         onReleaseAfterLongPress = { releasedCount.incrementAndGet() },
                         onDragBeyondSlop = { dragStarts.incrementAndGet(); startResult },
                         onDragMove = { moves.incrementAndGet() },
-                        onDragEnd = { _, cancelled ->
+                        onDragEnd = { cancelled ->
                             dragEnds.incrementAndGet()
                             lastEndCancelled.set(cancelled)
                         },
@@ -85,6 +83,24 @@ class DrawerDragToFavoriteDetectionTest {
         assertEquals(1, moves.get())
         assertEquals(1, dragEnds.get())
         assertTrue(lastEndCancelled.get().not())
+    }
+
+    @Test
+    fun cancellingAfterDragStartReportsCancellationWithoutOpeningSheet() {
+        setContent()
+
+        composeRule.onNodeWithTag("detection_target").performTouchInput {
+            down(center)
+            moveBy(Offset(x = 0.5f, y = 0f), delayMillis = 600)
+            moveBy(Offset(x = 120f, y = 0f))
+            cancel()
+        }
+        composeRule.waitForIdle()
+
+        assertEquals(1, dragStarts.get())
+        assertEquals(1, dragEnds.get())
+        assertTrue(lastEndCancelled.get())
+        assertEquals(0, releasedCount.get())
     }
 
     @Test

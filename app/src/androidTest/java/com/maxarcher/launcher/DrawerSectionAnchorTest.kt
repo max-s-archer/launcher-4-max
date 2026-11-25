@@ -7,6 +7,7 @@ import android.os.Process
 import com.maxarcher.launcher.ui.drawer.DrawerListPosition
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import com.maxarcher.launcher.ui.drawer.DrawerNamePlacement
 import com.maxarcher.launcher.ui.drawer.DrawerRestorationTarget
@@ -29,6 +30,9 @@ class DrawerSectionAnchorTest {
             for (columns in validItemsPerRowRange(placement)) {
                 for (anchors in DrawerSectionAnchorPresentation.entries) {
                     val ranges = drawerSectionRanges(sections, columns, anchors, true)
+                    val applicationRanges = drawerSectionRanges(sections, columns, anchors, false)
+                    assertEquals(applicationRanges, ranges.dropLast(1))
+                    assertTrue(ranges.last().isSettings)
                     assertEquals(anchors.headerItemCount + (9 + columns - 1) / columns, ranges[1].startIndex)
                     assertEquals(ranges[1].endIndex, ranges[2].startIndex)
                     for (index in 0 until ranges.last().endIndex) {

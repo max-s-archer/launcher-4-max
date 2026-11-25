@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -23,6 +24,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.maxarcher.launcher.R
+
+@Composable
+internal fun rememberDrawerSectionRanges(
+    sections: List<DrawerSection>,
+    displaySettings: DrawerDisplaySettings,
+    includeSettings: Boolean,
+): List<DrawerSectionRange> {
+    val columns = displaySettings.itemsPerRow
+    val anchors = displaySettings.sectionAnchorPresentation
+    return remember(sections, columns, anchors, includeSettings) {
+        drawerSectionRanges(sections, columns, anchors, includeSettings)
+    }
+}
 
 internal fun drawerPinnedAnchorTop(
     sectionTop: Int,

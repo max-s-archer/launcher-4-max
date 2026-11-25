@@ -88,7 +88,7 @@ internal fun Modifier.drawerDragToFavoriteDetection(
     onReleaseAfterLongPress: () -> Unit,
     onDragBeyondSlop: (PointerInputChange) -> Boolean,
     onDragMove: (PointerInputChange) -> Unit,
-    onDragEnd: (PointerInputChange?, cancelled: Boolean) -> Unit,
+    onDragEnd: (cancelled: Boolean) -> Unit,
 ): Modifier = this.pointerInput(key1) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
@@ -111,7 +111,7 @@ internal fun Modifier.drawerDragToFavoriteDetection(
                 val cancelled = tracked.changedToUp().not()
                 if (dispatched) {
                     endDelivered = true
-                    onDragEnd(tracked, cancelled)
+                    onDragEnd(cancelled)
                 } else if (!cancelled) {
                     endDelivered = true
                     onReleaseAfterLongPress()
@@ -134,7 +134,7 @@ internal fun Modifier.drawerDragToFavoriteDetection(
                 }
             } else {
                 endDelivered = true
-                if (!trackedUp) onDragMove(tracked) else onDragEnd(tracked, false)
+                if (!trackedUp) onDragMove(tracked) else onDragEnd(false)
                 if (trackedUp) break
             }
             if (dispatched) {
@@ -144,7 +144,7 @@ internal fun Modifier.drawerDragToFavoriteDetection(
         } finally {
             // A cancelled detector coroutine must still end the journey, or the
             // frozen preview and edit mode are left dangling without an owner.
-            if (dispatched && !endDelivered) onDragEnd(null, true)
+            if (dispatched && !endDelivered) onDragEnd(true)
         }
     }
 }

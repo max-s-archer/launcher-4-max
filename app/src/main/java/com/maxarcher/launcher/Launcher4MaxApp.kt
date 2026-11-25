@@ -4,8 +4,6 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -34,7 +32,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -60,6 +57,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
+import com.maxarcher.launcher.ui.components.guardSurfaceMultiTouch
 import com.maxarcher.launcher.ui.settings.EmptySettingsPlatform
 import com.maxarcher.launcher.ui.settings.SettingsPage
 import com.maxarcher.launcher.ui.settings.SettingsPlatform
@@ -75,6 +73,11 @@ internal enum class AppSurface {
     Home,
     Drawer,
 }
+
+private data class ActionSheetSelection(
+    val entry: LaunchableEntry,
+    val source: ApplicationActionSheetSource,
+)
 
 private data class FavoriteAddTarget(
     val containerId: String?,
@@ -262,8 +265,7 @@ internal fun Launcher4MaxApp(
     var favoriteAvailability by remember {
         mutableStateOf<Map<LaunchableIdentity, FavoriteAvailability>>(emptyMap())
     }
-    var selectedEntry by remember { mutableStateOf<LaunchableEntry?>(null) }
-    var selectedEntryFromHome by remember { mutableStateOf(false) }
+    var actionSheetSelection by remember { mutableStateOf<ActionSheetSelection?>(null) }
     var rootOriginInWindow by remember { mutableStateOf(Offset.Zero) }
     var drawerDisplaySettingsCandidate by remember {
         mutableStateOf<DrawerDisplaySettings?>(null)
@@ -450,21 +452,22 @@ internal fun Launcher4MaxApp(
         }
     }
 
-    LaunchedEffect(selectedEntry, shortcutController) {
+    LaunchedEffect(actionSheetSelection?.entry, shortcutController) {
         shortcutOwner = null
         applicationShortcuts = emptyList()
-        val entry = selectedEntry ?: return@LaunchedEffect
+        val entry = actionSheetSelection?.entry ?: return@LaunchedEffect
         val loaded = shortcutController.load(entry)
-        if (selectedEntry?.identity == entry.identity) {
+        if (actionSheetSelection?.entry?.identity == entry.identity) {
             shortcutOwner = entry.identity
             applicationShortcuts = loaded
         }
     }
     LaunchedEffect(favoriteState) {
         val state = favoriteState
-        if (state !is FavoriteReadState.Readable && selectedEntryFromHome) {
-            selectedEntry = null
-            selectedEntryFromHome = false
+        if (state !is FavoriteReadState.Readable &&
+            actionSheetSelection?.source == ApplicationActionSheetSource.Home
+        ) {
+            actionSheetSelection = null
         }
         if (homeCoordinator.editMode) {
             val readable = state as? FavoriteReadState.Readable
@@ -624,8 +627,7 @@ internal fun Launcher4MaxApp(
         gestureDisplacementPx = 0f
         drawerTransitionOwnsGesture = false
         homeTransitionOwnsGesture = false
-        selectedEntry = null
-        selectedEntryFromHome = false
+        actionSheetSelection = null
         settingsOpen = false
         settingsPage = SettingsPage.Root
         homeCoordinator.dismissEditMode()
@@ -976,7 +978,7 @@ internal fun Launcher4MaxApp(
         key1 = windowInfo.isWindowFocused,
         block = {
             // A Launcher4Max action sheet is part of the journey; system-owned overlays are not.
-            if (!windowInfo.isWindowFocused && selectedEntry == null) {
+            if (!windowInfo.isWindowFocused && actionSheetSelection == null) {
                 favoriteEditor.invalidateUndo()
                 homeCoordinator.dismissEditMode()
                 // A system overlay is not part of the one-shot journey.
@@ -1016,7 +1018,7 @@ internal fun Launcher4MaxApp(
 
     BackHandler(enabled = !homeCoordinator.editMode && !settingsOpen &&
         settledSurface == AppSurface.Home && progress == 0f &&
-        selectedEntry == null &&
+        actionSheetSelection == null &&
         homeBottomAppBarExpanded
     ) {
         homeBottomAppBarExpanded = false
@@ -1186,41 +1188,11 @@ internal fun Launcher4MaxApp(
         homeTransitionNestedScrollConnection(homeFavoriteListState)
     }
 
-    val drawerPointerSafetyModifier = Modifier.pointerInput(Unit) {
-        awaitEachGesture {
-            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            var multiplePointersDetected = false
-            var pointersRemainPressed: Boolean
-            do {
-                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                if (!multiplePointersDetected && event.changes.count { it.pressed } > 1) {
-                    multiplePointersDetected = true
-                    if (drawerTransitionOwnsGesture) settleTo(AppSurface.Drawer)
-                }
-                if (multiplePointersDetected) {
-                    event.changes.forEach { change -> change.consume() }
-                }
-                pointersRemainPressed = event.changes.any { it.pressed }
-            } while (pointersRemainPressed)
-        }
+    val drawerPointerSafetyModifier = Modifier.guardSurfaceMultiTouch {
+        if (drawerTransitionOwnsGesture) settleTo(AppSurface.Drawer)
     }
-    val homePointerSafetyModifier = Modifier.pointerInput(Unit) {
-        awaitEachGesture {
-            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            var multiplePointersDetected = false
-            var pointersRemainPressed: Boolean
-            do {
-                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                if (!multiplePointersDetected && event.changes.count { it.pressed } > 1) {
-                    multiplePointersDetected = true
-                    settleTo(AppSurface.Home)
-                }
-                if (multiplePointersDetected) {
-                    event.changes.forEach { change -> change.consume() }
-                }
-                pointersRemainPressed = event.changes.any { it.pressed }
-            } while (pointersRemainPressed)
-        }
+    val homePointerSafetyModifier = Modifier.guardSurfaceMultiTouch {
+        settleTo(AppSurface.Home)
     }
     val wallpaperPreviewOpen = settingsOpen && (
         settingsPage == SettingsPage.IconShape ||
@@ -1321,8 +1293,10 @@ internal fun Launcher4MaxApp(
                 onRequestEditMode = homeCoordinator::requestEditMode,
                 onToggleModuleStylePanel = homeCoordinator::toggleModuleStylePanel,
                 onLongPressFavorite = { entry ->
-                    selectedEntryFromHome = true
-                    selectedEntry = entry
+                    actionSheetSelection = ActionSheetSelection(
+                        entry = entry,
+                        source = ApplicationActionSheetSource.Home,
+                    )
                 },
                 onAddFavoritesToList = ::openFavoriteSelection,
                 onAddProvisionalFavorites = ::openProvisionalFavoriteSelection,
@@ -1377,8 +1351,7 @@ internal fun Launcher4MaxApp(
             ) {
                 DrawerScreen(
                     inventoryLoader = inventoryLoader,
-                    inventoryCoordinator = inventoryCoordinator,
-                    initialLoadHandledExternally = true,
+                    appInventoryCoordinator = inventoryCoordinator,
                     entryLauncher = entryLauncher,
                     onExternalLaunch = { externalLaunchPendingReturn = true },
                     onNavigateBack = { settleTo(target = AppSurface.Home) },
@@ -1432,9 +1405,7 @@ internal fun Launcher4MaxApp(
                     onDragToFavoriteMove = { position ->
                         homeCoordinator.moveDrawerDrag(position)
                     },
-                    onDragToFavoriteEnd = { _, cancelled ->
-                        homeCoordinator.endDrawerDrag(cancelled)
-                    },
+                    onDragToFavoriteEnd = homeCoordinator::endDrawerDrag,
                     favoriteSelection = favoriteSelection,
                     favoriteMembership = favoriteMembership.orEmpty(),
                     favoriteSelectionSaving = favoriteSelectionSaving,
@@ -1457,11 +1428,13 @@ internal fun Launcher4MaxApp(
                     onCancelFavoriteSelection = ::closeFavoriteSelection,
                     onConfirmFavoriteSelection = ::confirmFavoriteSelection,
                     onLongPress = { entry ->
-                        selectedEntryFromHome = false
-                        selectedEntry = entry
+                        actionSheetSelection = ActionSheetSelection(
+                            entry = entry,
+                            source = ApplicationActionSheetSource.Drawer,
+                        )
                     },
                     onOpenSettings = {
-                        selectedEntry = null
+                        actionSheetSelection = null
                         settingsOpen = true
                     },
                 )
@@ -1477,24 +1450,17 @@ internal fun Launcher4MaxApp(
             )
         }
 
-        selectedEntry?.let { entry ->
+        actionSheetSelection?.let { (entry, source) ->
             // Both hosts evaluate the default-launcher state when the sheet opens.
-            val isDefaultHome = remember(selectedEntry) {
+            val isDefaultHome = remember(entry) {
                 settingsPlatform.isDefaultHome()
             }
             ApplicationActionSheet(
                 entry = entry,
-                source = if (selectedEntryFromHome) {
-                    ApplicationActionSheetSource.Home
-                } else {
-                    ApplicationActionSheetSource.Drawer
-                },
+                source = source,
                 isDefaultHome = isDefaultHome,
                 favoriteState = favoriteState,
-                onDismiss = {
-                    selectedEntry = null
-                    selectedEntryFromHome = false
-                },
+                onDismiss = { actionSheetSelection = null },
                 onAddFavorite = {
                     scope.launch(
                         block = {
@@ -1503,28 +1469,28 @@ internal fun Launcher4MaxApp(
                             }
                         },
                     )
-                    selectedEntry = null
+                    actionSheetSelection = null
                 },
                 onRemoveFavorite = {
                     if ((favoriteState as? FavoriteReadState.Readable)?.orderedModules != null) {
-                        removeHomeFavorite(identity = entry.identity, offerUndo = selectedEntryFromHome)
+                        removeHomeFavorite(
+                            identity = entry.identity,
+                            offerUndo = source == ApplicationActionSheetSource.Home,
+                        )
                     } else {
                         scope.launch { effectiveFavoriteStore.remove(entry.identity) }
                     }
-                    selectedEntry = null
-                    selectedEntryFromHome = false
+                    actionSheetSelection = null
                 },
                 onEditFavorites = {
                     homeCoordinator.requestEditMode()
                     homeCoordinator.clearEditSelection()
-                    selectedEntry = null
-                    selectedEntryFromHome = false
+                    actionSheetSelection = null
                 },
-                canEditFavorites = selectedEntryFromHome,
                 favoriteMutationEnabled = !favoriteEditor.isSaving,
                 informationLauncher = informationLauncher,
                 onInformationOpened = { inventoryRefreshPendingReturn = true },
-                uninstallAvailable = selectedEntryFromHome &&
+                uninstallAvailable = source == ApplicationActionSheetSource.Home &&
                     uninstallLauncher.isAvailable(entry = entry),
                 onUninstall = { uninstallLauncher.open(entry = entry) },
                 onUninstallOpened = { inventoryRefreshPendingReturn = true },
@@ -1535,8 +1501,7 @@ internal fun Launcher4MaxApp(
                     if (shortcutController.launch(shortcut)) {
                         externalLaunchPendingReturn = true
                     }
-                    selectedEntry = null
-                    selectedEntryFromHome = false
+                    actionSheetSelection = null
                 },
             )
         }

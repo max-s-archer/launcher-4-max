@@ -130,10 +130,7 @@ private enum class DrawerLoadTrigger {
 @Composable
 internal fun DrawerScreen(
     inventoryLoader: LaunchableInventoryLoader,
-    inventoryCoordinator: LaunchableInventoryCoordinator = remember(inventoryLoader) {
-        LaunchableInventoryCoordinator(inventoryLoader)
-    },
-    initialLoadHandledExternally: Boolean = false,
+    appInventoryCoordinator: LaunchableInventoryCoordinator? = null,
     entryLauncher: LaunchableEntryLauncher = LaunchableEntryLauncher { false },
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
@@ -157,8 +154,12 @@ internal fun DrawerScreen(
     onConfirmFavoriteSelection: () -> Unit = {},
     onDragToFavoriteStart: (DrawerDragJourney) -> Boolean = { false },
     onDragToFavoriteMove: (Offset) -> Unit = {},
-    onDragToFavoriteEnd: (Offset?, Boolean) -> Unit = { _, _ -> },
+    onDragToFavoriteEnd: (cancelled: Boolean) -> Unit = {},
 ) {
+    val inventoryCoordinator = appInventoryCoordinator ?: remember(inventoryLoader) {
+        LaunchableInventoryCoordinator(inventoryLoader)
+    }
+    val appManagesInventory = appInventoryCoordinator != null
     // Live drag preview of the background opacity; null means render the persisted value.
     // It never reaches the display-settings store: the release commits exactly one save.
     var backgroundOpacityPreview by remember { mutableStateOf<Int?>(null) }
@@ -219,7 +220,7 @@ internal fun DrawerScreen(
 
         LaunchedEffect(inventoryLoader, loadRequest) {
             if (loadRequest == 0 &&
-                (initialLoadHandledExternally || state is LaunchableInventoryState.Content)
+                (appManagesInventory || state is LaunchableInventoryState.Content)
             ) {
                 return@LaunchedEffect
             }
@@ -271,8 +272,8 @@ internal fun DrawerScreen(
             }
         }
 
-        LaunchedEffect(inventoryLoader, active, initialLoadHandledExternally) {
-            if (active && !initialLoadHandledExternally) {
+        LaunchedEffect(inventoryLoader, active, appManagesInventory) {
+            if (active && !appManagesInventory) {
                 if (!hasBeenActive) {
                     hasBeenActive = true
                     return@LaunchedEffect
@@ -293,8 +294,8 @@ internal fun DrawerScreen(
             }
         }
 
-        LaunchedEffect(state, initialLoadHandledExternally) {
-            if (!initialLoadHandledExternally) return@LaunchedEffect
+        LaunchedEffect(state, appManagesInventory) {
+            if (!appManagesInventory) return@LaunchedEffect
             val content = state as? LaunchableInventoryState.Content ?: return@LaunchedEffect
             val oldContent = previousContent
             previousContent = content.snapshot
@@ -327,8 +328,8 @@ internal fun DrawerScreen(
             )
         }
 
-        DisposableEffect(inventoryLoader, active, initialLoadHandledExternally) {
-            val observation = if (active && !initialLoadHandledExternally) {
+        DisposableEffect(inventoryLoader, active, appManagesInventory) {
+            val observation = if (active && !appManagesInventory) {
                 inventoryCoordinator.observe {
                     if (currentState is LaunchableInventoryState.Content) {
                         loadTrigger = DrawerLoadTrigger.LiveUpdate
@@ -360,7 +361,7 @@ internal fun DrawerScreen(
                     message = stringResource(R.string.drawer_loading_applications),
                     showProgress = true,
                     retry = null,
-                    selection = favoriteSelection,
+                    selectionSize = favoriteSelection.size,
                     saving = favoriteSelectionSaving,
                     onCancel = onCancelFavoriteSelection,
                     onConfirm = onConfirmFavoriteSelection,
@@ -386,7 +387,7 @@ internal fun DrawerScreen(
                     message = stringResource(R.string.drawer_loading_applications),
                     showProgress = true,
                     retry = null,
-                    selection = favoriteSelection,
+                    selectionSize = favoriteSelection.size,
                     saving = favoriteSelectionSaving,
                     onCancel = onCancelFavoriteSelection,
                     onConfirm = onConfirmFavoriteSelection,
@@ -422,7 +423,7 @@ internal fun DrawerScreen(
                         loadTrigger = DrawerLoadTrigger.ManualRetry
                         loadRequest += 1
                     },
-                    selection = favoriteSelection,
+                    selectionSize = favoriteSelection.size,
                     saving = favoriteSelectionSaving,
                     onCancel = onCancelFavoriteSelection,
                     onConfirm = onConfirmFavoriteSelection,
@@ -503,12 +504,6 @@ internal fun DrawerScreen(
                         displaySettingsPosition = null
                     }
                 }
-                val alreadyFavoritedDragToast = stringResource(
-                    R.string.drawer_drag_already_favorite,
-                )
-                val unableToAddDragToast = stringResource(
-                    R.string.drawer_drag_unable_to_add,
-                )
                 val startDragToFavorite: (DrawerDragJourney) -> Boolean = { journey ->
                     val started = onDragToFavoriteStart(journey)
                     if (started && searchActive) {
@@ -553,8 +548,6 @@ internal fun DrawerScreen(
                             }
                         },
                         onLongPress = onLongPress,
-                        alreadyFavoritedDragToast = alreadyFavoritedDragToast,
-                        unableToAddDragToast = unableToAddDragToast,
                         onDragToFavoriteStart = startDragToFavorite,
                         onDragToFavoriteMove = onDragToFavoriteMove,
                         onDragToFavoriteEnd = onDragToFavoriteEnd,
@@ -728,7 +721,7 @@ private fun DrawerSelectionMessage(
     message: String,
     showProgress: Boolean,
     retry: (() -> Unit)?,
-    selection: List<LaunchableIdentity>,
+    selectionSize: Int,
     saving: Boolean,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
@@ -740,13 +733,12 @@ private fun DrawerSelectionMessage(
     ) {
         DrawerSelectionHeader(
             target = target,
-            selectionSize = selection.size,
+            selectionSize = selectionSize,
             selectionLimit = null,
             saving = saving,
             onCancel = onCancel,
             onConfirm = onConfirm,
         )
-        DrawerTopBarDivider()
         DrawerMessage(
             modifier = Modifier.weight(1f),
             message = message,
@@ -780,10 +772,12 @@ private fun DrawerFavoriteSelectionList(
     onConfirm: () -> Unit,
 ) {
     val leftAnchors = displaySettings.sectionAnchorPresentation == DrawerSectionAnchorPresentation.LeftSide
-    val sectionRanges = remember(sections, displaySettings.itemsPerRow, displaySettings.sectionAnchorPresentation) {
-        drawerSectionRanges(sections, displaySettings.itemsPerRow, displaySettings.sectionAnchorPresentation, false)
+    val sectionRanges = rememberDrawerSectionRanges(
+        sections, displaySettings, includeSettings = false,
+    )
+    val sectionAnchors = remember(sectionRanges) {
+        sectionRanges.associate { it.label to it.startIndex }
     }
-    val sectionAnchors = sectionRanges.associate { it.label to it.startIndex }
     val coroutineScope = rememberCoroutineScope()
     var activeIndexLabel by remember { mutableStateOf<String?>(null) }
     var indexJumpJob by remember { mutableStateOf<Job?>(null) }
@@ -804,7 +798,6 @@ private fun DrawerFavoriteSelectionList(
             onCancel = onCancel,
             onConfirm = onConfirm,
         )
-        DrawerTopBarDivider()
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -892,15 +885,7 @@ private fun DrawerFavoriteSelectionList(
                 includeSettings = false,
             )
             activeIndexLabel?.let { label ->
-                DrawerIndexBubble(
-                    label = label,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(
-                            end = dimensionResource(R.dimen.drawer_index_width) +
-                                dimensionResource(R.dimen.drawer_index_bubble_index_gap),
-                        ),
-                )
+                DrawerIndexBubble(label = label)
             }
         }
     }
@@ -965,6 +950,7 @@ private fun DrawerSelectionHeader(
             }
         }
     }
+    DrawerTopBarDivider()
 }
 
 @Composable
@@ -1059,11 +1045,9 @@ private fun DrawerApplicationList(
     favoriteAvailability: Map<LaunchableIdentity, FavoriteAvailability>,
     onLaunch: (LaunchableEntry) -> Unit,
     onLongPress: (LaunchableEntry) -> Unit,
-    alreadyFavoritedDragToast: String,
-    unableToAddDragToast: String,
     onDragToFavoriteStart: (DrawerDragJourney) -> Boolean,
     onDragToFavoriteMove: (Offset) -> Unit,
-    onDragToFavoriteEnd: (Offset?, Boolean) -> Unit,
+    onDragToFavoriteEnd: (cancelled: Boolean) -> Unit,
     onNavigateBack: () -> Unit,
     onEnterSearch: () -> Unit,
     onQueryChange: (String) -> Unit,
@@ -1072,21 +1056,18 @@ private fun DrawerApplicationList(
     onOpenDisplaySettings: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
-    val context = LocalContext.current
     val leftAnchors = displaySettings.sectionAnchorPresentation == DrawerSectionAnchorPresentation.LeftSide
-    val sectionRanges = remember(sections, displaySettings.itemsPerRow, displaySettings.sectionAnchorPresentation) {
-        drawerSectionRanges(sections, displaySettings.itemsPerRow, displaySettings.sectionAnchorPresentation, false)
+    val sectionRanges = rememberDrawerSectionRanges(
+        sections, displaySettings, includeSettings = !searchActive,
+    )
+    val sectionAnchors = remember(sectionRanges) {
+        sectionRanges.associate { it.label to it.startIndex }
     }
-    val sectionAnchors = sectionRanges.associate { it.label to it.startIndex }
-    val allRanges = remember(sectionRanges, searchActive, displaySettings.sectionAnchorPresentation) {
-        drawerSectionRanges(sections, displaySettings.itemsPerRow, displaySettings.sectionAnchorPresentation, !searchActive)
-    }
-    val settingsAnchor = sectionRanges.lastOrNull()?.endIndex ?: 0
     val coroutineScope = rememberCoroutineScope()
     val hapticFeedback = LocalHapticFeedback.current
     var activeIndexLabel by remember { mutableStateOf<String?>(null) }
     var indexJumpJob by remember { mutableStateOf<Job?>(null) }
-    LaunchedEffect(searchActive, allRanges) {
+    LaunchedEffect(searchActive, sectionRanges) {
         indexJumpJob?.cancel()
         activeIndexLabel = null
     }
@@ -1169,20 +1150,6 @@ private fun DrawerApplicationList(
                                         ),
                                         onLaunch = onLaunch,
                                         onLongPress = onLongPress,
-                                        onAlreadyFavoritedDrag = {
-                                            Toast.makeText(
-                                                context,
-                                                alreadyFavoritedDragToast,
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                        },
-                                        onUnableToAddDrag = {
-                                            Toast.makeText(
-                                                context,
-                                                unableToAddDragToast,
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                        },
                                         onDragToFavoriteStart = onDragToFavoriteStart,
                                         onDragToFavoriteMove = onDragToFavoriteMove,
                                         onDragToFavoriteEnd = onDragToFavoriteEnd,
@@ -1215,7 +1182,7 @@ private fun DrawerApplicationList(
                     }
                 }
                 if (leftAnchors) {
-                    DrawerLeftSectionAnchors(ranges = allRanges, listState = listState)
+                    DrawerLeftSectionAnchors(ranges = sectionRanges, listState = listState)
                 }
                 if (!searchActive || sections.isNotEmpty()) {
                     DrawerAlphabetIndex(
@@ -1238,6 +1205,7 @@ private fun DrawerApplicationList(
                         onActiveLabelChange = { label -> activeIndexLabel = label },
                         onSelectSettings = { immediate ->
                             if (!searchActive) {
+                                val settingsAnchor = sectionRanges.last().startIndex
                                 hapticFeedback.performHapticFeedback(
                                     hapticFeedbackType = HapticFeedbackType.SegmentTick,
                                 )
@@ -1257,16 +1225,7 @@ private fun DrawerApplicationList(
             }
 
             activeIndexLabel?.let { label ->
-                DrawerIndexBubble(
-                    label = label,
-                    modifier = Modifier
-                        .align(alignment = Alignment.CenterEnd)
-                        .padding(
-                            end = indexWidth + dimensionResource(
-                                id = R.dimen.drawer_index_bubble_index_gap,
-                            ),
-                        ),
-                )
+                DrawerIndexBubble(label = label)
             }
         }
     }
@@ -1339,14 +1298,13 @@ private fun DrawerApplicationRow(
     dragEligibility: DrawerDragEligibility,
     onLaunch: (LaunchableEntry) -> Unit,
     onLongPress: (LaunchableEntry) -> Unit,
-    onAlreadyFavoritedDrag: () -> Unit,
-    onUnableToAddDrag: () -> Unit,
     onDragToFavoriteStart: (DrawerDragJourney) -> Boolean,
     onDragToFavoriteMove: (Offset) -> Unit,
-    onDragToFavoriteEnd: (Offset?, Boolean) -> Unit,
+    onDragToFavoriteEnd: (cancelled: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val rowHeight = drawerApplicationRowHeight(displaySettings)
+    val context = LocalContext.current
     val hapticFeedback = LocalHapticFeedback.current
     val openActionsLabel = stringResource(R.string.drawer_open_application_actions)
     var rowCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
@@ -1398,11 +1356,19 @@ private fun DrawerApplicationRow(
                             ),
                         )
                         DrawerDragEligibility.AlreadyFavorited -> {
-                            onAlreadyFavoritedDrag()
+                            Toast.makeText(
+                                context,
+                                R.string.drawer_drag_already_favorite,
+                                Toast.LENGTH_SHORT,
+                            ).show()
                             false
                         }
                         DrawerDragEligibility.ReliablyDisabled -> {
-                            onUnableToAddDrag()
+                            Toast.makeText(
+                                context,
+                                R.string.drawer_drag_unable_to_add,
+                                Toast.LENGTH_SHORT,
+                            ).show()
                             false
                         }
                     }
@@ -1412,14 +1378,7 @@ private fun DrawerApplicationRow(
                         onDragToFavoriteMove(coordinates.localToWindow(change.position))
                     }
                 },
-                onDragEnd = { change, cancelled ->
-                    onDragToFavoriteEnd(
-                        change?.let { currentChange ->
-                            rowCoordinates?.localToWindow(currentChange.position)
-                        },
-                        cancelled,
-                    )
-                },
+                onDragEnd = onDragToFavoriteEnd,
             )
             .testTag("drawer_application_row"),
         contentAlignment = Alignment.Center,

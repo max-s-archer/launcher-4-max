@@ -25,6 +25,7 @@ import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
+import androidx.test.espresso.Espresso.pressBack
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.maxarcher.launcher.ui.drawer.DrawerListPosition
 import com.maxarcher.launcher.ui.drawer.DrawerRestorationTarget
@@ -1173,8 +1174,9 @@ class HomeScreenTest {
     }
 
     @Test
-    fun firstDrawerEntryDoesNotRepeatTheApplicationOwnedInitialLoad() {
+    fun firstDrawerEntryDoesNotRepeatAppInventoryLoadOrObservation() {
         var loadCount = 0
+        var observationCount = 0
         val entry = LaunchableEntry(
             identity = LaunchableIdentity(
                 profileSerialNumber = 0,
@@ -1184,21 +1186,30 @@ class HomeScreenTest {
             label = "Example application",
             icon = ColorDrawable(Color.TRANSPARENT),
         )
-        composeRule.setContent {
-            Launcher4MaxTheme {
-                Launcher4MaxApp(
-                    inventoryLoader = LaunchableInventoryLoader {
-                        loadCount += 1
-                        completeSnapshot(entry)
-                    },
-                )
+        val inventory = object : LaunchableInventoryLoader, LaunchableInventoryMonitor {
+            override suspend fun load(): LaunchableInventorySnapshot {
+                loadCount += 1
+                return completeSnapshot(entry)
             }
+
+            override fun observe(
+                onInventoryChanged: (LaunchableInventoryChange) -> Unit,
+            ): LaunchableInventoryObservation {
+                observationCount += 1
+                return LaunchableInventoryObservation {}
+            }
+        }
+        composeRule.setContent {
+            Launcher4MaxTheme { Launcher4MaxApp(inventoryLoader = inventory) }
         }
 
         composeRule.waitUntil { loadCount == 1 }
         composeRule.onNodeWithTag("home_surface").performTouchInput { swipeUp() }
         composeRule.onNodeWithText("Example application").assertIsDisplayed()
-        composeRule.runOnIdle { assertEquals(1, loadCount) }
+        composeRule.runOnIdle {
+            assertEquals(1, loadCount)
+            assertEquals(1, observationCount)
+        }
     }
 
     @Test
@@ -1486,7 +1497,6 @@ class HomeScreenTest {
                     onAddFavorite = {},
                     onRemoveFavorite = {},
                     onEditFavorites = { editRequested = true },
-                    canEditFavorites = true,
                     informationLauncher = ApplicationInformationLauncher { true },
                 )
             }
@@ -1517,7 +1527,6 @@ class HomeScreenTest {
                     onAddFavorite = {},
                     onRemoveFavorite = {},
                     onEditFavorites = {},
-                    canEditFavorites = true,
                     informationLauncher = ApplicationInformationLauncher { true },
                 )
             }
@@ -1597,7 +1606,6 @@ class HomeScreenTest {
                     onAddFavorite = {},
                     onRemoveFavorite = {},
                     onEditFavorites = {},
-                    canEditFavorites = true,
                     informationLauncher = ApplicationInformationLauncher { true },
                     uninstallAvailable = true,
                     shortcuts = listOf(shortcut),
@@ -1708,7 +1716,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun homeActionSheetLoadsAndLaunchesShortcutForExactEntry() {
+    fun reopeningSameEntryFromHomeAndDrawerUsesCurrentSourceAndReloadsShortcuts() {
         val entry = LaunchableEntry(
             identity = LaunchableIdentity(
                 profileSerialNumber = 11,
@@ -1726,11 +1734,11 @@ class HomeScreenTest {
             user = entry.user,
             rank = 0,
         )
-        var loadedEntry: LaunchableEntry? = null
+        val loadedEntries = mutableListOf<LaunchableEntry>()
         var launchedShortcut: ApplicationShortcut? = null
         val controller = object : ApplicationShortcutController {
             override suspend fun load(entry: LaunchableEntry): List<ApplicationShortcut> {
-                loadedEntry = entry
+                loadedEntries.add(entry)
                 return listOf(shortcut)
             }
 
@@ -1750,10 +1758,25 @@ class HomeScreenTest {
         }
 
         composeRule.onNodeWithText("Shortcut source").performTouchInput { longClick() }
+        composeRule.onNodeWithTag("edit_favorites_action").assertIsDisplayed()
+        composeRule.onNodeWithText("Open exact shortcut").assertIsDisplayed()
+        pressBack()
+        composeRule.onNodeWithTag("application_action_sheet").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("home_surface").performTouchInput { swipeUp() }
+        composeRule.onNodeWithTag("drawer_application_row").performTouchInput { longClick() }
+        composeRule.onNodeWithText("Open exact shortcut").assertIsDisplayed()
+        composeRule.onNodeWithTag("edit_favorites_action").assertDoesNotExist()
+        pressBack()
+        composeRule.onNodeWithTag("application_action_sheet").assertDoesNotExist()
+        pressBack()
+
+        composeRule.onNodeWithTag("home_favorite_row").performTouchInput { longClick() }
+        composeRule.onNodeWithTag("edit_favorites_action").assertIsDisplayed()
         composeRule.onNodeWithText("Open exact shortcut").assertIsDisplayed().performClick()
 
         composeRule.runOnIdle {
-            assertEquals(entry, loadedEntry)
+            assertEquals(listOf(entry, entry, entry), loadedEntries)
             assertEquals(shortcut, launchedShortcut)
         }
         composeRule.onAllNodesWithTag("application_action_sheet").assertCountEquals(0)

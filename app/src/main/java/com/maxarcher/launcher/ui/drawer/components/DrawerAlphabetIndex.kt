@@ -3,8 +3,10 @@ package com.maxarcher.launcher.ui.drawer.components
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -226,14 +228,16 @@ internal fun DrawerAlphabetIndex(
 }
 
 @Composable
-internal fun DrawerIndexBubble(
-    label: String,
-    modifier: Modifier = Modifier,
-) {
+internal fun BoxScope.DrawerIndexBubble(label: String) {
     val bubbleSize = dimensionResource(id = R.dimen.drawer_index_bubble_size)
     val tail = dimensionResource(id = R.dimen.drawer_index_bubble_tail)
     Box(
-        modifier = modifier
+        modifier = Modifier
+            .align(Alignment.CenterEnd)
+            .padding(
+                end = dimensionResource(R.dimen.drawer_index_width) +
+                    dimensionResource(R.dimen.drawer_index_bubble_index_gap),
+            )
             .size(width = bubbleSize + tail, height = bubbleSize)
             .paint(
                 painter = painterResource(id = R.drawable.drawer_index_bubble_background),

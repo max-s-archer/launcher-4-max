@@ -767,22 +767,7 @@ private fun LicenseBottomSheet(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         scrimColor = MaterialTheme.colorScheme.scrim,
-        dragHandle = {
-            androidx.compose.foundation.layout.Box(
-                Modifier
-                    .padding(vertical = dimensionResource(R.dimen.action_sheet_handle_padding))
-                    .size(
-                        width = dimensionResource(R.dimen.action_sheet_handle_width),
-                        height = dimensionResource(R.dimen.action_sheet_handle_height),
-                    )
-                    .background(
-                        color = MaterialTheme.colorScheme.onSurface,
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                            dimensionResource(R.dimen.action_sheet_handle_height),
-                        ),
-                    ),
-            )
-        },
+        dragHandle = { SettingsModalDragHandle() },
         modifier = Modifier.testTag(sheetTag),
     ) {
         Text(
