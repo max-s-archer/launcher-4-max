@@ -127,6 +127,9 @@ This document owns exact Settings typography and row geometry. [Settings behavio
   Chinese uses `和风天气`. The region remains visible while the master switch is off.
 - A large attribution may reduce the height of that region. Its ordinary height, reduced height,
   typography, and internal spacing are `To be decided`.
+- One weather-application row follows the bottom information region. Its exact row geometry,
+  selected-state presentation, and the selection page's search, list, and alphabet-index
+  geometry are `To be decided`.
 
 ## Informational Bottom Sheets
 

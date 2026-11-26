@@ -31,30 +31,40 @@ Remaining space is transparent Home background, not another module.
 Current weather belongs to V1 fixed presentation. It is not a V2 adaptive capability.
 
 - A master switch on the Weather settings page controls the feature and defaults to off.
-  While off, Home shows no weather presentation and starts no weather request. The saved API
-  Key, current location, weather application, and provider remain saved. Turning the switch on
-  again restores those saved settings without asking the user to enter them again.
+  While off, Home shows no weather presentation and starts no weather request. The saved
+  weather application remains saved. Turning the switch on again restores that setting
+  without asking the user to select it again.
 
 - The date row shows one weather icon and the current temperature in Celsius to the right of
   the date. It does not show the QWeather attribution. Exact icon size, spacing, and alignment
   are `To be decided`.
 - Selecting that weather presentation opens the weather application selected by the user.
-  The target may be a system or third-party application. An unavailable target produces
-  localized non-blocking feedback and does not affect other Launcher behavior.
+  The target may be a system or third-party application. While no application is selected,
+  selection shows one localized non-blocking explanation and opens nothing. An unavailable
+  saved target produces localized non-blocking feedback and does not affect other Launcher
+  behavior. The selection page and its saved result belong to
+  [Settings behavior](settings.md).
 - Launcher4Max provides no weather-detail, forecast, alert, or air-quality page.
-- QWeather is the first weather-data provider. The product requires the provider to be
-  replaceable. QWeather request fields, error codes, and response formats are outside this
-  contract. Its weather API documentation is
-  <https://dev.qweather.com/docs/api/weather/>, and its attribution requirement is
-  <https://dev.qweather.com/docs/terms/attribution/>.
-- The user supplies the API Key. While the feature is on without one, Home shows the
-  unconfigured state rather than live weather, and every other Launcher capability remains
-  available. No personal API Key is placed in product documentation, public source, a public
-  APK, or Git. Whether the QWeather terms, free quota, or Key authorization permit public
-  distribution is `To be decided`.
-- The first version uses the current location and does not offer a manually selected city.
-  Whether it requests location permission, which location source it uses, and how it resolves
-  that location to a weather location are `To be decided`.
+- QWeather is the fixed first-version weather-data provider. The product requires a provider
+  to be replaceable later, but the first version offers no provider choice. QWeather request
+  fields, error codes, and response formats are outside this contract. Its weather API
+  documentation is <https://dev.qweather.com/docs/api/weather/>, and its attribution
+  requirement is <https://dev.qweather.com/docs/terms/attribution/>.
+- A developer who wants weather requests supplies that developer's own QWeather API Key
+  through a local build configuration. The GitHub repository, public source, and every
+  published artifact default to no Key. No personal API Key is placed in product
+  documentation, source, an APK, or Git. A build without a Key cannot make weather requests.
+  While the feature is on without one, Home shows the unconfigured state rather than live
+  weather, and every other Launcher capability remains available. QWeather permits public
+  distribution when the application meets applicable legal requirements. Free quota remains
+  `To be decided`.
+- The first version uses the current system location and does not offer a manually selected
+  city. Turning the switch on requests precise location permission. The request sends that
+  location's coordinates to QWeather and no other location information. If permission is
+  denied, the switch stays off, Home shows no weather, and no weather request starts.
+  Launcher4Max shows one localized non-blocking explanation and does not ask again. Granting
+  permission later in system settings does not turn the switch on. Developer-option or
+  mock locations are not treated separately.
 - Home distinguishes fresh data, cached data, a failed read, and an unconfigured state.
   Cached data is never presented as fresh weather. The exact presentation of each state is
   `To be decided`.
@@ -64,8 +74,8 @@ Current weather belongs to V1 fixed presentation. It is not a V2 adaptive capabi
   interval. The first-version interval is 60 minutes.
 - A failed request, unavailable network, or expired cached result leaves Launcher4Max usable.
   Current weather excludes a public weather proxy, a Launcher4Max-operated backend, accounts,
-  forecasts, alerts, air quality, high and low temperatures, automatic location, geofencing,
-  and automatic provider switching.
+  forecasts, alerts, air quality, high and low temperatures, a manually selected location,
+  geofencing, and automatic provider switching.
 
 ## Default-launcher prompt
 
