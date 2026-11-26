@@ -36,14 +36,16 @@ Current weather belongs to V1 fixed presentation. It is not a V2 adaptive capabi
   without asking the user to select it again.
 
 - The date row shows one weather icon and the current temperature in Celsius to the right of
-  the date. It does not show the QWeather attribution. Exact icon size, spacing, and alignment
+  the date. The icon and temperature form one interaction target, separate from the date
+  target. It does not show the QWeather attribution. Exact icon size, spacing, and alignment
   are `To be decided`.
-- Selecting that weather presentation opens the weather application selected by the user.
-  The target may be a system or third-party application. While no application is selected,
+- Selecting that weather target in normal Home opens the weather application selected by the
+  user. The target may be a system or third-party application. While no application is selected,
   selection shows one localized non-blocking explanation and opens nothing. An unavailable
   saved target produces localized non-blocking feedback and does not affect other Launcher
-  behavior. The selection page and its saved result belong to
-  [Settings behavior](settings.md).
+  behavior. The target is not interactive during edit mode. It is excluded from the eligible
+  blank space used by the basic-information quick-action gestures. The selection page and its
+  saved result belong to [Settings behavior](settings.md).
 - Launcher4Max provides no weather-detail, forecast, alert, or air-quality page.
 - QWeather is the fixed first-version weather-data provider. The product requires a provider
   to be replaceable later, but the first version offers no provider choice. QWeather request
@@ -66,13 +68,20 @@ Current weather belongs to V1 fixed presentation. It is not a V2 adaptive capabi
   permission later in system settings does not turn the switch on. Developer-option or
   mock locations are not treated separately.
 - Home distinguishes fresh data, cached data, a failed read, and an unconfigured state.
-  Cached data is never presented as fresh weather. The exact presentation of each state is
-  `To be decided`.
+  Cached data is never presented as fresh weather. A failed request or unavailable network
+  shows the failed state immediately. It does not continue showing the previous weather icon
+  or temperature. The failed state uses one failed-weather icon and the temperature text `-`.
+  The exact failed icon and the presentation of the other states are `To be decided`.
 - Weather data is cached for the current location. Rebuilding the interface, changing pages,
   or showing the same weather again does not start a new request.
-- Home uses the cache by default and refreshes it in the background only after the refresh
-  interval. The first-version interval is 60 minutes.
-- A failed request, unavailable network, or expired cached result leaves Launcher4Max usable.
+- Turning the feature on with precise location permission starts one request immediately.
+  Location becoming available again also starts one request immediately. While the screen is
+  on, another request starts 30 minutes after the latest successful request. A request that
+  is still unresolved keeps showing the last successful result and is not presented as failed.
+  When the screen stays off for more than 30 minutes, weather requests stop. The next time
+  the screen turns on starts one request and restarts the 30-minute interval from its success.
+  Screen-off time alone does not present cached weather as failed.
+- A failed request or unavailable network leaves Launcher4Max usable.
   Current weather excludes a public weather proxy, a Launcher4Max-operated backend, accounts,
   forecasts, alerts, air quality, high and low temperatures, a manually selected location,
   geofencing, and automatic provider switching.
@@ -161,7 +170,7 @@ Normal Home, edit mode, and one-shot operation present the same Home content. Th
 
 ## Home edit mode
 
-Edit mode may be entered from the existing favorite action or through a basic-information quick-action slot bound to `Edit mode` ([quick-actions.md](../features/quick-actions.md)); with the default bindings no blank-space gesture enters edit mode. A Drawer drag-to-favorite does not enter edit mode. It enters [one-shot operation](#one-shot-operation), defined below. Eligible blank space excludes the complete time, date-and-weekday, application, module-control, Loading, Error, and Retry targets, together with any later interactive target placed in that region. No blank space in the favorite main list or the remaining Home layout enters edit mode. When the long-press slot is bound to `Edit mode`, holding eligible space through the platform long-press threshold while remaining within platform movement tolerance produces one platform-standard haptic and enters edit mode; when the double-tap slot is bound to `Edit mode`, a recognized double tap produces one platform-standard haptic and enters edit mode. Shared gesture ownership and cancellation follow [Navigation](../navigation.md). Edit mode does not add a fixed edit dock. The basic-information region remains visible, and the main-list viewport occupies the remaining content height. Empty Home exposes only the two main-list add-favorite entries defined below; it has no module and therefore no style settings panel. Edit mode shows every editing affordance and leaves only through its existing Back and interruption rules. It does not end when one movement ends.
+Edit mode may be entered from the existing favorite action or through a basic-information quick-action slot bound to `Edit mode` ([quick-actions.md](../features/quick-actions.md)); with the default bindings no blank-space gesture enters edit mode. A Drawer drag-to-favorite does not enter edit mode. It enters [one-shot operation](#one-shot-operation), defined below. Eligible blank space excludes the complete time, date-and-weekday, current-weather, application, module-control, Loading, Error, and Retry targets, together with any later interactive target placed in that region. No blank space in the favorite main list or the remaining Home layout enters edit mode. When the long-press slot is bound to `Edit mode`, holding eligible space through the platform long-press threshold while remaining within platform movement tolerance produces one platform-standard haptic and enters edit mode; when the double-tap slot is bound to `Edit mode`, a recognized double tap produces one platform-standard haptic and enters edit mode. Shared gesture ownership and cancellation follow [Navigation](../navigation.md). Edit mode does not add a fixed edit dock. The basic-information region remains visible, and the main-list viewport occupies the remaining content height. Empty Home exposes only the two main-list add-favorite entries defined below; it has no module and therefore no style settings panel. Edit mode shows every editing affordance and leaves only through its existing Back and interruption rules. It does not end when one movement ends.
 
 ### Drag-to-favorite journeys
 
