@@ -106,6 +106,28 @@ This document owns exact Settings typography and row geometry. [Settings behavio
   corner radius, border width, bar height, and collapsed exposure together. The preview does not
   reuse those Home dimensions at their unscaled values.
 
+## Weather settings page
+
+- The `Weather` page reuses the Settings top app bar and non-scrolling page defined for the
+  [Home bottom app bar settings page](#home-bottom-app-bar-settings-page). Its title is `Weather`.
+  From top to bottom it shows one master switch, one preview window, and one bottom information
+  region. It reserves `32dp` of bottom padding after that region inside the safe area.
+- The preview window follows the Home bottom app bar window: it is fully transparent, uses
+  `12dp` corners, and reveals the system wallpaper without reading, sampling, copying, or drawing
+  it. Its width, height, and insets are `To be decided`.
+- The window shows the basic-information region scaled as one complete presentation. The scale is
+  `preview-window interior width / Home safe width`, recalculated only when either width changes.
+  It covers the region's text, spacing, margins, weather icon, and temperature together. The
+  window inset itself is not scaled. While the switch is off, the scaled region shows no weather.
+  While the switch is on, it includes the current weather icon and Celsius temperature. The window
+  shows no QWeather attribution. Exact unscaled weather icon size, spacing, alignment, and
+  temperature typography remain `To be decided`.
+- The bottom information region shows the fixed provider label and the complete attribution
+  content owned by [Settings behavior](../surfaces/settings.md). English uses `QWeather`;
+  Chinese uses `和风天气`. The region remains visible while the master switch is off.
+- A large attribution may reduce the height of that region. Its ordinary height, reduced height,
+  typography, and internal spacing are `To be decided`.
+
 ## Informational Bottom Sheets
 
 - The Screen-lock explanation, Privacy, Launcher4Max License, and Third-party notices reuse the exterior shell geometry defined by the [application action sheet presentation specification](app-action-sheet.md): complete available portrait-phone width, `12dp` top corner radii, natural height up to the status-bar safe boundary, `0dp` global content padding, and the shared `32dp x 4dp` handle with `12dp` vertical padding above and below.

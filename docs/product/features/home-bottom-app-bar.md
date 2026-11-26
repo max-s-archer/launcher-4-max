@@ -12,7 +12,7 @@ The accepted Settings entry and page title are `Home bottom app bar` in English 
 
 ## Settings
 
-- Settings places one primary entry directly below `Icon shape` and above the Data entries. It belongs to the same Launcher-settings grouping and opens its own page. It does not share a page with Icon shape.
+- Settings places one primary entry directly below `Weather` and above the Data entries. It belongs to the same Launcher-settings grouping and opens its own page. It does not share a page with Weather.
 - The page title is `Home bottom app bar`. From top to bottom it shows one master switch, one preview, and the remaining settings. The master switch is the only control that turns the feature on or off. It defaults to off. The page also shows a localized read-only capacity message for the selected icon tier and current Home width, such as `Up to 6 apps at this width`. This message updates whenever the width or selected icon tier changes.
 - While the switch is off, Home shows no bar, no collapsed edge, and no reserved height. Membership, the fixed-or-semi-hidden choice, and the icon size remain saved. The settings below the preview use the shared disabled treatment and reject input. The preview stays visible and does not accept changes.
 - While the switch is on and the bar has no favorite, ordinary Home still shows no bar and reserves no height. Edit mode is the exception defined below.
