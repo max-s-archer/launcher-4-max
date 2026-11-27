@@ -57,21 +57,28 @@ Current weather belongs to V1 fixed presentation. It is not a V2 adaptive capabi
   published artifact default to no Key. No personal API Key is placed in product
   documentation, source, an APK, or Git. A build without a Key cannot make weather requests.
   While the feature is on without one, Home shows the unconfigured state rather than live
-  weather, and every other Launcher capability remains available. QWeather permits public
+  weather or previously cached weather, and every other Launcher capability remains
+  available. The unconfigured state uses the same failed-weather icon and temperature text
+  `-`. Its distinction from a failed request is carried only by its accessibility
+  description. The exact description is `To be decided`. QWeather permits public
   distribution when the application meets applicable legal requirements. Free quota remains
   `To be decided`.
 - The first version uses the current system location and does not offer a manually selected
-  city. Turning the switch on requests precise location permission. The request sends that
+  city. Turning the switch on requests precise location permission only when the installed
+  build contains a QWeather API Key. Without a Key, the switch may turn on, but Launcher4Max
+  requests no location permission and reads no location. A weather request sends that
   location's coordinates to QWeather and no other location information. If permission is
   denied, the switch stays off, Home shows no weather, and no weather request starts.
   Launcher4Max shows one localized non-blocking explanation and does not ask again. Granting
   permission later in system settings does not turn the switch on. Developer-option or
   mock locations are not treated separately.
-- Home distinguishes fresh data, cached data, a failed read, and an unconfigured state.
-  Cached data is never presented as fresh weather. A failed request or unavailable network
-  shows the failed state immediately. It does not continue showing the previous weather icon
-  or temperature. The failed state uses one failed-weather icon and the temperature text `-`.
-  The exact failed icon and the presentation of the other states are `To be decided`.
+- Home distinguishes fresh data, a failed read, and an unconfigured state. A successful
+  result keeps the ordinary weather presentation until the next request resolves. It adds no
+  separate cached-weather mark. A failed request or unavailable network shows the failed
+  state immediately. It does not continue showing the previous weather icon or temperature.
+  The failed and unconfigured states use one failed-weather icon and the temperature text
+  `-`. The exact failed icon, accessibility descriptions, and the presentation of the other
+  states are `To be decided`.
 - Weather data is cached for the current location. Rebuilding the interface, changing pages,
   or showing the same weather again does not start a new request.
 - Turning the feature on with precise location permission starts one request immediately.
