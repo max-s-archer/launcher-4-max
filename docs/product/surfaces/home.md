@@ -60,7 +60,7 @@ Current weather belongs to V1 fixed presentation. It is not a V2 adaptive capabi
   weather or previously cached weather, and every other Launcher capability remains
   available. The unconfigured state uses the same failed-weather icon and temperature text
   `-`. Its distinction from a failed request is carried only by its accessibility
-  description. The exact description is `To be decided`. QWeather permits public
+  description, `Weather not configured`. QWeather permits public
   distribution when the application meets applicable legal requirements. Free quota remains
   `To be decided`.
 - The first version uses the current system location and does not offer a manually selected
@@ -74,20 +74,43 @@ Current weather belongs to V1 fixed presentation. It is not a V2 adaptive capabi
   mock locations are not treated separately.
 - Home distinguishes fresh data, a failed read, and an unconfigured state. A successful
   result keeps the ordinary weather presentation until the next request resolves. It adds no
-  separate cached-weather mark. A failed request or unavailable network shows the failed
-  state immediately. It does not continue showing the previous weather icon or temperature.
+  separate cached-weather mark. When the feature is turned on before any weather result
+  exists, Home starts with the failed-weather icon and temperature text `-`. It keeps that
+  state while the first request is unresolved, replaces it after success, and keeps it after
+  three failed attempts. A failed request, unavailable network, or temporarily unavailable
+  location shows the failed state immediately. It does not continue showing the previous
+  weather icon or temperature.
   The failed and unconfigured states use one failed-weather icon and the temperature text
-  `-`. The exact failed icon, accessibility descriptions, and the presentation of the other
-  states are `To be decided`.
-- Weather data is cached for the current location. Rebuilding the interface, changing pages,
-  or showing the same weather again does not start a new request.
+  `-`. A successful result uses the accessibility description `Weather icon and Celsius
+  temperature`. A failed result uses `Weather unavailable`. The exact failed icon and the
+  presentation of the other states are `To be decided`. The weather master switch uses
+  `Basic-information weather`, followed by its on or off state.
+- Weather data is cached for the current location and survives process restart. After a
+  restart, Home first shows the latest successful result when one exists. It then uses the
+  30-minute timestamp check to decide whether to request again. A request in progress does
+  not change that displayed result. Rebuilding the interface, changing pages, or showing the
+  same weather again does not start a new request. The API Key and location are not included
+  in the favorite backup.
 - Turning the feature on with precise location permission starts one request immediately.
-  Location becoming available again also starts one request immediately. While the screen is
-  on, another request starts 30 minutes after the latest successful request. A request that
-  is still unresolved keeps showing the last successful result and is not presented as failed.
-  When the screen stays off for more than 30 minutes, weather requests stop. The next time
-  the screen turns on starts one request and restarts the 30-minute interval from its success.
-  Screen-off time alone does not present cached weather as failed.
+  Location becoming available again also starts one request immediately. A temporarily
+  unavailable location does not wait for that request before showing the failed state.
+  Returning to the foreground checks the timestamp of the latest successful weather refresh.
+  When that timestamp is more than 30 minutes earlier, Launcher4Max starts one weather
+  request and records a new timestamp only after that request succeeds. A failed request
+  retries immediately, up to three attempts in that round. While a request or retry is
+  unresolved, Home keeps its current weather state unchanged. A failed attempt does not
+  update the timestamp. After three failed attempts, Home shows the failed state.
+  Returning to the foreground during the following 30 minutes does not start another round.
+  The next return after those 30 minutes may start a new round. A missing API Key, denied
+  location permission, or a still-unavailable location does not enter this retry round.
+  While a request is unresolved, Home keeps its current weather state unchanged. Returning
+  within 30 minutes of a successful refresh does not start another request. Movement does
+  not start a request in the first version. A changed location takes effect only on the next
+  request allowed by the 30-minute rule. Launcher4Max does not keep a continuous location
+  watch for weather. Launcher4Max adds no background wake-up and does not refresh weather on a
+  timer while it remains in the foreground. While its process is not running, it starts no
+  weather request. The next time it returns to the foreground uses the same timestamp check.
+  Time spent in the background alone does not present the last successful weather as failed.
 - A failed request or unavailable network leaves Launcher4Max usable.
   Current weather excludes a public weather proxy, a Launcher4Max-operated backend, accounts,
   forecasts, alerts, air quality, high and low temperatures, a manually selected location,

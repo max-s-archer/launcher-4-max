@@ -119,9 +119,10 @@ This document owns exact Settings typography and row geometry. [Settings behavio
   `preview-window interior width / Home safe width`, recalculated only when either width changes.
   It covers the region's text, spacing, margins, weather icon, and temperature together. The
   window inset itself is not scaled. While the switch is off, the scaled region shows no weather.
-  While the switch is on, it includes the current weather icon and Celsius temperature. The window
-  shows no QWeather attribution. Exact unscaled weather icon size, spacing, alignment, and
-  temperature typography remain `To be decided`.
+  While the switch is on, it copies the current Home weather state, including a successful
+  result or the failed icon and `-`. It uses no separate sample weather. The window shows no
+  QWeather attribution. Exact unscaled weather icon size, spacing, alignment, and temperature
+  typography remain `To be decided`.
 - The bottom information region shows the fixed provider label and the complete attribution
   content owned by [Settings behavior](../surfaces/settings.md). English uses `QWeather`;
   Chinese uses `和风天气`. The region remains visible while the master switch is off.
